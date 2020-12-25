@@ -92,8 +92,7 @@ int device_intr()
         if (irq == UART0_IRQ) {
             uart_intr();
         } else if (irq == VIRTIO0_IRQ) {
-            // 没有磁盘
-            panic("no disk irq=%d\n", irq);
+            virtio_disk_intr();
         } else if (irq) {
             panic("unexpected interrupt irq=%d\n", irq);
         }

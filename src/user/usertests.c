@@ -1,3 +1,5 @@
+#include "kernel/fs/fs.h"
+#include "kernel/fs/buf.h"
 #include "kernel/defs.h"
 
 void forktest()
@@ -54,6 +56,15 @@ void exectest()
     }
 }
 
+void fstest(){
+    struct buf b;
+    b.blockno = 1;
+    virtio_disk_rw(&b, 0);
+    struct superblock sb;
+    memmove(&sb, b.data, sizeof(sb));
+    printf("%p\n", sb.magic);
+}
+
 void runtest(void f(void), char* s)
 {
     printf("\ntest %s: \n", s);
@@ -72,9 +83,10 @@ struct test {
     void (*f)(void);
     char* s;
 } tests[] = {
-    { exectest, "exectest" },
-    { timertest, "timertest" },
-    { forktest, "forktest" },
+    // { exectest, "exectest" },
+    // { timertest, "timertest" },
+    // { forktest, "forktest" },
+    { fstest,  "fstest" },
     { 0, 0 },
 };
 

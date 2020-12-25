@@ -39,19 +39,18 @@ OBJS = \
   $K/switch.o \
   $K/syscall.o \
   $K/process_assist.o \
-
-fs.img: mkfs/mkfs README
-	mkfs/mkfs fs.img README
+  $K/fs/virtio_disk.o \
 
 LDFLAGS = -z max-page-size=4096
 $K/kernel: $(OBJS) $K/kernel.ld
 	$(LD) $(LDFLAGS) -T $K/kernel.ld -o $K/kernel $(OBJS) 
 	$(OBJDUMP) -S $K/kernel > $K/kernel.asm
 
-
-
 -include kernel/*.d user/*.d
 
+fs.img:
+	gcc -o mkfs/makefs mkfs/makefs.c
+	mkfs/makefs fs.img
 
 qemu: $K/kernel
 	$(QEMU) $(QEMUOPTS)

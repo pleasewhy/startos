@@ -1,9 +1,17 @@
+struct buf;
+struct context;
 
 // uart.c
 void            uart_init();
 void            uartputc_sync(int);
 int             uartgetc();
 void            uart_intr();
+
+
+// virtio.c
+void            virtio_disk_init();
+void            virtio_disk_rw(struct buf *, int write);
+void            virtio_disk_intr();
 
 // io.c
 int             read_line(char *);
