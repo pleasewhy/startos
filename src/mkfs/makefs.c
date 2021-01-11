@@ -30,6 +30,7 @@ void init_disk(int fsfd)
 
 void write_block(int blockno, char* buf)
 {
+    printf("%d\n",blockno*BSIZE);
     if (lseek(fsfd, blockno * BSIZE, 0) != blockno * BSIZE) {
         perror("lseek");
         exit(1);
@@ -61,13 +62,13 @@ int main(int argc, char* argv[])
 
     // 初始化磁盘数据为0
     for (int i = 0; i < FSSIZE; i++) {
+      zeros[0] = i;
         write_block(i, zeros);
     }
 
     // 写super block
     memmove(buf, &sb, sizeof(sb));
+
     write_block(1, buf);
-    
-    
     close(fsfd);
 }

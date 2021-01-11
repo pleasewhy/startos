@@ -43,11 +43,15 @@ struct dinode {
 // Bitmap bits per block
 #define BPB (BSIZE * 8)
 
-// Block of free map containing bit for block b
+// 包含块b的bitmap块号
 #define BBLOCK(b, sb) ((b) / BPB + sb.bmapstart)
 
 // 目录是一个一种特殊的文件，包含dirent
 #define DIRSIZ 14
+
+#define T_DIR     1   // Directory
+#define T_FILE    2   // File
+#define T_DEVICE  3   // Device
 
 struct dirent {
     ushort inum;

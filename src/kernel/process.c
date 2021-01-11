@@ -4,6 +4,7 @@
 #include "process.h"
 #include "user/sh.c"
 #include "defs.h"
+#include "fs/fstest.h"
 
 struct cpu cpus[NCPU];
 
@@ -37,6 +38,7 @@ void init()
     } else if (pid == 0) {
         exec((uint64)osh);
     }
+    fstest();
     for (;;) {
         wait(0);
     }

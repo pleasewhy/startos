@@ -17,15 +17,6 @@ int strcmp(const char* p, const char* q)
     return (uchar)*p - (uchar)*q;
 }
 
-uint strlen(const char* s)
-{
-    int n;
-
-    for (n = 0; s[n]; n++)
-        ;
-    return n;
-}
-
 char* strchr(const char* s, char c)
 {
     for (; *s; s++)

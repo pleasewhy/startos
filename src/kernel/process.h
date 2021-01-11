@@ -24,28 +24,30 @@ struct context {
 
 // cpu
 struct cpu {
-    struct proc* proc; // 当前运行在该CPU的进程。
-    struct context context; // 内核调度线程的上下文。
+  struct proc* proc; // 当前运行在该CPU的进程。
+  struct context context; // 内核调度线程的上下文。
+  int noff; // push_off嵌套的深度。
+  int intena; // 在push_off之前是否允许中断？
 };
 
 extern struct cpu cpus[NCPU];
 
 enum procstate { UNUSED,
-    SLEEPING,
-    RUNNABLE,
-    RUNNING,
-    ZOMBIE };
+  SLEEPING,
+  RUNNABLE,
+  RUNNING,
+  ZOMBIE };
 
 // 进程
 struct proc {
-    enum procstate state; // 进程的状态
-    struct proc* parent; // 父进程
-    void* chan; // 如果非空，将在chan睡眠
-    int killed; // 如果非空，将被杀死
-    int xstate; // 返回给父进程的退出状态
-    int pid; // 进程ID
+  enum procstate state; // 进程的状态
+  struct proc* parent; // 父进程
+  void* chan; // 如果非空，将在chan睡眠
+  int killed; // 如果非空，将被杀死
+  int xstate; // 返回给父进程的退出状态
+  int pid; // 进程ID
 
-    uint64 kstack; // 进程的内核空间栈。
-    struct context context; // 被保存的寄存器，用于pswitch
-    char name[16]; // 进程名
+  uint64 kstack; // 进程的内核空间栈。
+  struct context context; // 被保存的寄存器，用于pswitch
+  char name[16]; // 进程名
 };

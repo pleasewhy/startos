@@ -40,6 +40,11 @@ OBJS = \
   $K/syscall.o \
   $K/process_assist.o \
   $K/fs/virtio_disk.o \
+  $K/fs/fstest.o \
+  $K/fs/fs.o \
+  $K/fs/buf_cache.o \
+  $K/lock/spinlock.o \
+  $K/lock/sleeplock.o \
 
 LDFLAGS = -z max-page-size=4096
 $K/kernel: $(OBJS) $K/kernel.ld
@@ -48,11 +53,11 @@ $K/kernel: $(OBJS) $K/kernel.ld
 
 -include kernel/*.d user/*.d
 
-fs.img:
+fs.img: mkfs/makefs.c
 	gcc -o mkfs/makefs mkfs/makefs.c
 	mkfs/makefs fs.img
 
-qemu: $K/kernel
+qemu: $K/kernel fs.img
 	$(QEMU) $(QEMUOPTS)
 
 .gdbinit: .gdbinit.tmpl-riscv
@@ -65,4 +70,5 @@ qemu-gdb: $K/kernel .gdbinit
 clean: 
 	rm -f *.tex *.dvi *.idx *.aux *.log *.ind *.ilg \
 	*/*.o */*.d */*.asm */*.sym \
-	$U/initcode $U/initcode.out $K/kernel \
+	*/*/*.o */*/*.d */*/*.asm */*/*.sym \
+	$K/kernel fs.img mkfs/makefs

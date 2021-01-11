@@ -2,7 +2,7 @@
 #include "kernel/defs.h"
 #include "user/ulib.c"
 #include "user/hello.c"
-#include "user/usertests.c"
+//#include "user/usertests.c"
 
 void showHistory();
 
@@ -36,8 +36,8 @@ void runcmd(char* cmdstr)
         run((uint64)help);
     else if (strcmp(cmdstr, "history") == 0)
         run((uint64)showHistory);
-    else if (strcmp(cmdstr, "usertests") == 0)
-        run((uint64)usertests);
+//    else if (strcmp(cmdstr, "usertests") == 0)
+//        run((uint64)usertests);
     else if(strcmp(cmdstr, "cowsay") == 0)
         run((uint64)cowsay);
     else if(strcmp(cmdstr, "mew") == 0)

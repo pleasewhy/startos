@@ -28,3 +28,11 @@ void* memmove(void* vdst, const void* vsrc, int n)
     }
     return vdst;
 }
+
+uint strlen(const char* s)
+{
+  int n;
+  for (n = 0; s[n]; n++)
+    ;
+  return n;
+}

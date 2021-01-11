@@ -1,5 +1,10 @@
 struct buf;
 struct context;
+struct spinlock;
+struct sleeplock;
+struct cpu;
+struct superblock;
+struct inode;
 
 // uart.c
 void            uart_init();
@@ -50,6 +55,7 @@ void            print_proc();
 // string.c
 void*           memset(void *, int, uint);
 void*           memmove(void*, const void*, int);
+uint            strlen(const char* s);
 
 // pswitch.S
 void            pswitch(struct context*, struct context*);
@@ -59,3 +65,45 @@ void            pswitch(struct context*, struct context*);
 int             fork();
 void            sleep_sec(int);
 void            yeild();
+
+// buf_cache.c
+struct buf*     alloc_buf(int, int);
+void            relse_buf(struct buf*);
+struct buf*     buf_read(int, int);
+void            buf_write(struct buf*);
+
+// spinlock.c
+void            spinlock_init(struct spinlock*, char*);
+void            spin_lock(struct spinlock*);
+void            spin_unlock(struct spinlock*);
+int             spin_holding(struct spinlock*);
+void            pop_off(void);
+void            push_off(void);
+
+// sleeplock.c
+void            sleeplock_init(struct sleeplock*, char*);
+void            sleep_lock(struct sleeplock*);
+void            sleep_unlock(struct sleeplock*);
+int             sleep_holding(struct sleeplock*);
+
+// fs.c
+void            read_superblock(struct superblock*);
+void            init_fs();
+void            zero_block(int blockno);
+uint            alloc_disk_block();
+void            free_disk_block(int blockno);
+void            init_inode_cache();
+struct inode*   alloc_inode(short type);
+void            update_inode(struct inode* ip);
+struct inode*   get_inode(int inum);
+void            putback_inode(struct inode* ip);
+uint            bmap(struct inode* ip, uint bn);
+int             read_inode(struct inode* ip, uint64 dst, uint off, int n);
+int             write_inode(struct inode* ip, uint64 src, uint64 off, int n);
+
+
+
+
+
+
+

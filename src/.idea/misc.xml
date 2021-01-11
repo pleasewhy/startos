@@ -6,9 +6,14 @@
       <MakefileProjectSettings>
         <option name="analyzerType" value="OUTPUT_PARSING" />
         <option name="buildOptions" value="" />
-        <option name="buildTarget" value="all" />
+        <option name="buildTarget" value="qemu" />
         <option name="cleanTarget" value="clean" />
         <option name="externalProjectPath" value="$PROJECT_DIR$" />
+        <option name="modules">
+          <set>
+            <option value="C:\Users\hy\Desktop\自学课程\startos\src" />
+          </set>
+        </option>
         <option name="switches" value="--just-print --print-directory --keep-going" />
       </MakefileProjectSettings>
     </option>
