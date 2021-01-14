@@ -57,6 +57,10 @@ fs.img: mkfs/makefs.c
 	gcc -o mkfs/makefs mkfs/makefs.c
 	mkfs/makefs fs.img
 
+fs:
+	gcc -o mkfs/makefs mkfs/makefs.c
+	mkfs/makefs fs.img readme.txt
+
 qemu: $K/kernel fs.img
 	$(QEMU) $(QEMUOPTS)
 
@@ -72,3 +76,4 @@ clean:
 	*/*.o */*.d */*.asm */*.sym \
 	*/*/*.o */*/*.d */*/*.asm */*/*.sym \
 	$K/kernel fs.img mkfs/makefs
+.PHONY: clean fs

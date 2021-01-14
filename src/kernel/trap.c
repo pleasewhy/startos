@@ -2,6 +2,7 @@
 #include "param.h"
 #include "riscv.h"
 #include "memlayout.h"
+#include "lock/lock.h"
 #include "process.h"
 #include "defs.h"
 
@@ -11,6 +12,8 @@ void kernelvec();
 extern int device_intr();
 
 uint64 ticks; // 定时器中断次数，可用于计时
+struct spinlock ticks_lock;
+
 
 // 配置中断处理程序
 void trapinit(void)
@@ -71,7 +74,9 @@ void kerneltrap()
 // 定时器中断处理程序
 void clockintr()
 {
+    spin_lock(&ticks_lock);
     ticks++;
+    spin_unlock(&ticks_lock);
     wakeup(&ticks);
 }
 

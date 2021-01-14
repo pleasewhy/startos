@@ -1,6 +1,7 @@
 #include "types.h"
 #include "param.h"
 #include "riscv.h"
+#include "lock/lock.h"
 #include "process.h"
 #include "defs.h"
 

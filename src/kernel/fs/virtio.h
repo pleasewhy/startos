@@ -8,8 +8,6 @@
 // https://docs.oasis-open.org/virtio/virtio/v1.1/virtio-v1.1.pdf
 //
 
-// virtio mmio control registers, mapped starting at 0x10001000.
-// from qemu virtio_mmio.h
 // virtio mmio 控制寄存器, 被映射到0x1000100
 #define VIRTIO_MMIO_MAGIC_VALUE		0x000 // 0x74726976
 #define VIRTIO_MMIO_VERSION		    0x004 // version; 1 is legacy

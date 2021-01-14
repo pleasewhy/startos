@@ -66,3 +66,13 @@ execra:
     ld s10, 96(a1)
     ld s11, 104(a1)
     ret
+
+# exec 重新执行的地址
+# userret(uint64 fn, uint64 sp)
+.globl userret
+.align 4
+userret:
+    add ra, a0, 0
+    add sp, a1, 0
+    ret
+

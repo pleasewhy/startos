@@ -1,6 +1,6 @@
 // 磁盘上的文件系统
 
-#define ROOTINO 1 // root i-number
+#define ROOTINO 0 // root i-number
 #define BSIZE 1024 // 块的大小
 
 // Disk layout:
@@ -49,11 +49,13 @@ struct dinode {
 // 目录是一个一种特殊的文件，包含dirent
 #define DIRSIZ 14
 
+#define NINODE 50
+
 #define T_DIR     1   // Directory
 #define T_FILE    2   // File
 #define T_DEVICE  3   // Device
 
-struct dirent {
+struct direntry {
     ushort inum;
     char name[DIRSIZ];
 };

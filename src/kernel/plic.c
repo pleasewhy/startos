@@ -2,6 +2,7 @@
 #include "param.h"
 #include "riscv.h"
 #include "memlayout.h"
+#include "lock/lock.h"
 #include "process.h"
 #include "defs.h"
 

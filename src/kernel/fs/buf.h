@@ -3,7 +3,8 @@ struct buf {
     int disk; // does disk "own" buf?
     uint dev;
     uint blockno;
-    //   struct sleeplock lock;
+    uint64 last_use_tick;
+    struct sleeplock lock;
     uint refcnt;
     uchar data[BSIZE];
 };

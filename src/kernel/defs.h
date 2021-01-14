@@ -43,7 +43,7 @@ struct proc*    alloc_proc();
 int             cpuid();
 struct cpu*     mycpu(void);
 struct proc*    myproc(void);
-void            sleep(void* chan);
+void            sleep(void* chan, struct spinlock*);
 void            sleep_time(uint64 sleep_ticks);
 void            wakeup(void* chan);
 void            scheduler();
@@ -51,11 +51,14 @@ void            exit(int);
 int             wait(int* status);
 void            exec(uint64);
 void            print_proc();
+void            before_sched();
 
 // string.c
 void*           memset(void *, int, uint);
 void*           memmove(void*, const void*, int);
 uint            strlen(const char* s);
+char*           strncpy(char *s, const char *t, int n);
+int             strncmp(const char *p, const char *q, uint n);
 
 // pswitch.S
 void            pswitch(struct context*, struct context*);
@@ -67,6 +70,7 @@ void            sleep_sec(int);
 void            yeild();
 
 // buf_cache.c
+void            init_buf();
 struct buf*     alloc_buf(int, int);
 void            relse_buf(struct buf*);
 struct buf*     buf_read(int, int);
