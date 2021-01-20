@@ -18,7 +18,7 @@ void            virtio_disk_init();
 void            virtio_disk_rw(struct buf *, int write);
 void            virtio_disk_intr();
 
-// io.c
+// console.c
 int             read_line(char *);
 void            console_intr(char);
 void            panic();
@@ -67,7 +67,7 @@ void            pswitch(struct context*, struct context*);
 // syscall.c
 int             fork();
 void            sleep_sec(int);
-void            yeild();
+void            yield();
 
 // buf_cache.c
 void            init_buf();
@@ -104,6 +104,12 @@ void            putback_inode(struct inode* ip);
 uint            bmap(struct inode* ip, uint bn);
 int             read_inode(struct inode* ip, uint64 dst, uint off, int n);
 int             write_inode(struct inode* ip, uint64 src, uint64 off, int n);
+void            lock_inode(struct inode *ip);
+void            unlock_inode(struct inode *ip);
+struct inode*   dup_inode(struct inode *ip);
+void            trunc_inode(struct inode *ip) ;
+struct          inode* namei(char *path);
+struct          inode* nameiparent(char *path, char *name);
 
 
 

@@ -91,6 +91,7 @@ struct proc {
     int pid; // 进程ID
     struct trapframe trapframe;
     struct spinlock proc_lock;
+    struct inode *current_dir;
 
     uint64 kstack; // 进程的内核空间栈。
     struct context context; // 被保存的寄存器，用于pswitch

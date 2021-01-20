@@ -1,9 +1,11 @@
 #include "../types.h"
 #include "../lock/lock.h"
+#include "../param.h"
 #include "fs.h"
 #include "buf.h"
 #include "file.h"
 #include "virtio.h"
+#include "../process.h"
 #include "../defs.h"
 
 #define min(a, b) ((a) < (b) ? (a) : (b))
@@ -73,7 +75,6 @@ void free_disk_block(int blockno) {
 }
 
 
-
 //
 // inode层, 只是简单的实现
 //
@@ -124,7 +125,8 @@ void free_disk_block(int blockno) {
 // inode_cache.lock。
 //
 // 睡眠锁ip->lock保护inode除了ref的全部字段。当读/写inode字段时必须持有ip->lock。
-
+//
+//
 struct {
     struct spinlock lock;
     struct inode inode[NINODE];
@@ -163,6 +165,9 @@ struct inode *alloc_inode(short type) {
 }
 
 // 将内存中的inode写入到磁盘中,
+// 每次改变磁盘上的ip->xxx字段都需要调用该函数，
+// 因为inode cache是write-through。
+// 调用者必须持有ip->lock.
 void update_inode(struct inode *ip) {
     struct buf *bp;
     struct dinode *dip;
@@ -183,8 +188,8 @@ void update_inode(struct inode *ip) {
 struct inode *get_inode(int inum) {
     struct inode *ip;
     struct inode *empty;
-    struct buf *bp;
-    struct dinode *dip;
+//    struct buf *bp;
+//    struct dinode *dip;
 
     spin_lock(&inode_cache.lock);
     empty = 0;
@@ -198,33 +203,37 @@ struct inode *get_inode(int inum) {
             empty = ip;
         }
     }
-    spin_unlock(&inode_cache.lock);
     if (empty == 0) {
         panic("get_inode");
     }
 
     ip = empty;
-    bp = buf_read(0, IBLOCK(inum, sb));
-    dip = (struct dinode *) bp->data + inum % IPB;
-
     ip->inum = inum;
-    ip->type = dip->type;
-    ip->major = dip->major;
-    ip->minor = dip->minor;
-    ip->nlink = dip->nlink;
-    ip->size = dip->size;
-
-    memmove(ip->addrs, dip->addrs, sizeof(ip->addrs));
-    relse_buf(bp);
-    if (ip->type == 0)
-        panic("get_inode: no type");
-
+    ip->ref = 1;
+    ip->valid = 0;
+    spin_unlock(&inode_cache.lock);
     return ip;
 }
 
-// 通过inum从缓冲池中获取一个inode
+// 移除一个对inode的引用
+// 如果是最后一个引用，则这个缓存inode能够被重新使用。
+// 如果是最后一个引用，并且并且没有链接到该inode目录项,
+// 则在磁盘上释放该inode和它的内容。
 void putback_inode(struct inode *ip) {
     spin_lock(&inode_cache.lock);
+    if (ip->ref == 1 && ip->valid && ip->nlink == 0) {
+        // 当没有目录项链接该inode，以及该inode的链接数为0时，释放inode的数据块。
+        sleep_lock(&ip->lock);
+
+        spin_unlock(&inode_cache.lock);
+
+        trunc_inode(ip);
+        ip->type = 0;
+        update_inode(ip);
+        ip->valid = 0;
+        sleep_unlock(&ip->lock);
+        spin_lock(&inode_cache.lock);
+    }
     ip->ref--;
     spin_unlock(&inode_cache.lock);
 }
@@ -241,6 +250,83 @@ uint bmap(struct inode *ip, uint bn) {
 
     panic("bmap");
     return 0;
+}
+
+// Truncate inode(移除内容)
+// 调用者必须持有ip->lock
+void trunc_inode(struct inode *ip) {
+    int i, j;
+    struct buf *bp;
+    uint *a;
+
+    for (i = 0; i < NDIRECT; i++) {
+        if (ip->addrs[i]) {
+            free_disk_block(ip->addrs[i]);
+            ip->addrs[i] = 0;
+        }
+    }
+
+    if (ip->addrs[NDIRECT]) {
+        bp = buf_read(ip->dev, ip->addrs[NDIRECT]);
+        a = (uint *) bp->data;
+        for (j = 0; j < NINDIRECT; j++) {
+            if (a[j])
+                free_disk_block(a[j]);
+        }
+        relse_buf(bp);
+        free_disk_block(ip->addrs[NDIRECT]);
+        ip->addrs[NDIRECT] = 0;
+    }
+
+    ip->size = 0;
+    update_inode(ip);
+}
+
+// 递增ip->ref
+struct inode *dup_inode(struct inode *ip) {
+    spin_lock(&inode_cache.lock);
+    ip->ref++;
+    spin_unlock(&inode_cache.lock);
+    return ip;
+}
+
+// 锁定给定的inode
+// 需要时读取从磁盘读数据
+void lock_inode(struct inode *ip) {
+    struct buf *bp;
+    struct dinode *dip;
+
+    if (ip == 0 || ip->ref < 1)
+        panic("lock_inode");
+
+    sleep_lock(&ip->lock);
+
+    if (ip->valid == 0) {
+        bp = buf_read(ip->dev, IBLOCK(ip->inum, sb));
+        dip = (struct dinode *) bp->data + ip->inum % IPB;
+        ip->type = dip->type;
+        ip->major = dip->major;
+        ip->minor = dip->minor;
+        ip->nlink = dip->nlink;
+        ip->size = dip->size;
+        memmove(ip->addrs, dip->addrs, sizeof(ip->addrs));
+        relse_buf(bp);
+        ip->valid = 1;
+        if (ip->type == 0)
+            panic("lock_inode: no type");
+    }
+}
+
+// 解锁inode.
+void unlock_inode(struct inode *ip) {
+    if (ip == 0 || !sleep_holding(&ip->lock) || ip->ref < 1)
+        panic("unlock_inode");
+    sleep_unlock(&ip->lock);
+}
+
+void unlock_and_putback(struct inode *ip) {
+    unlock_inode(ip);
+    putback_inode(ip);
 }
 
 // 从inode中读取数据
@@ -291,6 +377,7 @@ int write_inode(struct inode *ip, uint64 src, uint64 off, int n) {
 
 
 // 目录层
+//
 // 第一个inode为根目录，该目录在mkfs/makefs下创建
 //
 
@@ -355,4 +442,86 @@ int dirlink(struct inode *dp, char *name, uint inum) {
     return 0;
 }
 
+// Path层
 
+// 复制path第一个path元素到name中。
+// 返回这个path元素后面的path
+// 返回的path没有前缀 “/”，所以可以通过检测*path="\0"来
+// 知道name是否为最后一个元素。
+//
+//如果没有name可以移除，则返回0
+//
+//例子：
+//   skipelem("a/bb/c", name) = "bb/c", setting name = "a"
+//   skipelem("///a//bb", name) = "bb", setting name = "a"
+//   skipelem("a", name) = "", setting name = "a"
+//   skipelem("", name) = skipelem("////", name) = 0
+//
+static char *skipelem(char *path, char *name) {
+    char *s;
+    int len;
+
+    while (*path == '/')
+        path++;
+    if (*path == 0)
+        return 0;
+    s = path;
+    while (*path != '/' && *path != 0)
+        path++;
+    len = path - s;
+    if (len >= DIRSIZ)
+        memmove(name, s, DIRSIZ);
+    else {
+        memmove(name, s, len);
+        name[len] = 0;
+    }
+    while (*path == '/')
+        path++;
+    return path;
+}
+
+// 根据path返回一个inode
+// 该函数供nameiparent和namei使用
+// 如果parent!=0返回父目录的inode并且复制最后一个元素到name中，
+// name必须拥有足够的空间来存储DIRSIZE字节的字符串。
+static struct inode *namex(char *path, int nameiparent, char *name) {
+    struct inode *ip, *next;
+    struct proc *p = myproc();
+    if (*path == '/')
+        ip = get_inode(ROOTINO);
+    else
+        ip = get_inode(p->current_dir->inum); // TODO 修改：从进程的当前path
+
+    while ((path = skipelem(path, name)) != 0) {
+        lock_inode(ip);
+        if (ip->type != T_DIR) {
+            unlock_and_putback(ip);
+            return 0;
+        }
+        if (nameiparent && *path == '\0') {
+            // Stop one level early.
+            unlock_inode(ip);
+            return ip;
+        }
+        if ((next = dirlookup(ip, name, 0)) == 0) {
+            unlock_and_putback(ip);
+            return 0;
+        }
+        unlock_and_putback(ip);
+        ip = next;
+    }
+    if (nameiparent) {
+        putback_inode(ip);
+        return 0;
+    }
+    return ip;
+}
+
+struct inode *namei(char *path) {
+    char name[DIRSIZ];
+    return namex(path, 0, name);
+}
+
+struct inode *nameiparent(char *path, char *name) {
+    return namex(path, 1, name);
+}

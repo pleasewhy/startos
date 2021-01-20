@@ -1,5 +1,7 @@
 #include "types.h"
 #include "param.h"
+#include "memlayout.h"
+#include "riscv.h"
 #include "lock/lock.h"
 #include "process.h"
 #include "printf.h"
@@ -81,10 +83,25 @@ void console_intr(char c)
     }
 }
 
+void backtrace()
+{
+    uint64 s0 = r_fp();
+    uint64 stack_top = PGROUNDUP(s0);
+    uint64 stack_bottom = PGROUNDDOWN(s0);
+    uint64 fp = s0;
+
+    printf("backtrace:\n");
+    while (fp != stack_top && fp != stack_bottom)
+    {
+        printf("%p\n", *(uint64*)(fp - 8));
+        fp = *(uint64*)(fp - 16);
+    }
+}
+
 void panic(char* s)
 {
     printf("panic:%s", s);
-
+    backtrace();
     for (;;) {
     }
 }

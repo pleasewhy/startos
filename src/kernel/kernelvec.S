@@ -126,7 +126,7 @@ proc_sched:
         sd t6, 240(sp)
 
 	# 让出cpu
-        call yeild
+        call yield
 
         # 恢复寄存器.
         ld ra, 0(sp)

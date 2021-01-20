@@ -40,11 +40,10 @@ void init() {
     } else if (pid == 0) {
         exec((uint64) osh);
     }
-    printf("init0\n");
     init_fs();
-    printf("init1\n");
-    fstest();
+#ifdef TEST_FS
     dirtest();
+#endif
     for (;;) {
         wait(0);
     }
@@ -54,6 +53,7 @@ void init() {
 void init_first_process() {
     struct proc *p = alloc_proc();
     p->context.ra = (uint64) init;
+    p->current_dir = namei("/");
     p->state = RUNNABLE;
     initproc = p;
 }
@@ -253,7 +253,9 @@ void exit(int status) {
         }
     }
     wakeup(p->parent);
-    pswitch(&(myproc()->context), &(mycpu()->context));
+    spin_lock(&p->proc_lock);
+    before_sched();
+//    pswitch(&(myproc()->context), &(mycpu()->context));
 }
 
 // 设置exec的返回地址(execret)，并切换到内核调度线程
@@ -264,7 +266,6 @@ extern void userret(uint64 fn, uint64 sp);
 // exec返回函数, 该函数释放进程锁，并返回到需要执行的代码
 void execret() {
     struct proc *p = myproc();
-    printf("%p\n",p->trapframe.a0);
     spin_unlock(&p->proc_lock);
     userret(p->trapframe.a0, p->context.sp);
 }

@@ -23,11 +23,10 @@ int fork() {
     memmove((char *) np->kstack, (char *) p->kstack, PGSIZE);
     np->parent = p;
     np->state = RUNNABLE;
+    np->current_dir = dup_inode(p->current_dir);
     forkra(&np->context, p->kstack, np->kstack);
     if (myproc() == np) {
-        printf("child\n");
         spin_unlock(&np->proc_lock);
-        printf("child2\n");
     }
     return myproc() == np ? 0 : np->pid;
 }
@@ -42,11 +41,10 @@ void sleep_sec(int seconds) {
 //
 // 让出cpu
 //
-void yeild() {
+void yield() {
     struct proc *p = myproc();
     spin_lock(&p->proc_lock);
     p->state = RUNNABLE;
-//    pswitch(&(myproc()->context), &(mycpu()->context));
     before_sched();
     spin_unlock(&p->proc_lock);
 }

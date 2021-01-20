@@ -30,7 +30,7 @@ OBJS = \
   $K/start.o \
   $K/main.o \
   $K/uart.o \
-  $K/io.o \
+  $K/console.o \
   $K/trap.o \
   $K/plic.o \
   $K/kernelvec.o \

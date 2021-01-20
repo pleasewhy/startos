@@ -15,7 +15,6 @@ void main()
     plicinit();             // 初始化plic
     plicinithart();
     virtio_disk_init();     // 初始化磁盘
-//    init_fs();              // 初始化文件系统
     init_inode_cache();     // 初始化inode cache
     init_buf();          // 初始化磁盘块缓冲
     init_process_table();   // 初始化进程表
