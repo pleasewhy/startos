@@ -21,10 +21,12 @@ void            virtio_disk_intr();
 // console.c
 int             read_line(char *);
 void            console_intr(char);
-void            panic();
 void            putc(int , char );
-void            printf(const char* , ...);
-void            puts(const char* );
+
+// printf.c
+void            printf(const char* fmt, ...);
+void            panic(char *s);
+void            puts(const char* str);
 
 
 // plic.c
@@ -43,6 +45,7 @@ struct proc*    alloc_proc();
 int             cpuid();
 struct cpu*     mycpu(void);
 struct proc*    myproc(void);
+pagetable_t     proc_pagetable(struct proc *p);
 void            sleep(void* chan, struct spinlock*);
 void            sleep_time(uint64 sleep_ticks);
 void            wakeup(void* chan);
@@ -57,8 +60,10 @@ void            before_sched();
 void*           memset(void *, int, uint);
 void*           memmove(void*, const void*, int);
 uint            strlen(const char* s);
+char*           strcpy(char* s, const char* t);
 char*           strncpy(char *s, const char *t, int n);
 int             strncmp(const char *p, const char *q, uint n);
+int             strcmp(const char* p, const char* q);
 
 // pswitch.S
 void            pswitch(struct context*, struct context*);
@@ -106,14 +111,34 @@ int             read_inode(struct inode* ip, uint64 dst, uint off, int n);
 int             write_inode(struct inode* ip, uint64 src, uint64 off, int n);
 void            lock_inode(struct inode *ip);
 void            unlock_inode(struct inode *ip);
+void            unlock_and_putback(struct inode *ip);
 struct inode*   dup_inode(struct inode *ip);
 void            trunc_inode(struct inode *ip) ;
 struct          inode* namei(char *path);
 struct          inode* nameiparent(char *path, char *name);
 
 
+// kalloc.c
+void            kfree(void *pa);
+void *          kalloc(void);
+void            kernel_mem_init();
 
+// vm.c
+void            kernel_vm_init();
+void            vm_hart_init();
+int             mappages(pagetable_t, uint64, uint64, uint64, int);
+void            kernel_vm_map(uint64 va, uint64 pa, uint64 sz, int perm);
+uint64          walkaddr(pagetable_t pagetable, uint64 va);
+pte_t *         walk(pagetable_t pagetable, uint64 va, int alloc);
+uint64          user_vm_alloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz);
+pagetable_t     user_vm_create();
+void            vmprint(pagetable_t pagetable, int n);
 
+// exec.c
+struct proc*    exec0(char *path, char **argv);
+
+// osh.c
+int             osh();
 
 
 

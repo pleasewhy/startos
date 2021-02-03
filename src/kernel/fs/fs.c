@@ -2,6 +2,7 @@
 #include "../lock/lock.h"
 #include "../param.h"
 #include "fs.h"
+#include "../riscv.h"
 #include "buf.h"
 #include "file.h"
 #include "virtio.h"

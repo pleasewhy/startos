@@ -33,6 +33,15 @@ uint strlen(const char *s) {
     return n;
 }
 
+char* strcpy(char* s, const char* t)
+{
+    char* os;
+    os = s;
+    while ((*s++ = *t++) != 0)
+        ;
+    return os;
+}
+
 char * strncpy(char *s, const char *t, int n) {
     char *os;
 
@@ -42,6 +51,14 @@ char * strncpy(char *s, const char *t, int n) {
         *s++ = 0;
     return os;
 }
+
+int strcmp(const char* p, const char* q)
+{
+    while (*p && *p == *q)
+        p++, q++;
+    return (uchar)*p - (uchar)*q;
+}
+
 int strncmp(const char *p, const char *q, uint n)
 {
     while(n > 0 && *p && *p == *q)

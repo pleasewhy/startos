@@ -192,7 +192,7 @@ int device_intr() {
         } else if (irq == VIRTIO0_IRQ) {
             virtio_disk_intr();
         } else if (irq) {
-            panic("unexpected interrupt irq=%d\n", irq);
+            printf("unexpected interrupt irq=%d\n", irq);
         }
 
         // PLIC只允许设备同时最多抛出一个中断;

@@ -83,17 +83,19 @@ enum procstate {
 
 // 进程
 struct proc {
-    enum procstate state; // 进程的状态
-    struct proc *parent; // 父进程
-    void *chan; // 如果非空，将在chan睡眠
-    int killed; // 如果非空，将被杀死
-    int xstate; // 返回给父进程的退出状态
-    int pid; // 进程ID
-    struct trapframe trapframe;
     struct spinlock proc_lock;
-    struct inode *current_dir;
+    enum procstate state;           // 进程的状态
+    struct proc *parent;            // 父进程
+    void *chan;                     // 如果非空，将在chan睡眠
+    int killed;                     // 如果非空，将被杀死
+    int xstate;                     // 返回给父进程的退出状态
+    int pid;                        // 进程ID
+    struct trapframe* trapframe;     // trampoline.S保存进程数据在这里
+    pagetable_t pagetable;          // 用户页表
+    struct inode *current_dir;      // 当前目录
+    uint64 entry;
 
-    uint64 kstack; // 进程的内核空间栈。
-    struct context context; // 被保存的寄存器，用于pswitch
-    char name[16]; // 进程名
+    uint64 kstack;                  // 进程的内核空间栈。
+    struct context context;         // 被保存的寄存器，用于pswitch
+    char name[16];                  // 进程名
 };

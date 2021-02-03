@@ -1,9 +1,9 @@
 #include "types.h"
 #include "param.h"
 #include "riscv.h"
+#include "memlayout.h"
 #include "lock/lock.h"
 #include "process.h"
-#include "user/sh.c"
 #include "defs.h"
 #include "fs/fstest.h"
 
@@ -16,6 +16,9 @@ extern struct spinlock ticks_lock;
 
 struct proc *initproc;
 
+extern char trampoline[]; // trampoline.S
+
+
 char stack[PGSIZE * (NPROC + 1)];
 
 // 初始化进程表
@@ -25,13 +28,17 @@ void init_process_table() {
         p = &proc_table[i];
         spinlock_init(&p->proc_lock, "proc");
         p->pid = i;
-        p->kstack = (uint64) stack + PGSIZE * i;
+        p->kstack = (uint64) kalloc();
+//        p->kstack = (uint64) stack + PGSIZE * i;
+        p->trapframe = 0;
         p->state = UNUSED;
     }
 }
 
 // 第一个进程, 创建osh进程
 // 后循环wait
+extern void execute(uint64 pagetable, uint64 entry);
+
 void init() {
     spin_unlock(&myproc()->proc_lock);
     int pid = fork();
@@ -40,7 +47,19 @@ void init() {
     } else if (pid == 0) {
         exec((uint64) osh);
     }
+    printf("TRAMPOLINE=%p\n", TRAMPOLINE);
     init_fs();
+    struct proc *p = exec0("proc", 0);
+
+    if(p==0){
+        panic("proc init\n");
+    }
+
+    vmprint(p->pagetable, 1);
+    printf("pagetable=%p\n", p->pagetable);
+    uint64 fn = TRAMPOLINE;
+    ((void (*)(uint64, uint64)) fn)(TRAPFRAME, MAKE_SATP(p->pagetable));
+
 #ifdef TEST_FS
     dirtest();
 #endif
@@ -65,21 +84,67 @@ void kerneltrap();
 // 分配一个进程
 struct proc *alloc_proc() {
     struct proc *p;
-    for (int i = 0; i < NPROC; i++) {
-        p = &proc_table[i];
+    for (p = proc_table; p < &proc_table[NPROC]; p++) {
+        spin_lock(&p->proc_lock);
         if (p->state == UNUSED) {
-            memset(&p->context, 0, sizeof(p->context));
-            p->context.sp = p->kstack + PGSIZE;
-            return p;
+            goto found;
+        } else {
+            spin_unlock(&p->proc_lock);
         }
     }
     return 0;
+
+    found:
+    if ((p->trapframe = (struct trapframe *) kalloc()) == 0) {
+        spin_unlock(&p->proc_lock);
+        return 0;
+    }
+    memset(&p->context, 0, sizeof(p->context));
+    p->context.sp = p->kstack + PGSIZE;
+    spin_unlock(&p->proc_lock);
+    return p;
 }
 
-// 调度函数，for循环寻找RUNABLE的进程，
-// 并执行，当使用进程只有一个时(shell),
-// 使CPU进入低功率模式。
-// 内核调度线程将一直执行该函数
+/**
+ *
+ * 创建一个进程可以使用的pagetable, 只映射了trampoline页,
+ * 用于进入和离开内核空间
+ *
+ * @return
+ */
+pagetable_t proc_pagetable(struct proc *p) {
+    pagetable_t pagetable;
+
+    // 创建一个空的页表
+    pagetable = user_vm_create();
+    if (pagetable == 0)
+        return 0;
+
+    // 映射trampoline代码(用于系统调用)到虚拟地址的顶端
+    // TODO PTE权限应该添加PTE_U
+    if (mappages(pagetable, TRAMPOLINE, PGSIZE,
+                 (uint64) trampoline, PTE_R | PTE_X) < 0) {
+        // TODO 失败释放内存
+        return 0;
+    }
+
+    // 将进程的trapframe映射到TRAPFRAME, TRAMPOLINE的低位一页
+    if (mappages(pagetable, TRAPFRAME, PGSIZE,
+                 (uint64) (p->trapframe), PTE_R | PTE_W) < 0) {
+//        uvmunmap(pagetable, TRAMPOLINE, 1, 0);
+//        uvmfree(pagetable, 0);
+        return 0;
+    }
+    return pagetable;
+}
+
+
+/**
+ * 调度函数，for循环寻找RUNABLE的进程，
+ * 并执行，当使用只有一个进程时(shell),
+ * 使CPU进入低功率模式。
+ *  内核调度线程将一直执行该函数
+ */
 void scheduler() {
     struct proc *p;
     struct cpu *c = mycpu();
@@ -267,7 +332,7 @@ extern void userret(uint64 fn, uint64 sp);
 void execret() {
     struct proc *p = myproc();
     spin_unlock(&p->proc_lock);
-    userret(p->trapframe.a0, p->context.sp);
+    userret(p->trapframe->a0, p->context.sp);
 }
 
 // 使进程执行其他函数
@@ -277,8 +342,8 @@ void exec(uint64 fn) {
     p->state = RUNNABLE;
     p->context.sp = p->kstack + PGSIZE;
     spin_lock(&p->proc_lock);
-    p->trapframe.a0 = fn;
-    execra(&p->context, &mycpu()->context, (uint64)execret);
+    p->trapframe->a0 = fn;
+    execra(&p->context, &mycpu()->context, (uint64) execret);
     // 不会返回
     panic("exec");
 }

@@ -5,6 +5,7 @@
 #include "../types.h"
 #include "../lock/lock.h"
 #include "fs.h"
+#include "../riscv.h"
 #include "buf.h"
 #include "../defs.h"
 

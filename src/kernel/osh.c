@@ -1,4 +1,13 @@
+//
+// Created by hy on 2021/2/3.
+//
+
 #include "types.h"
+#include "param.h"
+#include "riscv.h"
+#include "memlayout.h"
+#include "lock/lock.h"
+#include "process.h"
 #include "defs.h"
 
 #define MAX_BUFFER_SIZE 64
@@ -17,12 +26,40 @@ void showHistory()
     for (int k = MAX_HISTORY_NUM, i = (MAX_HISTORY_NUM + startP) % MAX_HISTORY_NUM; k > 0; i++, k--) {
         if (i >= MAX_HISTORY_NUM)
             i = i % MAX_HISTORY_NUM;
-        if (h.cmdlist[i][0] == '\0') 
+        if (h.cmdlist[i][0] == '\0')
             continue;
         else {
             printf("#%d\t%s\n", k, h.cmdlist[i]);
         }
     }
+    exit(0);
+}
+
+void hello()
+{
+    puts("Hello, world!\n\t\tfrom startOS with osh");
+    exit(0);
+}
+
+void cowsay(){
+    puts("    ____________");
+    puts("    < hi, there >");
+    puts("    ------------");
+    puts("         \\   ^__^");
+    puts("          \\  (oo)\\_______");
+    puts("             (__)\\       )\\/\\");
+    puts("                 ||----w |");
+    puts("                 ||     ||");
+    exit(0);
+}
+
+void mew(){
+    puts("          ＿＿");
+    puts("　　　／＞　　フ");
+    puts("　　　|   _　 _ |");
+    puts("　　／`  ミ＿xノ");
+    puts(" 　 /　　　 　 |");
+    puts("　 /　 ヽ　　 ﾉ");
     exit(0);
 }
 
@@ -46,6 +83,7 @@ void run(uint64 fn)
         exec(fn);
     }
 }
+
 void runcmd(char* cmdstr)
 {
     if (strlen(cmdstr) == 0)
@@ -93,3 +131,5 @@ int osh()
     }
     exit(0);
 }
+
+

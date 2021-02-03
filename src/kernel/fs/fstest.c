@@ -3,6 +3,7 @@
 //
 #include "../types.h"
 #include "fs.h"
+#include "../riscv.h"
 #include "../lock/lock.h"
 #include "buf.h"
 #include "file.h"

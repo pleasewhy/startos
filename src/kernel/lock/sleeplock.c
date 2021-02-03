@@ -6,9 +6,9 @@
 
 #include "../types.h"
 #include "../param.h"
+#include "../riscv.h"
 #include "lock.h"
 #include "../process.h"
-#include "../riscv.h"
 #include "../defs.h"
 
 void sleeplock_init(struct sleeplock* lk, char* name)

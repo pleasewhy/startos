@@ -5,8 +5,8 @@
 #include "../types.h"
 #include "../param.h"
 #include "lock.h"
-#include "../process.h"
 #include "../riscv.h"
+#include "../process.h"
 #include "../defs.h"
 
 void spinlock_init(struct spinlock *lk, char *name) {

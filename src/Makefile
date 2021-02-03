@@ -1,5 +1,6 @@
 
 K = kernel
+U = user
 CPUS = 1
 TOOLPREFIX = riscv64-unknown-elf-
 
@@ -10,7 +11,7 @@ CC = $(TOOLPREFIX)gcc
 OBJDUMP = $(TOOLPREFIX)objdump
 
 
-CFLAGS = -Wall -Werror -O -fno-omit-frame-pointer -ggdb
+CFLAGS = -Wall -Werror -Og -fno-omit-frame-pointer -ggdb
 CFLAGS += -MD
 CFLAGS += -mcmodel=medany
 CFLAGS += -ffreestanding -fno-common -nostdlib -mno-relax
@@ -38,13 +39,29 @@ OBJS = \
   $K/string.o \
   $K/switch.o \
   $K/syscall.o \
+  $K/printf.o \
+  $K/osh.o \
+  $K/memory/kalloc.o \
+  $K/memory/vm.o \
   $K/process_assist.o \
   $K/fs/virtio_disk.o \
   $K/fs/fstest.o \
+  $K/fs/exec.o \
   $K/fs/fs.o \
   $K/fs/buf_cache.o \
   $K/lock/spinlock.o \
   $K/lock/sleeplock.o \
+  $K/trap/trampoline.o \
+
+_%: %.o
+	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o $@ $^
+	$(OBJDUMP) -S $@ > $*.asm
+	$(OBJDUMP) -t $@ | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $*.sym
+
+.PRECIOUS: %.o
+UPROGS =\
+	$U/_proc\
+
 
 LDFLAGS = -z max-page-size=4096
 $K/kernel: $(OBJS) $K/kernel.ld
@@ -57,9 +74,10 @@ fs.img: mkfs/makefs.c
 	gcc -o mkfs/makefs mkfs/makefs.c
 	mkfs/makefs fs.img
 
-fs:
+
+fs: $(UPROGS)
 	gcc -o mkfs/makefs mkfs/makefs.c
-	mkfs/makefs fs.img readme.txt
+	mkfs/makefs fs.img readme.txt $(UPROGS)
 
 qemu: $K/kernel fs.img
 	$(QEMU) $(QEMUOPTS)
