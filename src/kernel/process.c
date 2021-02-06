@@ -14,6 +14,8 @@ struct proc proc_table[NPROC];
 extern uint64 ticks;
 extern struct spinlock ticks_lock;
 
+extern char trampoline[], uservec[], userret[];
+
 struct proc *initproc;
 
 extern char trampoline[]; // trampoline.S
@@ -29,59 +31,91 @@ void init_process_table() {
         spinlock_init(&p->proc_lock, "proc");
         p->pid = i;
         p->kstack = (uint64) kalloc();
-//        p->kstack = (uint64) stack + PGSIZE * i;
         p->trapframe = 0;
         p->state = UNUSED;
     }
 }
 
 // 第一个进程, 创建osh进程
-// 后循环wait
-extern void execute(uint64 pagetable, uint64 entry);
+//// 后循环wait
+//void init() {
+//    spin_unlock(&myproc()->proc_lock);
+//    int pid = fork();
+//    if (pid < 0) {
+//        panic("init");
+//    } else if (pid == 0) {
+//        exec((uint64) osh);
+//    }
+//    printf("TRAMPOLINE=%p\n", TRAMPOLINE);
+//    init_fs();
+//    struct proc *p = exec0("proc", 0);
+//
+//    if (p == 0) {
+//        panic("proc init\n");
+//    }
+//
+//    vmprint(p->pagetable, 1);
+//    printf("pagetable=%p\n", p->pagetable);
+//    usertrapret(p);
+//#ifdef TEST_FS
+//    dirtest();
+//#endif
+//    for (;;) {
+//        wait(0);
+//    }
+//}
 
-void init() {
-    spin_unlock(&myproc()->proc_lock);
-    int pid = fork();
-    if (pid < 0) {
-        panic("init");
-    } else if (pid == 0) {
-        exec((uint64) osh);
-    }
-    printf("TRAMPOLINE=%p\n", TRAMPOLINE);
-    init_fs();
-    struct proc *p = exec0("proc", 0);
-
-    if(p==0){
-        panic("proc init\n");
-    }
-
-    vmprint(p->pagetable, 1);
-    printf("pagetable=%p\n", p->pagetable);
-    uint64 fn = TRAMPOLINE;
-    ((void (*)(uint64, uint64)) fn)(TRAPFRAME, MAKE_SATP(p->pagetable));
-
-#ifdef TEST_FS
-    dirtest();
-#endif
-    for (;;) {
-        wait(0);
-    }
-}
+// 该程序执行exec("/init"), 然后退出
+// 通过 od -t xC initcode 生成
+uchar initcode[] = {
+        0x17, 0x05, 0x00, 0x00, 0x13, 0x05, 0x45, 0x02,
+        0x97, 0x05, 0x00, 0x00, 0x93, 0x85, 0x35, 0x02,
+        0x93, 0x08, 0x20, 0x00, 0x73, 0x00, 0x00, 0x00,
+        0x93, 0x08, 0x30, 0x00, 0x73, 0x00, 0x00, 0x00,
+        0xef, 0xf0, 0x9f, 0xff, 0x2f, 0x69, 0x6e, 0x69,
+        0x74, 0x00, 0x00, 0x24, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00
+};
 
 // 初始化第一个进程
 void init_first_process() {
     struct proc *p = alloc_proc();
-    p->context.ra = (uint64) init;
+    // 为进程分配一页内存，并将初始化的指令和数据写入
+    user_vm_init(p->pagetable, initcode, sizeof(initcode));
+
+    p->sz = PGSIZE;
+    // 内核空间第一次进入用户空间
+    p->trapframe->epc = 0;
+    p->trapframe->sp = PGSIZE;
+
+    memmove(p->name, "initcode", sizeof(p->name));
     p->current_dir = namei("/");
+
     p->state = RUNNABLE;
     initproc = p;
+    printf("over");
 }
 
-void trapret();
+// fork的子进程的会从此处开始执行
+void forkret(void) {
+    static int first = 1;
 
-void kerneltrap();
+    // 这里需要释放进程锁
+    spin_unlock(&myproc()->proc_lock);
 
-// 分配一个进程
+    if (first) {
+        // File system initialization must be run in the context of a
+        // regular process (e.g., because it calls sleep), and thus cannot
+        // be run from main().
+        //
+        first = 0;
+        init_fs();
+    }
+
+    usertrapret();
+}
+
+// 分配一个进程，并设置其初始执行函数为forkret
 struct proc *alloc_proc() {
     struct proc *p;
     for (p = proc_table; p < &proc_table[NPROC]; p++) {
@@ -94,13 +128,21 @@ struct proc *alloc_proc() {
     }
     return 0;
 
-    found:
+found:
     if ((p->trapframe = (struct trapframe *) kalloc()) == 0) {
         spin_unlock(&p->proc_lock);
         return 0;
     }
+
+    // 为进程创建页表
+    p->pagetable = proc_pagetable(p);
+
     memset(&p->context, 0, sizeof(p->context));
+    memset(p->trapframe, 0, sizeof(*p->trapframe));
+
     p->context.sp = p->kstack + PGSIZE;
+    p->context.ra = (uint64) forkret;
+
     spin_unlock(&p->proc_lock);
     return p;
 }
@@ -121,7 +163,6 @@ pagetable_t proc_pagetable(struct proc *p) {
         return 0;
 
     // 映射trampoline代码(用于系统调用)到虚拟地址的顶端
-    // TODO PTE权限应该添加PTE_U
     if (mappages(pagetable, TRAMPOLINE, PGSIZE,
                  (uint64) trampoline, PTE_R | PTE_X) < 0) {
         // TODO 失败释放内存
@@ -320,32 +361,7 @@ void exit(int status) {
     wakeup(p->parent);
     spin_lock(&p->proc_lock);
     before_sched();
-//    pswitch(&(myproc()->context), &(mycpu()->context));
-}
-
-// 设置exec的返回地址(execret)，并切换到内核调度线程
-void execra(struct context *, struct context *, uint64);
-
-extern void userret(uint64 fn, uint64 sp);
-
-// exec返回函数, 该函数释放进程锁，并返回到需要执行的代码
-void execret() {
-    struct proc *p = myproc();
-    spin_unlock(&p->proc_lock);
-    userret(p->trapframe->a0, p->context.sp);
-}
-
-// 使进程执行其他函数
-void exec(uint64 fn) {
-    struct proc *p = myproc();
-    memset(&p->context, 0, sizeof(struct context));
-    p->state = RUNNABLE;
-    p->context.sp = p->kstack + PGSIZE;
-    spin_lock(&p->proc_lock);
-    p->trapframe->a0 = fn;
-    execra(&p->context, &mycpu()->context, (uint64) execret);
-    // 不会返回
-    panic("exec");
+    panic("exit");
 }
 
 void print_proc() {
@@ -356,4 +372,15 @@ void print_proc() {
             continue;
         printf(" %d\t  %d\n", p->pid, p->state);
     }
+}
+
+//
+// 让出cpu
+//
+void yield() {
+    struct proc *p = myproc();
+    spin_lock(&p->proc_lock);
+    p->state = RUNNABLE;
+    before_sched();
+    spin_unlock(&p->proc_lock);
 }

@@ -6,6 +6,8 @@
 #include "../types.h"
 #include "../memlayout.h"
 #include "../riscv.h"
+#include "../lock/lock.h"
+#include "../process.h"
 #include "../defs.h"
 
 pagetable_t kernel_pagetable;
@@ -38,7 +40,7 @@ void kernel_vm_init() {
     kernel_vm_map((uint64) etext, (uint64) etext, PHYSTOP - (uint64) etext, PTE_R | PTE_W);
 
     // trampolinez作为trap的entry/exit，会被映射到虚拟地址的顶端
-    kernel_vm_map(TRAMPOLINE, (uint64)trampoline, PGSIZE, PTE_R | PTE_X);
+    kernel_vm_map(TRAMPOLINE, (uint64) trampoline, PGSIZE, PTE_R | PTE_X);
 }
 
 /**
@@ -135,8 +137,8 @@ uint64 walkaddr(pagetable_t pagetable, uint64 va) {
     if ((*pte & PTE_V) == 0)
         return 0;
     // TODO 用户空间时修改
-//    if ((*pte & PTE_U) == 0)
-//        return 0;
+    if ((*pte & PTE_U) == 0)
+        return 0;
     pa = PTE2PA(*pte);
     return pa;
 }
@@ -178,7 +180,7 @@ uint64 user_vm_alloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz) {
             return 0;
         }
         memset(mem, 0, PGSIZE);
-        if (mappages(pagetable, a, PGSIZE, (uint64) mem, PTE_W | PTE_X | PTE_R) != 0) {
+        if (mappages(pagetable, a, PGSIZE, (uint64) mem, PTE_W | PTE_X | PTE_R | PTE_U) != 0) {
             kfree(mem);
 //            uvmdealloc(pagetable, a, oldsz);
             // TODO 失败释放
@@ -202,28 +204,138 @@ pagetable_t user_vm_create() {
     return pagetable;
 }
 
-void vmprint(pagetable_t pagetable, int n)
-{
-    if (n == 1)
-    {
+/**
+ * 将用户initcode加载进入pagetable，只在
+ * 初始化第一个进程时才会调用该函数，sz必须
+ * 小于PGSIZE
+ */
+
+void user_vm_init(pagetable_t pagetable, uchar *src, uint sz) {
+    char *mem;
+
+    if (sz >= PGSIZE)
+        panic("inituvm: more than a page");
+    mem = kalloc();
+    memset(mem, 0, PGSIZE);
+    mappages(pagetable, 0, PGSIZE, (uint64) mem, PTE_W | PTE_R | PTE_X | PTE_U);
+    memmove(mem, src, sz);
+}
+
+/**
+ * 将用户页表中的数据copy到内核中。
+ * 从给定的pagetable中，以vsrc为起点向后copy len字节到内核中的dst处。
+ * 成功返回0，失败返回-1。
+ */
+int copyin(pagetable_t pagetable, char *dst, uint64 vsrc, uint64 len) {
+    uint64 n, va0, pa0;
+    while (len > 0) {
+        va0 = PGROUNDDOWN(vsrc);
+        pa0 = walkaddr(pagetable, va0);
+        if (pa0 == 0) {
+            return -1;
+        }
+        n = PGSIZE - (vsrc - va0);
+        if (n > len) {
+            n = len;
+        }
+        memmove(dst, (void *) (pa0 + (vsrc - va0)), n);
+        len -= n;
+        dst += n;
+        vsrc += n;
+    }
+    return 0;
+}
+
+/**
+ * copy用户空间的以0结束的字符串到内核空间中。
+ *
+ * @param pagetable 用户页表
+ * @param dst 内核空间目的地址
+ * @param vsrc 用户页表字符串虚拟地址
+ * @param maxsz  复制字符串的最大长度
+ * @return 成功返回0，错误返回-1。
+ */
+int copyinstr(pagetable_t pagetable, char *dst, uint64 vsrc, int maxsz) {
+    uint64 n, va0, pa0 = 0;
+    int got_null = 0;
+
+    while (got_null == 0 && maxsz > 0) {
+        va0 = PGROUNDDOWN(vsrc);
+        pa0 = walkaddr(pagetable, va0);
+        if (pa0 == 0) {
+            return -1;
+        }
+        n = PGSIZE - (vsrc - va0);
+        if (n > maxsz) {
+            n = maxsz;
+        }
+        char *p = (char *) (pa0 + (vsrc - va0));
+
+        while (n > 0) {
+            if (*p == 0) {
+                *dst = 0;
+                got_null = 1;
+                break;
+            } else {
+                *dst = *p;
+            }
+            n--;
+            maxsz--;
+            dst++;
+            p++;
+        }
+        vsrc = va0 + PGSIZE;
+    }
+    if (got_null) {
+        return 0;
+    }
+    return -1;
+}
+
+/**
+ * 复制内核数据到用户页表中
+ * @param pagetable 用户页表
+ * @param vdst 目的用户虚拟地址
+ * @param src 内核数据
+ * @param len copy长度
+ * @return 成功返回0，失败返回-1
+ */
+int copyout(pagetable_t pagetable, uint64 vdst, char *src, int len) {
+    uint64 n, va0, pa0;
+    while (len > 0) {
+        va0 = PGROUNDDOWN(vdst);
+        pa0 = walkaddr(pagetable, va0);
+        if (pa0 == 0) {
+            return -1;
+        }
+        n = PGSIZE - (vdst - va0);
+        if (n > len) {
+            n = len;
+        }
+        memmove((void *) (pa0 + (vdst - va0)), src, n);
+        len -= n;
+        vdst += n;
+        src += n;
+    }
+    return 0;
+}
+
+void vmprint(pagetable_t pagetable, int n) {
+    if (n == 1) {
         printf("page table %p\n", pagetable);
     }
-    if (n >= 4)
-    {
+    if (n >= 4) {
         return;
     }
-    for (int i = 0; i < 512; i++)
-    {
+    for (int i = 0; i < 512; i++) {
         pte_t pte = pagetable[i];
-        if (pte & PTE_V)
-        {
-            for (int j = 1; j <= n; j++)
-            {
+        if (pte & PTE_V) {
+            for (int j = 1; j <= n; j++) {
                 printf(".. ");
             }
             uint64 child = PTE2PA(pte);
             printf("%d: pte %p pa %p\n", i, pte, child);
-            vmprint((pagetable_t)child, n + 1);
+            vmprint((pagetable_t) child, n + 1);
         }
     }
 }

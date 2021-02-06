@@ -3,9 +3,11 @@
 //
 
 #include "../types.h"
+#include "../riscv.h"
+#include "../param.h"
 #include "../lock/lock.h"
 #include "fs.h"
-#include "../riscv.h"
+#include "../process.h"
 #include "buf.h"
 #include "../defs.h"
 

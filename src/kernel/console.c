@@ -20,7 +20,7 @@ struct
     int write_index;
 } consloe_buf;
 
-void putc(int fd, char ch)
+void putc(int fs, char ch)
 {
     uartputc_sync(ch);
 }

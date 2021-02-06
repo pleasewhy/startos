@@ -98,4 +98,5 @@ struct proc {
     uint64 kstack;                  // 进程的内核空间栈。
     struct context context;         // 被保存的寄存器，用于pswitch
     char name[16];                  // 进程名
+    int sz;                         // 进程使用空间的大小
 };

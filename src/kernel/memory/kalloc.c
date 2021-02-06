@@ -7,6 +7,7 @@
 #include "../memlayout.h"
 #include "../lock/lock.h"
 #include "../riscv.h"
+#include "../process.h"
 #include "../defs.h"
 
 void free_range(void *pa_start, void *pa_end);

@@ -54,7 +54,7 @@ void timerinit()
     int id = r_mhartid();
 
     // 向CLINT请求时钟中断
-    int interval = 1000000; // 周期, 在qemu中差不多是1/10秒
+    int interval = 1000000*10; // 周期, 在qemu中差不多是1/10秒
     *(uint64*)CLINT_MTIMECMP(id) = *(uint64*)CLINT_MTIME + interval;
 
     // 为timervec准备scratch[]中的内容

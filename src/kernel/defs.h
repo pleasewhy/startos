@@ -21,7 +21,7 @@ void            virtio_disk_intr();
 // console.c
 int             read_line(char *);
 void            console_intr(char);
-void            putc(int , char );
+void            putc(int, char);
 
 // printf.c
 void            printf(const char* fmt, ...);
@@ -37,6 +37,7 @@ void            plic_complete(int);
 
 // trap.c
 void            trapinit();
+void            usertrapret();
 
 // process.c
 void            init_process_table();
@@ -52,9 +53,9 @@ void            wakeup(void* chan);
 void            scheduler();
 void            exit(int);
 int             wait(int* status);
-void            exec(uint64);
 void            print_proc();
 void            before_sched();
+void            yield();
 
 // string.c
 void*           memset(void *, int, uint);
@@ -67,12 +68,6 @@ int             strcmp(const char* p, const char* q);
 
 // pswitch.S
 void            pswitch(struct context*, struct context*);
-
-
-// syscall.c
-int             fork();
-void            sleep_sec(int);
-void            yield();
 
 // buf_cache.c
 void            init_buf();
@@ -132,13 +127,24 @@ uint64          walkaddr(pagetable_t pagetable, uint64 va);
 pte_t *         walk(pagetable_t pagetable, uint64 va, int alloc);
 uint64          user_vm_alloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz);
 pagetable_t     user_vm_create();
+void            user_vm_init(pagetable_t, uchar *, uint);
+int             copyin(pagetable_t, char *, uint64, uint64);
+int             copyinstr(pagetable_t, char *, uint64, int);
+int             copyout(pagetable_t, uint64, char *, int);
 void            vmprint(pagetable_t pagetable, int n);
 
 // exec.c
-struct proc*    exec0(char *path, char **argv);
+int             exec(char *path, char **argv);
 
 // osh.c
-int             osh();
+//int             osh();
+
+// syscall.c
+uint64          argraw(int n);
+int             argint(int n, int *addr);
+int             argaddr(int n, uint64 *ip);
+int             argstr(int n, char *buf, int max);
+void            syscall(void);
 
 
 

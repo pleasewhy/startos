@@ -9,7 +9,7 @@
 
 static int loadseg(pte_t *pagetable, uint64 addr, struct inode *ip, uint offset, uint sz);
 
-struct proc *exec0(char *path, char **argv) {
+int exec(char *path, char **argv) {
 
     int i, off;
     uint64 sz = 0;
@@ -17,7 +17,7 @@ struct proc *exec0(char *path, char **argv) {
     struct inode *ip;
     struct proghdr ph;
     pagetable_t pagetable = 0;
-    struct proc *p = alloc_proc();
+    struct proc *p = myproc();
 
 
     if((pagetable = proc_pagetable(p))==0){
@@ -69,7 +69,7 @@ struct proc *exec0(char *path, char **argv) {
     p->pagetable = pagetable;
     p->trapframe->epc = elf.entry;
     p->trapframe->sp = sz;
-    return p;
+    return 0;
 
     bad:
     panic("exec");
