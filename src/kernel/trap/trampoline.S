@@ -96,12 +96,11 @@ userret:
     csrw satp, a1
     sfence.vma zero, zero
 
-    # put the saved user a0 in sscratch, so we
-    # can swap it with our a0 (TRAPFRAME) in the last step.
+    # 先将a0保存在sscratch中，在加载完寄存器后悔交换回来
     ld t0, 112(a0)
     csrw sscratch, t0
 
-    # restore all but a0 from TRAPFRAME
+    # 从TRAPFRAME中恢复除了a0其余全部寄存器
     ld ra, 40(a0)
     ld sp, 48(a0)
     ld gp, 56(a0)

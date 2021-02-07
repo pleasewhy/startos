@@ -18,3 +18,5 @@ sub entry {
 entry("putchar");
 entry("exec");
 entry("read");
+entry("fork");
+entry("exit");

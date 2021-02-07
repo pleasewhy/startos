@@ -69,6 +69,7 @@ int exec(char *path, char **argv) {
     p->pagetable = pagetable;
     p->trapframe->epc = elf.entry;
     p->trapframe->sp = sz;
+    p->sz = sz;
     return 0;
 
     bad:

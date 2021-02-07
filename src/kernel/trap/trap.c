@@ -22,14 +22,6 @@ void trapinit(void) {
     w_stvec((uint64) kernelvec);
 }
 
-//
-// 处理进程error的情况
-// 中断处理程序检测到错误将会返回到这里
-//
-void proc_err() {
-    exit(-1);
-}
-
 
 /**
  *  处理用户空间的interrupt, exception, 系统调用
@@ -40,10 +32,9 @@ void usertrap(void) {
     if ((r_sstatus() & SSTATUS_SPP) != 0)
         panic("usertrap: not from user mode");
 
-
     // 由于现在处于内核空间, 所以需要更改中断向量为kerneltrap()
     w_stvec((uint64) kernelvec);
-
+//    printf("usertrap: sp=%p\n",r_sp());
 
     struct proc *p = myproc();
 
@@ -74,6 +65,7 @@ void usertrap(void) {
 
     // 若是时钟中断则放弃CPU
     if (which_dev == 2) {
+        panic("timer\n");
         yield();
     }
 
@@ -117,15 +109,9 @@ void usertrapret() {
     ((void (*)(uint64, uint64)) fn)(TRAPFRAME, satp);
 }
 
-//
-// 需要调度时返回到这里
-//
 
 
 // kernel空间trap处理程序，
-// TODO 添加用户空间时修改
-uint64 trap_ra;
-
 void kerneltrap() {
     int which_dev = 0;
     struct proc *p = myproc();
@@ -145,6 +131,7 @@ void kerneltrap() {
     if (which_dev == 0) { // 未知来源
         printf("scause %p\n", scause);
         printf("sepc=%p stval=%p\n", r_sepc(), r_stval());
+        printf("process id = %d",myproc()->pid);
         panic("kerneltrap");
     }
 

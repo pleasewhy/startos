@@ -28,19 +28,19 @@ void putc(int fs, char ch)
 int read_line(char* s)
 {
     int cnt = 0;
-
-    spin_lock(&consloe_buf.lock);
-    sleep(&consloe_buf, &consloe_buf.lock);
+    struct proc *p = myproc();
+    spin_lock(&p->proc_lock);
+    sleep(&consloe_buf, &p->proc_lock);
     for (int i = consloe_buf.read_index; i < consloe_buf.write_index; i++) {
         s[cnt++] = consloe_buf.buf[i % INPUT_BUF];
         if (consloe_buf.buf[i % INPUT_BUF] == '\n') {
             consloe_buf.read_index = i + 1;
             s[cnt - 1] = 0;
-            spin_unlock(&consloe_buf.lock);
+            spin_unlock(&p->proc_lock);
             return cnt - 1;
         }
     }
-    spin_unlock(&consloe_buf.lock);
+    spin_unlock(&p->proc_lock);
     return -1;
 }
 

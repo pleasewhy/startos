@@ -132,7 +132,7 @@ void backtrace()
 void panic(char* s)
 {
     printf("panic:%s", s);
-    backtrace();
+//    backtrace();
     for (;;) {
     }
 }

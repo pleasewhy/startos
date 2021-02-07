@@ -320,6 +320,38 @@ int copyout(pagetable_t pagetable, uint64 vdst, char *src, int len) {
     return 0;
 }
 
+/**
+ * 将父进程的内存复制到子进程中，页表和物理内存都会被复制。
+ * 成功返回0, 失败返回-1。
+ * 失败会释放任何已经分配的页。
+ */
+int user_vm_copy(pagetable_t old, pagetable_t new, int sz) {
+    pte_t *pte;
+    uint64 pa;
+    uint flags;
+    char *mem;
+    for (int i = 0; i < sz; i += PGSIZE) {
+        if ((pte = walk(old, i, 0)) == 0) {
+            panic("user_vm_copy: pte not present");
+        }
+        if ((*pte & PTE_V) == 0) {
+            panic("user_vm_copy: pte invalid");
+        }
+        pa = PTE2PA(*pte);
+        flags = PTE_FLAGS(*pte);
+
+        if ((mem = kalloc()) == 0) {
+            panic("user_vm_copy: alloc mem fail");
+        }
+        memmove(mem, (void *) pa, PGSIZE);
+        if (mappages(new, i, PGSIZE, (uint64) mem, flags) < 0) {
+            kfree(mem);
+            panic("user_vm_copy: mappages fail");
+        }
+    }
+    return 0;
+}
+
 void vmprint(pagetable_t pagetable, int n) {
     if (n == 1) {
         printf("page table %p\n", pagetable);

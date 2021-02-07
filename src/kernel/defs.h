@@ -51,6 +51,7 @@ void            sleep(void* chan, struct spinlock*);
 void            sleep_time(uint64 sleep_ticks);
 void            wakeup(void* chan);
 void            scheduler();
+int             fork();
 void            exit(int);
 int             wait(int* status);
 void            print_proc();
@@ -63,6 +64,7 @@ void*           memmove(void*, const void*, int);
 uint            strlen(const char* s);
 char*           strcpy(char* s, const char* t);
 char*           strncpy(char *s, const char *t, int n);
+char*           safestrcpy(char *s, const char *t, int n);
 int             strncmp(const char *p, const char *q, uint n);
 int             strcmp(const char* p, const char* q);
 
@@ -128,9 +130,11 @@ pte_t *         walk(pagetable_t pagetable, uint64 va, int alloc);
 uint64          user_vm_alloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz);
 pagetable_t     user_vm_create();
 void            user_vm_init(pagetable_t, uchar *, uint);
+int             user_vm_copy(pagetable_t old, pagetable_t new, int sz);
 int             copyin(pagetable_t, char *, uint64, uint64);
 int             copyinstr(pagetable_t, char *, uint64, int);
 int             copyout(pagetable_t, uint64, char *, int);
+
 void            vmprint(pagetable_t pagetable, int n);
 
 // exec.c

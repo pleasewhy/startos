@@ -21,7 +21,7 @@ struct proc *initproc;
 extern char trampoline[]; // trampoline.S
 
 
-char stack[PGSIZE * (NPROC + 1)];
+char stack[PGSIZE * 2 * (NPROC + 1)];
 
 // 初始化进程表
 void init_process_table() {
@@ -30,40 +30,12 @@ void init_process_table() {
         p = &proc_table[i];
         spinlock_init(&p->proc_lock, "proc");
         p->pid = i;
-        p->kstack = (uint64) kalloc();
+//        p->kstack = (uint64) kalloc();
+        p->kstack = (uint64) (stack + PGSIZE * i);
         p->trapframe = 0;
         p->state = UNUSED;
     }
 }
-
-// 第一个进程, 创建osh进程
-//// 后循环wait
-//void init() {
-//    spin_unlock(&myproc()->proc_lock);
-//    int pid = fork();
-//    if (pid < 0) {
-//        panic("init");
-//    } else if (pid == 0) {
-//        exec((uint64) osh);
-//    }
-//    printf("TRAMPOLINE=%p\n", TRAMPOLINE);
-//    init_fs();
-//    struct proc *p = exec0("proc", 0);
-//
-//    if (p == 0) {
-//        panic("proc init\n");
-//    }
-//
-//    vmprint(p->pagetable, 1);
-//    printf("pagetable=%p\n", p->pagetable);
-//    usertrapret(p);
-//#ifdef TEST_FS
-//    dirtest();
-//#endif
-//    for (;;) {
-//        wait(0);
-//    }
-//}
 
 // 该程序执行exec("/init"), 然后退出
 // 通过 od -t xC initcode 生成
@@ -128,7 +100,7 @@ struct proc *alloc_proc() {
     }
     return 0;
 
-found:
+    found:
     if ((p->trapframe = (struct trapframe *) kalloc()) == 0) {
         spin_unlock(&p->proc_lock);
         return 0;
@@ -168,7 +140,7 @@ pagetable_t proc_pagetable(struct proc *p) {
         // TODO 失败释放内存
         return 0;
     }
-
+    printf("TRAPOLINE=%p\n", TRAMPOLINE);
     // 将进程的trapframe映射到TRAPFRAME, TRAMPOLINE的低位一页
     if (mappages(pagetable, TRAPFRAME, PGSIZE,
                  (uint64) (p->trapframe), PTE_R | PTE_W) < 0) {
@@ -253,6 +225,7 @@ void sleep(void *chan, struct spinlock *lock) {
 
     before_sched();
 
+    printf("sleep over\n");
     // 重置chan
     p->chan = 0;
 
@@ -279,6 +252,8 @@ void before_sched() {
     intr_enable = mycpu()->intr_enable;
     pswitch(&p->context, &mycpu()->context);
     mycpu()->intr_enable = intr_enable;
+    printf("sched now pid=%d\n", myproc()->pid);
+    printf("sp=%p stack bottom=%p \n", r_sp(), myproc()->kstack);
 }
 
 // 睡眠一定时间
@@ -299,6 +274,36 @@ void wakeup(void *chan) {
             p->state = RUNNABLE;
         }
     }
+}
+
+int fork() {
+    struct proc *child;
+    struct proc *p = myproc();
+
+    // 分配一个新的进程
+    if ((child = alloc_proc()) == 0) {
+        return -1;
+    }
+
+    // 将父进程的内存复制到子进程中
+    if (user_vm_copy(p->pagetable, child->pagetable, p->sz) < 0) {
+        return -1;
+    }
+    printf("p.sz=%d\n", p->sz);
+    child->sz = p->sz;
+    child->parent = p;
+
+    // 复制父进程的用户空间的寄存器
+    *(child->trapframe) = *(p->trapframe);
+
+    // 设置子进程fork的返回值为0
+    child->trapframe->a0 = 0;
+
+    safestrcpy(child->name, p->name, sizeof(p->name));
+
+    child->state = RUNNABLE;
+
+    return child->pid;
 }
 
 //

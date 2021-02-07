@@ -25,17 +25,32 @@ uint64 sys_exec(void) {
 
 uint64 sys_read(void) {
     uint64 va = 0;
-    char buf[PGSIZE];
+    char buf[100];
     if (argaddr(0, &va) < 0) {
         return -1;
     }
-    read_line(buf);
+//    read_line(buf);
+    buf[0] = 'a';
+    buf[1] = 0;
+    printf("buf=%s", buf);
     copyout(myproc()->pagetable, va, buf, strlen(buf));
-    return 0;
+    return strlen(buf);
 }
+
+
+//
+// 进程相关的系统调用
+//
 
 uint64 sys_exit(void) {
     int status = 0;
-    argint(0, &status);
+    if (argint(0, &status) < 0) {
+        return -1;
+    }
     exit(status);
+    return 0;
+}
+
+uint64 sys_fork(void) {
+    return fork();
 }

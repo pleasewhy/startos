@@ -4,7 +4,9 @@
 
 // system call
 int putchar(char ch);
-void read(char *);
+int read(char *);
+int exit(int *);
+int fork();
 
 // printf.c
 void printf(const char*, ...);

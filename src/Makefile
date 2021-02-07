@@ -86,9 +86,9 @@ $K/kernel: $(OBJS) $K/kernel.ld
 
 -include kernel/*.d user/*.d
 
-fs.img: mkfs/makefs.c
+fs.img: mkfs/makefs.c $(UPROGS) $U/usys.o
 	gcc -o mkfs/makefs mkfs/makefs.c
-	mkfs/makefs fs.img
+	mkfs/makefs fs.img $(UPROGS)
 
 
 fs: $(UPROGS) $U/usys.o

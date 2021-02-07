@@ -92,26 +92,26 @@ kernelvec:
 .globl timervec
 .align 4
 timervec:
-        # start.c has set up the memory that mscratch points to:
-        # scratch[0,8,16] : register save area.
-        # scratch[32] : address of CLINT's MTIMECMP register.
-        # scratch[40] : desired interval between interrupts.
-        
+        # start.c会设置mscratch指向该函数
+        # scratch[0,8,16] : 寄存区保存区域
+        # scratch[32] : CLINT的MTIMECMp寄存器的地址
+        # scratch[40] : 定时器抛出中断的间隔时间
+
         csrrw a0, mscratch, a0
         sd a1, 0(a0)
         sd a2, 8(a0)
         sd a3, 16(a0)
 
-        # schedule the next timer interrupt
-        # by adding interval to mtimecmp.
+        # 设置下次定时器中断的时间
+        # 通过将mtimecmp加间隔时间
         ld a1, 32(a0) # CLINT_MTIMECMP(hart)
         ld a2, 40(a0) # interval
         ld a3, 0(a1)
         add a3, a3, a2
         sd a3, 0(a1)
 
-        # raise a supervisor software interrupt.
-	li a1, 2
+        # 抛出监督者软件中断
+	    li a1, 2
         csrw sip, a1
 
         ld a3, 16(a0)

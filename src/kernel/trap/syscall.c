@@ -79,15 +79,17 @@ int argstr(int n, char *buf, int max) {
 }
 
 extern uint64 sys_putchar(void);
-
 extern uint64 sys_exec(void);
-
 extern uint64 sys_read(void);
+extern uint64 sys_exit(void);
+extern uint64 sys_fork(void);
 
 static uint64 (*syscalls[])(void) = {
         [SYS_putchar] sys_putchar,
         [SYS_exec] sys_exec,
         [SYS_read] sys_read,
+        [SYS_exit] sys_exit,
+        [SYS_fork] sys_fork,
 };
 
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))
@@ -103,6 +105,6 @@ void syscall(void) {
         printf("%d %s: unknown sys call %d\n",
                p->pid, p->name, num);
         p->trapframe->a0 = -1;
-        panic("error");
+        panic("syscall error");
     }
 }

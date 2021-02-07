@@ -15,3 +15,13 @@ read:
  li a7, SYS_read
  ecall
  ret
+.global fork
+fork:
+ li a7, SYS_fork
+ ecall
+ ret
+.global exit
+exit:
+ li a7, SYS_exit
+ ecall
+ ret

@@ -41,7 +41,19 @@ char* strcpy(char* s, const char* t)
         ;
     return os;
 }
+// 和strncpy类似, 该函数会保证字符串以0结束。
+char* safestrcpy(char *s, const char *t, int n)
+{
+    char *os;
 
+    os = s;
+    if(n <= 0)
+        return os;
+    while(--n > 0 && (*s++ = *t++) != 0)
+        ;
+    *s = 0;
+    return os;
+}
 char * strncpy(char *s, const char *t, int n) {
     char *os;
 
