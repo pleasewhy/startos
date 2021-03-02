@@ -6,6 +6,7 @@
 #include "buf.h"
 #include "file.h"
 #include "virtio.h"
+#include "stat.h"
 #include "../process.h"
 #include "../defs.h"
 
@@ -242,10 +243,28 @@ void putback_inode(struct inode *ip) {
 // 数据块包含直接块和间接块，这里只实现了直接块
 // 获取inode的第bn个数据块对应的磁盘块号
 uint bmap(struct inode *ip, uint bn) {
-    uint64 addr;
+    uint addr, *indirect;
+    struct buf *bp;
     if (bn < NDIRECT) {
         if ((addr = ip->addrs[bn]) == 0)
             ip->addrs[bn] = addr = alloc_disk_block();
+        return addr;
+    }
+    bn -= NDIRECT;
+
+    // 间接块
+    if (bn < NINDIRECT) {
+        // 获取indirect块，如果没有需要申请
+        if ((addr = ip->addrs[NDIRECT]) == 0) {
+            ip->addrs[NDIRECT] = addr = alloc_disk_block();
+        }
+        bp = buf_read(0, addr);
+        indirect = (uint *) (bp->data);
+        if ((addr = indirect[bn]) == 0) {
+            addr = indirect[bn] = alloc_disk_block();
+            buf_write(bp);
+        }
+        relse_buf(bp);
         return addr;
     }
 
@@ -301,7 +320,6 @@ void lock_inode(struct inode *ip) {
         panic("lock_inode");
 
     sleep_lock(&ip->lock);
-
     if (ip->valid == 0) {
         bp = buf_read(ip->dev, IBLOCK(ip->inum, sb));
         dip = (struct dinode *) bp->data + ip->inum % IPB;
@@ -330,8 +348,20 @@ void unlock_and_putback(struct inode *ip) {
     putback_inode(ip);
 }
 
+/**
+ * 获取inode的元数据
+ */
+
+void stat_inode(struct inode *ip, struct stat *stat) {
+    stat->type = ip->type;
+    stat->nlink = ip->nlink;
+    stat->size = ip->size;
+    stat->dev = ip->dev;
+    stat->ino = stat->ino;
+}
+
 // 从inode中读取数据
-int read_inode(struct inode *ip, uint64 dst, uint off, int n) {
+int read_inode(struct inode *ip, int user_dst, uint64 dst, uint off, int n) {
     int total = 0, m = 0;
     struct buf *bp;
     if (off > ip->size || off + n < off) {
@@ -344,14 +374,18 @@ int read_inode(struct inode *ip, uint64 dst, uint off, int n) {
     for (; total < n; total += m, off += m, dst += m) {
         bp = buf_read(0, bmap(ip, off / BSIZE));
         m = min(BSIZE - off % BSIZE, n - total);
-        memmove((uint64 *) (dst), bp->data + (off % BSIZE), m);
+        if (either_copyout(user_dst, dst, bp->data + (off % BSIZE), m) == -1) {
+            relse_buf(bp);
+            total = -1;
+            break;
+        }
         relse_buf(bp);
     }
     return total;
 }
 
 // 将数据写入inode
-int write_inode(struct inode *ip, uint64 src, uint64 off, int n) {
+int write_inode(struct inode *ip, int user_src, uint64 src, uint64 off, int n) {
     uint total, m;
     struct buf *bp;
 
@@ -362,7 +396,10 @@ int write_inode(struct inode *ip, uint64 src, uint64 off, int n) {
     for (total = 0; total < n; total += m, off += m, src += m) {
         bp = buf_read(0, bmap(ip, off / BSIZE));
         m = min(BSIZE - off % BSIZE, n - total);
-        memmove(bp->data + (off % BSIZE), (uint64 *) (src), m);
+        if (either_copyin(bp->data + (off % BSIZE), user_src, src, m) == -1) {
+            relse_buf(bp);
+            break;
+        }
         buf_write(bp);
         relse_buf(bp);
     }
@@ -399,10 +436,11 @@ struct inode *dirlookup(struct inode *dp, char *name, uint *poff) {
         panic("dirlookup not DIR");
 
     for (off = 0; off < dp->size; off += sizeof(de)) {
-        if (read_inode(dp, (uint64) &de, off, sizeof(de)) != sizeof(de))
+        if (read_inode(dp, 0, (uint64) &de, off, sizeof(de)) != sizeof(de))
             panic("dirlookup read");
-        if (de.inum == 0)
-            continue;
+//        if (de.inum == 0) {
+//            continue;
+//        }
         if (namecmp(name, de.name) == 0) {
             // 该目录包含该该名称
             if (poff)
@@ -430,14 +468,14 @@ int dirlink(struct inode *dp, char *name, uint inum) {
 
     // 寻找一个空的目录项
     for (off = 0; off < dp->size; off += sizeof(de)) {
-        if (read_inode(dp, (uint64) &de, off, sizeof(de)) != sizeof(de))
+        if (read_inode(dp, 0, (uint64) &de, off, sizeof(de)) != sizeof(de))
             panic("dirlink read");
         if (de.inum == 0)
             break;
     }
     strncpy(de.name, name, DIRSIZ);
     de.inum = inum;
-    if (write_inode(dp, (uint64) &de, off, sizeof(de)) != sizeof(de))
+    if (write_inode(dp, 0, (uint64) &de, off, sizeof(de)) != sizeof(de))
         panic("dirlink");
 
     return 0;
@@ -491,8 +529,7 @@ static struct inode *namex(char *path, int nameiparent, char *name) {
     if (*path == '/')
         ip = get_inode(ROOTINO);
     else
-        ip = get_inode(p->current_dir->inum); // TODO 修改：从进程的当前path
-
+        ip = get_inode(p->current_dir->inum);
     while ((path = skipelem(path, name)) != 0) {
         lock_inode(ip);
         if (ip->type != T_DIR) {

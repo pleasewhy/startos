@@ -18,7 +18,7 @@ int inode_blocks = NINODE / IPB + 1; // inode块的数量
 int nmeta; // meta data block数量 (boot, superblock, inode, bitmap)
 int data_blocks; // data block数量
 int fsfd;   // “磁盘”的文件描述符
-int free_inode_num = 0;
+int free_inode_num = 1;
 int free_data_block;  // 根据元数据得到
 
 struct superblock sb;
@@ -94,20 +94,19 @@ int main(int argc, char *argv[]) {
     assert(rootino == ROOTINO);
 
     // 添加 . 目录项，指向当前目录
-    de.inum = 0;
-    bzero(&de, sizeof(de));
+    de.inum = ROOTINO;
     strcpy(de.name, ".");
     inode_append(rootino, &de, sizeof(de));
+
     // 根目录下的 .. 指向根目录
-    de.inum = rootino;
-    bzero(&de, sizeof(de));
+    de.inum = ROOTINO;
     strcpy(de.name, "..");
     inode_append(rootino, &de, sizeof(de));
 
     // 添加用户程序
     int fd, n;
     for (int i = 2; i < argc; i++) {
-        // get rid of "user/"
+        // 去除前缀 "user/"
         char *shortname;
         if (strncmp(argv[i], "user/", 5) == 0)
             shortname = argv[i] + 5;
@@ -121,10 +120,8 @@ int main(int argc, char *argv[]) {
             exit(1);
         }
         printf("%s\n", shortname);
-        // Skip leading _ in name when writing to file system.
-        // The binaries are named _rm, _cat, etc. to keep the
-        // build operating system from trying to execute them
-        // in place of system binaries like rm and cat.
+        // 由于一些用户程序会和原系统的用户程序，所以需要再前面添加"_"
+        // 这里将它们去除，再写入文件系统中
         if (shortname[0] == '_')
             shortname += 1;
 
@@ -145,7 +142,7 @@ int main(int argc, char *argv[]) {
     balloc(free_data_block);
     struct dinode dip;
     read_inode(1, &dip);
-    printf("%d\n",dip.nlink);
+    printf("%d\n", dip.nlink);
     close(fsfd);
 }
 
@@ -186,22 +183,37 @@ void inode_append(uint inum, void *data, int n) {
     uint bn, off, m;
     struct dinode din;
     char buf[BSIZE];
+    uint indirect[NINDIRECT];
     read_inode(inum, &din);
 
     off = din.size;
-    int datano;
+    int datano;  // 数据块号
     while (n > 0) {
         bn = off / BSIZE;
         assert(bn < MAXFILE);
-        assert(bn < NDIRECT); // TODO 添加间接块
-        if (din.addrs[bn] == 0) {
-            din.addrs[bn] = free_data_block++;
+        printf("bn=%d\n", bn);
+
+        if (bn < NDIRECT) {
+            if (din.addrs[bn] == 0) {
+                din.addrs[bn] = free_data_block++;
+            }
+            datano = din.addrs[bn];
+        } else {
+            if (din.addrs[NDIRECT] == 0) {
+                din.addrs[NDIRECT] = free_data_block++;
+            }
+            read_block(din.addrs[NDIRECT], (char *) indirect);
+            if (indirect[bn - NDIRECT] == 0) {
+                indirect[bn - NDIRECT] = free_data_block++;
+                write_block(din.addrs[NDIRECT], (char *) indirect);
+            }
+            datano = indirect[bn - NDIRECT];
         }
-        datano = din.addrs[bn];
+
         m = min(n, (bn + 1) * BSIZE - off);
         read_block(datano, buf);
         bcopy(p, buf + off - (bn * BSIZE), m);
-        write_block(datano,buf);
+        write_block(datano, buf);
         p += m;
         n -= m;
         off += m;

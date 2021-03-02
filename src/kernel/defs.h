@@ -3,6 +3,7 @@ struct context;
 struct spinlock;
 struct sleeplock;
 struct cpu;
+struct stat;
 struct superblock;
 struct inode;
 
@@ -20,6 +21,7 @@ void            virtio_disk_intr();
 
 // console.c
 int             read_line(char *);
+void            console_init();
 void            console_intr(char);
 void            putc(int, char);
 
@@ -53,10 +55,12 @@ void            wakeup(void* chan);
 void            scheduler();
 int             fork();
 void            exit(int);
-int             wait(int* status);
+int             wait(uint64 status);
 void            print_proc();
 void            before_sched();
 void            yield();
+int             either_copyout(int, uint64, void *, int);
+int             either_copyin(void *, int, uint64, uint64);
 
 // string.c
 void*           memset(void *, int, uint);
@@ -92,6 +96,16 @@ void            sleep_lock(struct sleeplock*);
 void            sleep_unlock(struct sleeplock*);
 int             sleep_holding(struct sleeplock*);
 
+
+//file.c
+void            fileinit(void);
+struct file *   file_alloc(void);
+struct file *   file_dup(struct file *f);
+void            file_close(struct file *f);
+int             file_stat(struct file *f, uint64 addr);
+int             file_read(struct file *f, uint64 addr, int n);
+int             file_write(struct file *f, uint64 addr, int n);
+
 // fs.c
 void            read_superblock(struct superblock*);
 void            init_fs();
@@ -104,8 +118,9 @@ void            update_inode(struct inode* ip);
 struct inode*   get_inode(int inum);
 void            putback_inode(struct inode* ip);
 uint            bmap(struct inode* ip, uint bn);
-int             read_inode(struct inode* ip, uint64 dst, uint off, int n);
-int             write_inode(struct inode* ip, uint64 src, uint64 off, int n);
+void            stat_inode(struct inode *ip, struct stat *stat);
+int             read_inode(struct inode *ip, int user_dst, uint64 dst, uint off, int n);
+int             write_inode(struct inode *ip, int user_src, uint64 src, uint64 off, int n);
 void            lock_inode(struct inode *ip);
 void            unlock_inode(struct inode *ip);
 void            unlock_and_putback(struct inode *ip);
@@ -113,6 +128,8 @@ struct inode*   dup_inode(struct inode *ip);
 void            trunc_inode(struct inode *ip) ;
 struct          inode* namei(char *path);
 struct          inode* nameiparent(char *path, char *name);
+struct inode *  dirlookup(struct inode *dp, char *name, uint *poff);
+int             dirlink(struct inode *dp, char *name, uint inum);
 
 
 // kalloc.c
@@ -146,7 +163,9 @@ int             exec(char *path, char **argv);
 // syscall.c
 uint64          argraw(int n);
 int             argint(int n, int *addr);
+int             fetchaddr(uint64 addr, uint64 *ip);
 int             argaddr(int n, uint64 *ip);
+int             fetchstr(uint64 addr, char *buf, int max);
 int             argstr(int n, char *buf, int max);
 void            syscall(void);
 

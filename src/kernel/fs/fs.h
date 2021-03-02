@@ -1,6 +1,6 @@
 // 磁盘上的文件系统
 
-#define ROOTINO 0 // root i-number
+#define ROOTINO 1 // root i-number, 不知道为什么0不行
 #define BSIZE 1024 // 块的大小
 
 // Disk layout:
@@ -27,20 +27,21 @@ struct superblock {
 // 磁盘上inode的结构体
 struct dinode {
     short type; // 文件类型
-    short major; // Major device number (T_DEVICE only)
-    short minor; // Minor device number (T_DEVICE only)
+    short major; // Major device number (T_DEVICE)
+    short minor; // Minor device number (T_DEVICE)
     short nlink; // 文件系统中链接该inode的数量
     uint size; // 文件的大小
     uint addrs[NDIRECT + 1]; // 数据块地址
 };
 
-// Inodes per block.
+// 每个块可以存放inode的数量
 #define IPB (BSIZE / sizeof(struct dinode))
 
 // Block containing inode i
+// 得到包含inode i的块
 #define IBLOCK(i, sb) ((i) / IPB + sb.inodestart)
 
-// Bitmap bits per block
+// 块的位数，用于Bitmap
 #define BPB (BSIZE * 8)
 
 // 包含块b的bitmap块号

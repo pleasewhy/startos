@@ -1,6 +1,17 @@
-#include "kernel/types.h"
-
+#include "../kernel/types.h"
+#include "../kernel/fs/fcntl.h"
+#include "user.h"
 //string utils
+char * strncpy(char *s, const char *t, int n) {
+    char *os;
+
+    os = s;
+    while (n-- > 0 && (*s++ = *t++) != 0);
+    while (n-- > 0)
+        *s++ = 0;
+    return os;
+}
+
 char* strcpy(char* s, const char* t)
 {
     char* os;
@@ -15,6 +26,12 @@ int strcmp(const char* p, const char* q)
     while (*p && *p == *q)
         p++, q++;
     return (uchar)*p - (uchar)*q;
+}
+
+uint strlen(const char *s) {
+    int n;
+    for (n = 0; s[n]; n++);
+    return n;
 }
 
 char* strchr(const char* s, char c)
@@ -42,6 +59,20 @@ char* strchr(const char* s, char c)
 //     return buf;
 // }
 
+int
+stat(const char *s, struct stat *st)
+{
+    int fd;
+    int r;
+
+    fd = open(s, O_RDONLY);
+    if(fd < 0)
+        return -1;
+    r = fstat(fd, st);
+//    close(fd);
+    return r;
+}
+
 int atoi(const char* s)
 {
     int n;
@@ -53,34 +84,34 @@ int atoi(const char* s)
 }
 
 //memory utils
-// void* memset(void* dst, int c, uint n)
-// {
-//     char* cdst = (char*)dst;
-//     int i;
-//     for (i = 0; i < n; i++) {
-//         cdst[i] = c;
-//     }
-//     return dst;
-// }
+ void* memset(void* dst, int c, uint n)
+ {
+     char* cdst = (char*)dst;
+     int i;
+     for (i = 0; i < n; i++) {
+         cdst[i] = c;
+     }
+     return dst;
+ }
 
-// void* memmove(void* vdst, const void* vsrc, int n)
-// {
-//     char* dst;
-//     const char* src;
+ void* memmove(void* vdst, const void* vsrc, int n)
+ {
+     char* dst;
+     const char* src;
 
-//     dst = vdst;
-//     src = vsrc;
-//     if (src > dst) {
-//         while (n-- > 0)
-//             *dst++ = *src++;
-//     } else {
-//         dst += n;
-//         src += n;
-//         while (n-- > 0)
-//             *--dst = *--src;
-//     }
-//     return vdst;
-// }
+     dst = vdst;
+     src = vsrc;
+     if (src > dst) {
+         while (n-- > 0)
+             *dst++ = *src++;
+     } else {
+         dst += n;
+         src += n;
+         while (n-- > 0)
+             *--dst = *--src;
+     }
+     return vdst;
+ }
 
 int memcmp(const void* s1, const void* s2, uint n)
 {

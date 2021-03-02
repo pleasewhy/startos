@@ -90,9 +90,10 @@ struct proc {
     int killed;                     // 如果非空，将被杀死
     int xstate;                     // 返回给父进程的退出状态
     int pid;                        // 进程ID
-    struct trapframe* trapframe;     // trampoline.S保存进程数据在这里
+    struct trapframe* trapframe;    // trampoline.S保存进程数据在这里
     pagetable_t pagetable;          // 用户页表
     struct inode *current_dir;      // 当前目录
+    struct file * open_file[NOFILE];// 用户打开文件，其下标为文件描述符。
     uint64 entry;
 
     uint64 kstack;                  // 进程的内核空间栈。

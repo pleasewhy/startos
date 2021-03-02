@@ -5,7 +5,6 @@
 #include "lock/lock.h"
 #include "process.h"
 #include "defs.h"
-#include "fs/fstest.h"
 
 struct cpu cpus[NCPU];
 
@@ -63,6 +62,8 @@ void init_first_process() {
     memmove(p->name, "initcode", sizeof(p->name));
     p->current_dir = namei("/");
 
+    for (int i = 0; i < NOFILE; i++)
+        p->open_file[i] = 0;
     p->state = RUNNABLE;
     initproc = p;
     printf("over");
@@ -140,7 +141,6 @@ pagetable_t proc_pagetable(struct proc *p) {
         // TODO 失败释放内存
         return 0;
     }
-    printf("TRAPOLINE=%p\n", TRAMPOLINE);
     // 将进程的trapframe映射到TRAPFRAME, TRAMPOLINE的低位一页
     if (mappages(pagetable, TRAPFRAME, PGSIZE,
                  (uint64) (p->trapframe), PTE_R | PTE_W) < 0) {
@@ -225,7 +225,6 @@ void sleep(void *chan, struct spinlock *lock) {
 
     before_sched();
 
-    printf("sleep over\n");
     // 重置chan
     p->chan = 0;
 
@@ -252,8 +251,6 @@ void before_sched() {
     intr_enable = mycpu()->intr_enable;
     pswitch(&p->context, &mycpu()->context);
     mycpu()->intr_enable = intr_enable;
-    printf("sched now pid=%d\n", myproc()->pid);
-    printf("sp=%p stack bottom=%p \n", r_sp(), myproc()->kstack);
 }
 
 // 睡眠一定时间
@@ -279,9 +276,10 @@ void wakeup(void *chan) {
 int fork() {
     struct proc *child;
     struct proc *p = myproc();
-
+    int i;
     // 分配一个新的进程
     if ((child = alloc_proc()) == 0) {
+        printf("\n\n\nuser\n\n\n");
         return -1;
     }
 
@@ -289,7 +287,6 @@ int fork() {
     if (user_vm_copy(p->pagetable, child->pagetable, p->sz) < 0) {
         return -1;
     }
-    printf("p.sz=%d\n", p->sz);
     child->sz = p->sz;
     child->parent = p;
 
@@ -299,11 +296,35 @@ int fork() {
     // 设置子进程fork的返回值为0
     child->trapframe->a0 = 0;
 
+    //
+    for (i = 0; i < NOFILE; i++) {
+        if (p->open_file[i] != 0) {
+            child->open_file[i] = file_dup(p->open_file[i]);
+        }
+    }
+    child->current_dir = dup_inode(p->current_dir);
+
     safestrcpy(child->name, p->name, sizeof(p->name));
 
     child->state = RUNNABLE;
-
     return child->pid;
+}
+
+
+static void
+proc_free(struct proc *p) {
+    if(p->trapframe)
+        kfree(p->trapframe);
+    p->trapframe = 0;
+    // TODO 释放页表
+    p->pagetable = 0;
+    p->sz = 0;
+    p->name[0] = 0;
+    p->chan = 0;
+    p->killed = 0;
+    p->xstate = 0;
+    p->state = UNUSED;
+    p->parent = 0;
 }
 
 //
@@ -311,7 +332,7 @@ int fork() {
 // 没有子进程返回-1， 将退出状态复
 // 制到status中。
 //
-int wait(int *status) {
+int wait(uint64 vaddr) {
     struct proc *cp; // 子进程
     struct proc *p;
     int havechild, pid;
@@ -325,10 +346,13 @@ int wait(int *status) {
                 havechild = 1;
                 if (cp->state == ZOMBIE) {
                     pid = cp->pid;
-                    if (status) {
-                        *status = cp->xstate;
+                    if (vaddr != 0 && copyout(cp->pagetable, vaddr, (char *) &cp->xstate,
+                                              sizeof(cp->xstate)) < 0) {
+                        spin_unlock(&cp->proc_lock);
+                        spin_unlock(&p->proc_lock);
+                        return -1;
                     }
-                    cp->state = UNUSED;
+                    proc_free(cp);
                     spin_unlock(&cp->proc_lock);
                     spin_unlock(&p->proc_lock);
                     return pid;
@@ -358,6 +382,18 @@ void exit(int status) {
     p = myproc();
     p->state = ZOMBIE;
     p->xstate = status;
+
+    // 关闭打开的文件
+    for (int fd = 0; fd < NOFILE; fd++) {
+        if (p->open_file[fd]) {
+            file_close(p->open_file[fd]);
+            p->open_file[fd] = 0;
+        }
+    }
+
+    // 归还当前目录inode
+    putback_inode(p->current_dir);
+
     for (cp = proc_table; cp < &proc_table[NPROC]; cp++) {
         if (cp->parent == p) {
             cp->parent = initproc;
@@ -389,3 +425,36 @@ void yield() {
     before_sched();
     spin_unlock(&p->proc_lock);
 }
+
+/**
+ *  根据user_dst将源数据复制内核地址或用户地址
+ *  @param user_dst dst是否为用户空间地址
+ *  @param copy的长度
+ * @return 成功返回0，失败返回-1
+ */
+int either_copyout(int user_dst, uint64 dst, void *src, int len) {
+    struct proc *p = myproc();
+    if (user_dst) {
+        return copyout(p->pagetable, dst, src, len);
+    } else {
+        memmove((char *) dst, src, len);
+        return 0;
+    }
+}
+
+/**
+ *  根据user_dst将数据从内核地址或用户地址copy到dst中
+ *  @param user_src dst是否为用户空间地址
+ *  @param copy的长度
+ * @return 成功返回0，失败返回-1
+ */
+int either_copyin(void *dst, int user_src, uint64 src, uint64 len) {
+    struct proc *p = myproc();
+    if (user_src) {
+        return copyin(p->pagetable, dst, src, len);
+    } else {
+        memmove(dst, (char *) src, len);
+        return 0;
+    }
+}
+

@@ -45,7 +45,6 @@ void usertrap(void) {
         // 系统调用
         if (p->killed)
             exit(-1);
-
         // sepc指向了ecall指令, 但是我们希望返回到ecall的下一条指令。
         p->trapframe->epc += 4;
         // 中断会改变部分寄存器，如sstatus，所以在使用完这些寄存器
@@ -65,7 +64,6 @@ void usertrap(void) {
 
     // 若是时钟中断则放弃CPU
     if (which_dev == 2) {
-        panic("timer\n");
         yield();
     }
 

@@ -11,8 +11,9 @@ static int loadseg(pte_t *pagetable, uint64 addr, struct inode *ip, uint offset,
 
 int exec(char *path, char **argv) {
 
-    int i, off;
-    uint64 sz = 0;
+    int i, off, argc;
+    uint64 sz = 0, stackbase, sp;
+    uint64 ustack[MAXARG + 1]; // 最后一项为0，用于标记结束
     struct elfhdr elf;
     struct inode *ip;
     struct proghdr ph;
@@ -20,7 +21,7 @@ int exec(char *path, char **argv) {
     struct proc *p = myproc();
 
 
-    if((pagetable = proc_pagetable(p))==0){
+    if ((pagetable = proc_pagetable(p)) == 0) {
         return 0;
     }
 
@@ -30,14 +31,14 @@ int exec(char *path, char **argv) {
     lock_inode(ip);
 
     // 检查ELF头
-    if (read_inode(ip, (uint64) &elf, 0, sizeof(elf)) != sizeof(elf))
+    if (read_inode(ip, 0, (uint64) &elf, 0, sizeof(elf)) != sizeof(elf))
         goto bad;
     if (elf.magic != ELF_MAGIC)
         goto bad;
 
     // 加载程序到内存中
     for (i = 0, off = elf.phoff; i < elf.phnum; i++, off += sizeof(ph)) {
-        if (read_inode(ip, (uint64) &ph, off, sizeof(ph)) != sizeof(ph))
+        if (read_inode(ip, 0, (uint64) &ph, off, sizeof(ph)) != sizeof(ph))
             goto bad;
         if (ph.type != ELF_PROG_LOAD)
             continue;
@@ -62,15 +63,52 @@ int exec(char *path, char **argv) {
     // 的下一页, 注意，栈是从上向下增长的。
     sz = PGROUNDUP(sz);
     uint64 sz1;
-    if ((sz1 = user_vm_alloc(pagetable, sz, sz+PGSIZE)) == 0)
+    if ((sz1 = user_vm_alloc(pagetable, sz, sz + PGSIZE)) == 0)
         goto bad;
     sz = sz1;
-    // TODO 将运行程序的参数添加到栈中
+    sp = sz;
+    stackbase = sz - PGSIZE;
+
+    // 先将参数push到用户栈中，并准备ustack数组，它的每一个
+    // 元素都按顺序指向参数。
+    for (argc = 0; argv[argc]; argc++) {
+        if (argc > MAXARG)
+            goto bad;
+        sp -= strlen(argv[argc]) + 1;
+        sp -= sp % 16;
+        if (sp < stackbase){
+            goto bad;
+        }
+        if (copyout(pagetable, sp, argv[argc], strlen(argv[argc]) + 1) < 0)
+            goto bad;
+        ustack[argc] = sp;
+    }
+    ustack[argc] = 0;
+
+    // push argv指针数组
+    sp -= (argc + 1) * sizeof(uint64);
+    sp -= sp % 16;
+    if (sp < stackbase){
+        goto bad;
+    }
+    if (copyout(pagetable, sp, (char *) ustack, (argc + 2) * sizeof(uint64)) < 0)
+        goto bad;
+
+    // 用户代码main(argc, argv)的参数
+    // argc通过系统调用返回，也就是a0
+    p->trapframe->a1 = sp;
+    // 保存程序名
+    char *last, *s;
+    for (last = s = path; *s; s++)
+        if (*s == '/')
+            last = s + 1;
+    safestrcpy(p->name, last, sizeof(p->name));
+
     p->pagetable = pagetable;
-    p->trapframe->epc = elf.entry;
-    p->trapframe->sp = sz;
     p->sz = sz;
-    return 0;
+    p->trapframe->epc = elf.entry;
+    p->trapframe->sp = sp;
+    return argc;
 
     bad:
     panic("exec");
@@ -106,7 +144,7 @@ static int loadseg(pagetable_t pagetable, uint64 va, struct inode *ip, uint offs
             n = sz - i;
         else
             n = PGSIZE;
-        if (read_inode(ip, (uint64) pa, offset + i, n) != n)
+        if (read_inode(ip, 0, (uint64) pa, offset + i, n) != n)
             return -1;
     }
 

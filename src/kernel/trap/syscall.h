@@ -1,5 +1,13 @@
 #define SYS_putchar     1
 #define SYS_exec        2
 #define SYS_exit        3
-#define SYS_read        4
-#define SYS_fork        5
+#define SYS_fork        4
+#define SYS_wait        5
+#define SYS_read        6
+#define SYS_write       7
+#define SYS_open        8
+#define SYS_mknod       9
+#define SYS_mkdir       10
+#define SYS_chdir       11
+#define SYS_dup         12
+#define SYS_fstat       13

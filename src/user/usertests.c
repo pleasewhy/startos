@@ -1,10 +1,6 @@
 #include "../kernel/types.h"
 #include "../kernel/fs/fs.h"
-#include "../kernel/fs/buf.h"
-#include "../kernel/fs/file.h"
-#include "../kernel/defs.h"
-//#include "ulib.c"
-
+#include "user.h"
 void forktest()
 {
   int a = 1, pid;

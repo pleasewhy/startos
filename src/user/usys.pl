@@ -18,5 +18,15 @@ sub entry {
 entry("putchar");
 entry("exec");
 entry("read");
+entry("write");
 entry("fork");
 entry("exit");
+entry("wait");
+entry("open");
+entry("mkdir");
+entry("mknod");
+entry("chdir");
+entry("dup");
+entry("fstat");
+
+

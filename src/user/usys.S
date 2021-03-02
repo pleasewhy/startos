@@ -15,6 +15,11 @@ read:
  li a7, SYS_read
  ecall
  ret
+.global write
+write:
+ li a7, SYS_write
+ ecall
+ ret
 .global fork
 fork:
  li a7, SYS_fork
@@ -23,5 +28,40 @@ fork:
 .global exit
 exit:
  li a7, SYS_exit
+ ecall
+ ret
+.global wait
+wait:
+ li a7, SYS_wait
+ ecall
+ ret
+.global open
+open:
+ li a7, SYS_open
+ ecall
+ ret
+.global mkdir
+mkdir:
+ li a7, SYS_mkdir
+ ecall
+ ret
+.global mknod
+mknod:
+ li a7, SYS_mknod
+ ecall
+ ret
+.global chdir
+chdir:
+ li a7, SYS_chdir
+ ecall
+ ret
+.global dup
+dup:
+ li a7, SYS_dup
+ ecall
+ ret
+.global fstat
+fstat:
+ li a7, SYS_fstat
  ecall
  ret

@@ -5,9 +5,8 @@
 #include "process.h"
 #include "defs.h"
 
-void main()
-{
-    uart_init();            // 初始化uart
+void main() {
+    console_init();         // 初始化控制台
     printf("\n");
     printf("xv6 kernel is booting\n");
     printf("\n");

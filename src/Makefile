@@ -42,8 +42,8 @@ OBJS = \
   $K/memory/kalloc.o \
   $K/memory/vm.o \
   $K/fs/virtio_disk.o \
-  $K/fs/fstest.o \
   $K/fs/exec.o \
+  $K/fs/file.o \
   $K/fs/fs.o \
   $K/fs/buf_cache.o \
   $K/lock/spinlock.o \
@@ -53,8 +53,12 @@ OBJS = \
   $K/trap/syscall.o \
   $K/trap/sysfile.o \
 
+UPROGS =\
+	$U/_init\
+	$U/_sh\
+	$U/_ls\
 
-ULIB = $U/usys.o $U/printf.o
+ULIB = $U/usys.o $U/printf.o $U/ulib.o
 
 _%: %.o $(ULIB)
 	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o $@ $^
@@ -74,13 +78,9 @@ initcode: $U/initcode.S
 	$(OBJDUMP) -S $U/initcode.o > $U/initcode.asm
 	od -t xC $U/initcode
 
-.PRECIOUS: %.o
-UPROGS =\
-	$U/_init\
-
 
 LDFLAGS = -z max-page-size=4096
-$K/kernel: $(OBJS) $K/kernel.ld
+$K/kernel: $(OBJS) $K/kernel.ld fs.img
 	$(LD) $(LDFLAGS) -T $K/kernel.ld -o $K/kernel $(OBJS) 
 	$(OBJDUMP) -S $K/kernel > $K/kernel.asm
 
@@ -90,10 +90,6 @@ fs.img: mkfs/makefs.c $(UPROGS) $U/usys.o
 	gcc -o mkfs/makefs mkfs/makefs.c
 	mkfs/makefs fs.img $(UPROGS)
 
-
-fs: $(UPROGS) $U/usys.o
-	gcc -o mkfs/makefs mkfs/makefs.c
-	mkfs/makefs fs.img readme.txt $(UPROGS)
 
 qemu: $K/kernel fs.img
 	$(QEMU) $(QEMUOPTS)
@@ -112,4 +108,4 @@ clean:
 	$K/kernel fs.img mkfs/makefs \
 	$(UPROGS) \
 
-.PHONY: clean fs
+.PHONY: clean

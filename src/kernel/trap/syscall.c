@@ -31,6 +31,16 @@ uint64 argraw(int n) {
     return -1;
 }
 
+// 获取当前进程addr处的一个uint64值
+int fetchaddr(uint64 addr, uint64 *ip){
+    struct proc *p = myproc();
+    if(addr >= p->sz || addr+sizeof(uint64) > p->sz)
+        return -1;
+    if(copyin(p->pagetable, (char *)ip, addr, sizeof(*ip)) != 0)
+        return -1;
+    return 0;
+}
+
 /**
  * 获取第n个int类型参数
  */
@@ -70,7 +80,6 @@ int fetchstr(uint64 addr, char *buf, int max) {
  * 获取第n个系统调用参数作为0结束的字符串
  *  复制到buf中, 最多复制max
  */
-
 int argstr(int n, char *buf, int max) {
     uint64 addr;
     if (argaddr(n, &addr) < 0)
@@ -80,16 +89,32 @@ int argstr(int n, char *buf, int max) {
 
 extern uint64 sys_putchar(void);
 extern uint64 sys_exec(void);
-extern uint64 sys_read(void);
 extern uint64 sys_exit(void);
 extern uint64 sys_fork(void);
+extern uint64 sys_wait(void);
+extern uint64 sys_read(void);
+extern uint64 sys_write(void);
+extern uint64 sys_open(void);
+extern uint64 sys_mknod(void);
+extern uint64 sys_mkdir(void);
+extern uint64 sys_chdir(void);
+extern uint64 sys_dup(void);
+extern uint64 sys_fstat(void);
 
 static uint64 (*syscalls[])(void) = {
         [SYS_putchar] sys_putchar,
         [SYS_exec] sys_exec,
-        [SYS_read] sys_read,
         [SYS_exit] sys_exit,
         [SYS_fork] sys_fork,
+        [SYS_wait] sys_wait,
+        [SYS_read] sys_read,
+        [SYS_write] sys_write,
+        [SYS_open] sys_open,
+        [SYS_mknod] sys_mknod,
+        [SYS_mkdir] sys_mkdir,
+        [SYS_chdir] sys_chdir,
+        [SYS_dup] sys_dup,
+        [SYS_fstat] sys_fstat,
 };
 
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))
@@ -97,7 +122,6 @@ static uint64 (*syscalls[])(void) = {
 void syscall(void) {
     int num;
     struct proc *p = myproc();
-
     num = p->trapframe->a7;
     if (num > 0 && num < NELEM(syscalls) && syscalls[num]) {
         p->trapframe->a0 = syscalls[num]();
