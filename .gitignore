@@ -1,5 +1,7 @@
 kernel/*/*.d
 kernel/*/*.o
+kernel/*/*/*.o
+kernel/*/*/*.d
 *.asm
 .vscode/*
 target/*
