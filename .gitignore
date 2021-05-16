@@ -1,0 +1,8 @@
+*.d
+*.o
+kernel
+*.asm
+.vscode/*
+*.img
+*.bin
+*.sym
