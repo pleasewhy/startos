@@ -1,8 +1,8 @@
-*.d
-*.o
-kernel
+kernel/*/*.d
+kernel/*/*.o
 *.asm
 .vscode/*
+target/*
 *.img
 *.bin
 *.sym
