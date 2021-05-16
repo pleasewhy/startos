@@ -1,0 +1,16 @@
+{
+  "files.associations": {
+    "taskscheduler.hpp": "c",
+    "process.hpp": "c",
+    "limits": "cpp",
+    "user.h": "c",
+    "spinlock.hpp": "c",
+    "types.hpp": "c",
+    "logger.h": "c",
+    "fcntl.h": "c",
+    "sysctl.hpp": "c",
+    "fpioa.hpp": "c",
+    "riscv.hpp": "c",
+    "memlayout.hpp": "c"
+  }
+}
