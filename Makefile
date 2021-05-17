@@ -84,9 +84,9 @@ qemu: $T/kernel fs.img
 	$(QEMU) $(QEMUOPTS)
 
 all: $T/kernel
-	@$(OBJCOPY) $T/kernel --strip-all -O binary $(kernelImg)
-	@$(OBJCOPY) $(RUSTSBI) --strip-all -O binary $(k210)
-	@dd if=$(kernelImg) of=$(k210) bs=128k seek=1
+	$(OBJCOPY) $T/kernel --strip-all -O binary $(kernelImg)
+	$(OBJCOPY) $(RUSTSBI) --strip-all -O binary $(k210)
+	dd if=$(kernelImg) of=$(k210) bs=128k seek=1
 	cp $(k210) k210.bin
 
 k210: $T/kernel
