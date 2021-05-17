@@ -127,6 +127,6 @@ clean:
 	rm -f *.tex *.dvi *.idx *.aux *.log *.ind *.ilg *.d \
 	*/*.o */*.d */*.asm */*.sym \
 	*/*/*.o */*/*.d */*/*.asm */*/*.sym \
-	kernel fs.img *.asm\
+	kernel fs.img *.asm StartOS.o\
 
 .PHONY: clean

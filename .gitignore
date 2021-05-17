@@ -2,6 +2,8 @@ kernel/*/*.d
 kernel/*/*.o
 kernel/*/*/*.o
 kernel/*/*/*.d
+kernel/*.d
+kernel/*.o
 user/*.d
 user/*.o
 user/*.asm
@@ -9,9 +11,12 @@ user/_*
 user/init
 user/submit.txt
 .vscode/*
-# target/*
+target/*.bin
+target/kernel
+target/*.asm
 *.img
 *.bin
 *.sym
 submit/*
 .gdb_history
+.gitignore
