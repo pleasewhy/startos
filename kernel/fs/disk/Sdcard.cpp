@@ -27,40 +27,23 @@ static void sd_lowlevel_init(uint8_t spi_index) {
 // #define SPI_CHIP_SELECT_0
 static void sd_write_data(uint8_t const *data_buff, uint32_t length) {
   spi_init(SPI_DEVICE_0, SPI_WORK_MODE_0, SPI_FF_STANDARD, 8, 0);
-#ifdef SUBMIT
-  spi_send_data_standard(SPI_DEVICE_0, SPI_CHIP_SELECT_0, NULL, 0, data_buff, length);
-#else
   spi_send_data_standard(SPI_DEVICE_0, SPI_CHIP_SELECT_3, NULL, 0, data_buff, length);
-#endif
 }
 
 static void sd_read_data(uint8_t *data_buff, uint32_t length) {
   spi_init(SPI_DEVICE_0, SPI_WORK_MODE_0, SPI_FF_STANDARD, 8, 0);
-#ifdef SUBMIT
-  spi_receive_data_standard(SPI_DEVICE_0, SPI_CHIP_SELECT_0, NULL, 0, data_buff, length);
-#else
   spi_receive_data_standard(SPI_DEVICE_0, SPI_CHIP_SELECT_3, NULL, 0, data_buff, length);
-#endif
 }
 
 static void sd_write_data_dma(uint8_t const *data_buff, uint32_t length) {
   spi_init(SPI_DEVICE_0, SPI_WORK_MODE_0, SPI_FF_STANDARD, 8, 0);
-#ifdef SUBMIT
-  spi_send_data_standard_dma(DMAC_CHANNEL0, SPI_DEVICE_0, SPI_CHIP_SELECT_0, NULL, 0, data_buff, length);
-#else
   spi_send_data_standard_dma(DMAC_CHANNEL0, SPI_DEVICE_0, SPI_CHIP_SELECT_3, NULL, 0, data_buff, length);
-#endif
 }
 
 static void sd_read_data_dma(uint8_t *data_buff, uint32_t length) {
   spi_init(SPI_DEVICE_0, SPI_WORK_MODE_0, SPI_FF_STANDARD, 8, 0);
-#ifdef SUBMIT
-  spi_receive_data_standard_dma((dmac_channel_number_t)-1, DMAC_CHANNEL0, SPI_DEVICE_0, SPI_CHIP_SELECT_0, NULL, 0,
-                                data_buff, length);
-#else
   spi_receive_data_standard_dma((dmac_channel_number_t)-1, DMAC_CHANNEL0, SPI_DEVICE_0, SPI_CHIP_SELECT_3, NULL, 0,
                                 data_buff, length);
-#endif
 }
 
 /*
