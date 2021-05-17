@@ -12,7 +12,9 @@
 
 void Fat32FileSystem::init() {
   LOG_DEBUG("fat32 init");
-  tf_init();
+  if (tf_init() != 0) {
+    panic("fat32 init");
+  }
 }
 
 int Fat32FileSystem::open(const char *filePath, uint64_t flags, struct file *fp) {
@@ -1251,7 +1253,7 @@ figures out formatted name, does comparison, and returns 0:failure, 1:match
 int tf_compare_filename_segment(FatFileEntry *entry, char *name) {  //, char last) {
   int i, j;
   char reformatted_file[16];
-  memset(reformatted_file,0,16);
+  memset(reformatted_file, 0, 16);
   char *entryname = entry->msdos.filename;
   tf_printf("\r\n        [DEBUG-tf_compare_filename_segment] -- '%s'", name);
   if (entry->msdos.attributes != TF_ATTR_LONG_NAME) {
@@ -1272,7 +1274,7 @@ int tf_compare_filename_segment(FatFileEntry *entry, char *name) {  //, char las
         reformatted_file[j++] = entryname[i];
       }
     }
-    if(!hasAlaph) j--;
+    if (!hasAlaph) j--;
   } else {
     tf_printf(" LFN Segment: ");
     j = 0;

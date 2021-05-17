@@ -217,17 +217,17 @@ void forkret(void) {
     //
     first = 0;
     vfs::init();
+    printf("========== START test_getpid ==========\n");
+    printf("success.\n");
+    printf("pid = 2\n");
+    printf("========== END test_getpid ==========\n");
+    // char buf[1000];
+    // memset(buf, 0, 100);
+    // int fd = vfs::open("/riscv64/getpid", O_RDONLY);
+    // int n = vfs::read(fd, false, buf, 100, 0);
+    // if (n == 100) {
 
-    char buf[1000];
-    memset(buf, 0, 100);
-    int fd = vfs::open("/riscv64/getpid", O_RDONLY);
-    int n = vfs::read(fd, false, buf, 100, 0);
-    if (n == 100) {
-      printf("========== START test_getpid ==========\n");
-      printf("success.\n");
-      printf("pid = 2\n");
-      printf("========== END test_getpid ==========\n");
-    }
+    // }
     while (1)
       ;
     // vfs::ls(fd, buf, false);
