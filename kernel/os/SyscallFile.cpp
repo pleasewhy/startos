@@ -21,7 +21,10 @@ uint64_t sys_getcwd(void) {
   if (strlen(cwd) > n) {
     return -1;
   }
-  return either_copyout(true, userBuf, reinterpret_cast<void *>(cwd), strlen(cwd));
+  if (either_copyout(true, userBuf, reinterpret_cast<void *>(cwd), strlen(cwd)) < 0) {
+    return 0;
+  }
+  return userBuf;
 }
 
 uint64_t sys_open(void) {

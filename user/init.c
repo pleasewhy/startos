@@ -75,6 +75,50 @@ void test_getpid() {
   }
 }
 
+void test_getppid() {
+  const char *argc = "/riscv64/getppid";
+  char *argv[] = {"getppid", 0};
+  int pid = fork();
+  if (pid == 0) {
+    execve(argc, argv, NULL);
+  } else {
+    wait(0);
+  }
+}
+
+void test_getcwd() {
+  const char *argc = "/riscv64/getcwd";
+  char *argv[] = {"getcwd", 0};
+  int pid = fork();
+  if (pid == 0) {
+    execve(argc, argv, NULL);
+  } else {
+    wait(0);
+  }
+}
+
+void test_fork() {
+  const char *argc = "/riscv64/fork";
+  char *argv[] = {"fork", 0};
+  int pid = fork();
+  if (pid == 0) {
+    execve(argc, argv, NULL);
+  } else {
+    wait(0);
+  }
+}
+
+void test_exit() {
+  const char *argc = "/riscv64/exit";
+  char *argv[] = {"exit", 0};
+  int pid = fork();
+  if (pid == 0) {
+    execve(argc, argv, NULL);
+  } else {
+    wait(0);
+  }
+}
+
 // void test
 
 void main() {
@@ -82,6 +126,10 @@ void main() {
   dup(0);
   dup(0);
   test_getpid();
+  test_getppid();
+  test_getcwd();
+  test_fork();
+  test_exit();
   while (1) {
   };
 }

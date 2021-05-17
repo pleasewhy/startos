@@ -113,6 +113,7 @@ void syscall_init() {
   syscalls[SYS_getpid] = sys_getpid;
   syscalls[SYS_getppid] = sys_getppid;
   syscalls[SYS_fork] = sys_fork;
+  syscalls[SYS_clone] = sys_fork;
   syscalls[SYS_exit] = sys_exit;
   syscalls[SYS_wait] = sys_wait;
   syscalls[SYS_wait4] = sys_wait4;

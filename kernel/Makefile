@@ -35,9 +35,9 @@ FLAGS += -DQEMU
 link = qemu.ld
 endif
 
-ifeq ($(submit), true)
-FLAGS += -DSUBMIT
-endif
+# ifeq ($(submit), true)
+# FLAGS += -DSUBMIT
+# endif
 
 LDFLAGS = -z max-page-size=4096
 
