@@ -9,7 +9,7 @@ user/_*
 user/init
 user/submit.txt
 .vscode/*
-target/*
+# target/*
 *.img
 *.bin
 *.sym
