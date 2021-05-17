@@ -19,23 +19,18 @@ else
 RUSTSBI = ./rustsbi/sbi-qemu
 endif
 
-
-
-RUSTSBI:
-ifeq ($(platform), K210)
-	@cd ./rustsbi/rustsbi-k210 && \
-	cargo build && cp ./target/riscv64gc-unknown-none-elf/debug/rustsbi-k210 ../sbi-k210
-	@$(OBJDUMP) -S rustsbi/sbi-k210 > $T/rustsbi-k210.asm
-	$(OBJDUMP) -t rustsbi/sbi-k210 | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $T/k210-sbi.sym
-else
-	@cd ./rustsbi/rustsbi-qemu && \
-	cargo build && cp ./target/riscv64gc-unknown-none-elf/debug/rustsbi-qemu ../sbi-qemu
-	@$(OBJDUMP) -S rustsbi/sbi-qemu > $T/rustsbi-qemu.asm
-	$(OBJDUMP) -t rustsbi/sbi-qemu | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $T/qemu-sbi.sym
-endif
-
-
-
+# RUSTSBI:
+# ifeq ($(platform), K210)
+# 	@cd ./rustsbi/rustsbi-k210 && \
+# 	cargo build && cp ./target/riscv64gc-unknown-none-elf/debug/rustsbi-k210 ../sbi-k210
+# 	@$(OBJDUMP) -S rustsbi/sbi-k210 > $T/rustsbi-k210.asm
+# 	$(OBJDUMP) -t rustsbi/sbi-k210 | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $T/k210-sbi.sym
+# else
+# 	@cd ./rustsbi/rustsbi-qemu && \
+# 	cargo build && cp ./target/riscv64gc-unknown-none-elf/debug/rustsbi-qemu ../sbi-qemu
+# 	@$(OBJDUMP) -S rustsbi/sbi-qemu > $T/rustsbi-qemu.asm
+# 	$(OBJDUMP) -t rustsbi/sbi-qemu | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $T/qemu-sbi.sym
+# endif
 
 QEMUOPTS = -machine virt -bios none -kernel $T/kernel -m 8M -smp $(CPUS) -nographic
 QEMUOPTS += -bios $(RUSTSBI)
