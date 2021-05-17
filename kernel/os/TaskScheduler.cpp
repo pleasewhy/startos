@@ -217,10 +217,6 @@ void forkret(void) {
     //
     first = 0;
     vfs::init();
-    printf("========== START test_getpid ==========\n");
-    printf("success.\n");
-    printf("pid = 2\n");
-    printf("========== END test_getpid ==========\n");
     // char buf[1000];
     // memset(buf, 0, 100);
     // int fd = vfs::open("/riscv64/getpid", O_RDONLY);
@@ -228,8 +224,8 @@ void forkret(void) {
     // if (n == 100) {
 
     // }
-    while (1)
-      ;
+    // while (1)
+    //   ;
     // vfs::ls(fd, buf, false);
     // struct dirent *dt = (struct dirent *)buf;
 
