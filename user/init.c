@@ -65,7 +65,7 @@
 // }
 
 void test_getpid() {
-  const char *argc = "/getpid";
+  const char *argc = "/riscv64/getpid";
   char *argv[] = {"getpid", 0};
   int pid = fork();
   if (pid == 0) {

@@ -3,6 +3,8 @@
 #include "common/printk.hpp"
 #include "common/sbi.h"
 #include "device/Console.hpp"
+#include "driver/dmac.hpp"
+#include "driver/fpioa.hpp"
 #include "fs/disk/Disk.hpp"
 #include "fs/inodefs/BufferLayer.hpp"
 #include "memlayout.hpp"
@@ -16,8 +18,6 @@
 #include "os/Timer.hpp"
 #include "os/trap.hpp"
 #include "types.hpp"
-#include "driver/fpioa.hpp"
-#include "driver/dmac.hpp"
 
 Console console;
 Cpu cpus[2];
@@ -59,10 +59,10 @@ extern "C" void main(unsigned long hartid, unsigned long dtb_pa) {
     plic.init();     // 初始化plic
     plic.initHart();
 
-    #ifdef K210
+#ifdef K210
     fpioa_pin_init();
     dmac_init();
-    #endif 
+#endif
     // 文件系统相关
     disk_init();
     bufferLayer.init();
@@ -73,7 +73,7 @@ extern "C" void main(unsigned long hartid, unsigned long dtb_pa) {
       unsigned long mask = 1 << i;
       sbi_send_ipi(&mask);
     }
-
+    printf("hart %d finish init\n", r_tp());
     __sync_synchronize();
     started = 1;
   } else {
@@ -85,10 +85,10 @@ extern "C" void main(unsigned long hartid, unsigned long dtb_pa) {
     initHartVm();     //  启用分页
     trapinithart();   // 初始化trap
     plic.initHart();  // ask PLIC for device interrupts
-    // printf("hart %d finish init\n", r_tp());
-    while(1){};
+    printf("hart %d finish init\n", r_tp());
+    while (1) {
+    };
   }
-  printf("hart %d finish init\n", r_tp());
-  
+
   scheduler();
 }
