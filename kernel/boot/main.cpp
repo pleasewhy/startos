@@ -65,10 +65,6 @@ extern "C" void main(unsigned long hartid, unsigned long dtb_pa) {
 #endif
     // 文件系统相关
     disk_init();
-    printf("========== START test_getpid ==========\n");
-    printf("success.\n");
-    printf("pid = 2\n");
-    printf("========== END test_getpid ==========\n");
     bufferLayer.init();
 
     initTaskTable();
