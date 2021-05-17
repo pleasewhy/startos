@@ -39,6 +39,7 @@ QEMUOPTS += -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0
 
 
 GDBPORT = 26000
+
 $T/kernel:
 	cd kernel;$(MAKE) kernel
 
@@ -58,7 +59,7 @@ k210 = $T/k210.bin
 
 
 fs.img:
-	# cd user;$(MAKE) fs.img
+# cd user;$(MAKE) fs.img
 
 oscmp:
 	@if [ ! -f "fs.img" ]; then \
@@ -83,7 +84,9 @@ sd: fs.img
 qemu: $T/kernel fs.img
 	$(QEMU) $(QEMUOPTS)
 
-all: $T/kernel
+all: 
+# $T/kernel
+	cd kernel;$(MAKE) kernel
 	$(OBJCOPY) $T/kernel --strip-all -O binary $(kernelImg)
 	$(OBJCOPY) $(RUSTSBI) --strip-all -O binary $(k210)
 	dd if=$(kernelImg) of=$(k210) bs=128k seek=1
