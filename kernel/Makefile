@@ -118,10 +118,20 @@ CRTEND_OBJ:=$(shell $(CXX) $(CFLAGS) -print-file-name=crtend.o)
 CRTN_OBJ=boot/crtn.o
 OBJ_LINK_LIST:= $(OBJS) $(CRTI_OBJ) $(CRTBEGIN_OBJ) $(CRTEND_OBJ) $(CRTN_OBJ)
 
+kernelImg = $T/kernel.bin
+k210 = $T/k210.bin
+RUSTSBI = ../rustsbi/sbi-k210
+
 kernel: $(link) $(OBJ_LINK_LIST)
 	$(LD) $(LDFLAGS) -T $(link) -o $T/kernel $(OBJ_LINK_LIST) -nostdlib
 	$(OBJDUMP) -S $T/kernel > $T/kernel.asm
 	@$(OBJDUMP) -t $T/kernel | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $T/kernel.sym
+# just for oscomp competition
+	$(OBJCOPY) $T/kernel --strip-all -O binary $(kernelImg)
+	$(OBJCOPY) $(RUSTSBI) --strip-all -O binary $(k210)
+	dd if=$(kernelImg) of=$(k210) bs=128k seek=1
+	cp $(k210) ../k210.bin
+
 
 clean: 
 	rm -f *.tex *.dvi *.idx *.aux *.log *.ind *.ilg *.d \

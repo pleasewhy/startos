@@ -85,12 +85,11 @@ qemu: $T/kernel fs.img
 	$(QEMU) $(QEMUOPTS)
 
 all: 
-# $T/kernel
 	cd kernel;$(MAKE) kernel
-	$(OBJCOPY) $T/kernel --strip-all -O binary $(kernelImg)
-	$(OBJCOPY) $(RUSTSBI) --strip-all -O binary $(k210)
-	dd if=$(kernelImg) of=$(k210) bs=128k seek=1
-	cp $(k210) k210.bin
+	# $(OBJCOPY) $T/kernel --strip-all -O binary $(kernelImg)
+	# $(OBJCOPY) $(RUSTSBI) --strip-all -O binary $(k210)
+	# dd if=$(kernelImg) of=$(k210) bs=128k seek=1
+	# cp $(k210) k210.bin
 
 k210: $T/kernel
 	@$(OBJCOPY) $T/kernel --strip-all -O binary $(kernelImg)
@@ -104,7 +103,7 @@ k210: $T/kernel
 clean:
 	cd kernel;$(MAKE) clean
 	cd user;$(MAKE) clean
-	# rm -f $T/* fs.img
+	rm -f $T/*.bin $T/*.asm $T/*.sym $T/kernel k210.bin
 
 cleansbi:
 	cd ./rustsbi/rustsbi-k210; cargo clean
