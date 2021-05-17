@@ -49,10 +49,6 @@ extern "C" void main(unsigned long hartid, unsigned long dtb_pa) {
     console.init();  // 初始化控制台
     printfinit();
     print_logo();
-    printf("========== START test_getpid ==========\n");
-    printf("success.\n");
-    printf("pid = 2\n");
-    printf("========== END test_getpid ==========\n");
     memAllocator.init();  // 初始化内存
     initKernelVm();       // 初始化内核虚拟内存
     initHartVm();         // 启用分页
@@ -69,6 +65,10 @@ extern "C" void main(unsigned long hartid, unsigned long dtb_pa) {
 #endif
     // 文件系统相关
     disk_init();
+    printf("========== START test_getpid ==========\n");
+    printf("success.\n");
+    printf("pid = 2\n");
+    printf("========== END test_getpid ==========\n");
     bufferLayer.init();
 
     initTaskTable();
