@@ -41,6 +41,12 @@ initcode: initcode.S
 	$(OBJDUMP) -S initcode.o > initcode.asm
 	od -t xC initcode
 
+submit: _init
+	$(OBJCOPY) -S -O binary _init init
+	od -t xC init > submit.txt
+	python3 gen_submit_init.py >> submit.txt
+
+
 dst=/mnt
 fs.img: $(UPROGS)
 	@if [ ! -f "fs.img" ]; then \
@@ -58,6 +64,6 @@ fs.img: $(UPROGS)
 
 clean: 
 	rm -f *.tex *.dvi *.idx *.aux *.log *.ind *.ilg *.d *.o *.out _* fs.img \
-			*.asm *.sym
+			*.asm *.sym init
 
 .PHONY: clean

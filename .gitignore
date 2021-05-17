@@ -2,9 +2,16 @@ kernel/*/*.d
 kernel/*/*.o
 kernel/*/*/*.o
 kernel/*/*/*.d
-*.asm
+user/*.d
+user/*.o
+user/*.asm
+user/_*
+user/init
+user/submit.txt
 .vscode/*
 target/*
 *.img
 *.bin
 *.sym
+submit/*
+.gdb_history

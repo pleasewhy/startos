@@ -35,6 +35,10 @@ FLAGS += -DQEMU
 link = qemu.ld
 endif
 
+ifeq ($(submit), true)
+FLAGS += -DSUBMIT
+endif
+
 LDFLAGS = -z max-page-size=4096
 
 CXXFLAGS = -std=c++11 

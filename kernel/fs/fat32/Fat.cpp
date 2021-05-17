@@ -39,9 +39,10 @@ int Fat32FileSystem::open(const char *filePath, uint64_t flags, struct file *fp)
 int Fat32FileSystem::mkdir(const char *filepath) { return tf_mkdir(filepath, 0); }
 
 size_t Fat32FileSystem::read(const char *path, bool user, char *buf, int offset, int n) {
+  LOG_DEBUG("read filepath=%s", path);
   TFFile *fp = tf_fopen(path, "r");
+  if (fp == NULL) return -1;
   tf_fseek(fp, 0, offset);
-  LOG_DEBUG("read");
   int x = tf_fread(buf, n, fp, user);
   tf_fclose(fp);
   return x;
@@ -85,7 +86,6 @@ int copysfn(char *sfn, char *dst, bool user) {
   for (i = 0; i < 8 && sfn[i] != 0x20; i++) {
     n++;
   }
-  LOG_DEBUG("name=%d", n);
   either_copyout(user, reinterpret_cast<uint64_t>(dst), sfn, i);
   for (i = 8; i < 11 && sfn[i] != 0x20; i++) {
   }
@@ -95,8 +95,7 @@ int copysfn(char *sfn, char *dst, bool user) {
   either_copyout(user, reinterpret_cast<uint64_t>(dst + n), (void *)".", 1);
   n += 1;
   either_copyout(user, reinterpret_cast<uint64_t>(dst + n), sfn + 8, i - 8);
-  LOG_DEBUG("cal sfn=%s", dst)
-  return n + i-8;
+  return n + i - 8;
 }
 
 int Fat32FileSystem::ls(const char *filepath, char *contents, bool user) {
@@ -110,7 +109,7 @@ int Fat32FileSystem::ls(const char *filepath, char *contents, bool user) {
     return -1;
   }
   while (tf_fread((char *)&entry, sizeof(FatFileEntry), fp) == sizeof(FatFileEntry)) {
-    if (entry.msdos.filename[0] == 0x00) { // 结束
+    if (entry.msdos.filename[0] == 0x00) {  // 结束
       return cnt;
     }
     // 短文件目录项
@@ -126,6 +125,7 @@ int Fat32FileSystem::ls(const char *filepath, char *contents, bool user) {
       dt.d_reclen = DIENT_BASE_LEN + n;  // n为短文件目录项的文件名长度
       dt.d_off = reinterpret_cast<uint64_t>(contents) + dt.d_reclen;
       either_copyout(user, (uint64_t)contents, (void *)&dt, DIENT_BASE_LEN);
+      LOG_DEBUG("sfn=%s", dirent->d_name);
       contents += dt.d_reclen;
       cnt++;
     } else {  // 长文件名目录项
@@ -230,7 +230,7 @@ int Fat32FileSystem::ls(const char *filepath, char *contents, bool user) {
 extern BufferLayer bufferLayer;
 // USERLAND
 int read_sector(char *data, uint32_t sector) {
-  LOG_TRACE("begin read sector=%d", sector);
+  // LOG_TRACE("begin read sector=%d", sector);
 #ifdef K210
   sdcard_read_sector(reinterpret_cast<uint8_t *>(data), sector);
 #else
@@ -238,12 +238,12 @@ int read_sector(char *data, uint32_t sector) {
   memmove(data, b->data, BSIZE);
   bufferLayer.freeBuffer(b);
 #endif
-  LOG_TRACE("end read sector=%d", sector);
+  // LOG_TRACE("end read sector=%d", sector);
   return 0;
 }
 
 int write_sector(char *data, uint32_t sector) {
-  LOG_TRACE("begin write sector=%d", sector);
+  // LOG_TRACE("begin write sector=%d", sector);
 #ifdef K210
   sdcard_write_sector(reinterpret_cast<uint8_t *>(data), sector);
 #else
@@ -252,7 +252,7 @@ int write_sector(char *data, uint32_t sector) {
   bufferLayer.write(b);
   bufferLayer.freeBuffer(b);
 #endif
-  LOG_TRACE("end write sector=%d", sector);
+  // LOG_TRACE("end write sector=%d", sector);
   return 0;
 }
 
@@ -404,7 +404,7 @@ int tf_init() {
   tf_fclose(fp);
   tf_info.rootDirectorySize = temp;
 
-  printf("\r\n[DEBUG-tf_init] Size of root directory: %d bytes", tf_info.rootDirectorySize);
+  // printf("\r\n[DEBUG-tf_init] Size of root directory: %d bytes", tf_info.rootDirectorySize);
 #ifdef TF_DEBUG
   tf_fetch(0);
   printBPB((BPB_struct *)tf_info.buffer);
@@ -491,14 +491,18 @@ uint32_t tf_first_sector(uint32_t cluster) {
 char *tf_walk(char *filename, TFFile *fp) {
   FatFileEntry entry;
   tf_printf("\r\n  [DEBUG-tf_walk] Walking path '%s'", filename);
-
+  LOG_DEBUG("walk0");
   // We're out of path. this walk is COMPLETE
   if (*filename == '/') {
     filename++;
-    if (*filename == '\x00') return NULL;
+    if (*filename == '\x00') {
+      LOG_DEBUG("error");
+      return NULL;
+    }
   }
   // There's some path left
   if (*filename != '\x00') {
+    LOG_DEBUG("walk1");
     // fp is the handle for the current directory
     // filename is the name of the current file in that directory
     // Go fetch the FatFileEntry that corresponds to the current file
@@ -1043,6 +1047,7 @@ TFFile *tf_fopen(const char *filename, const char *mode) {
     if (strchr(mode, '+') || strchr(mode, 'w') || strchr(mode, 'a')) {
       tf_create(filename);
     }
+    LOG_DEBUG("fopen failed");
     return tf_fnopen(filename, mode, strlen(filename));
   }
   return fp;
@@ -1075,11 +1080,14 @@ TFFile *tf_fnopen(const char *filename, const char *mode, int n) {
   // fp->size=tf_info.rootDirectorySize;
   fp->mode = TF_MODE_READ | TF_MODE_WRITE | TF_MODE_OVERWRITE;
 
+  // LOG_DEBUG("temp filename=%s",temp_filename);
+
   while (temp_filename != NULL) {
     temp_filename = tf_walk(temp_filename, fp);
+    // LOG_DEBUG("temp filename=%s", temp_filename);
     if (fp->flags == 0xff) {
       tf_release_handle(fp);
-      dbg_printf("\r\ntf_fnopen: cannot open file: fp->flags == 0xff ");
+      LOG_DEBUG("tf_fnopen: cannot open file: fp->flags == 0xff ");
       return NULL;
     }
   }
@@ -1215,7 +1223,7 @@ int tf_unsafe_fseek(TFFile *fp, int32_t base, long offset) {
 int tf_find_file(TFFile *current_directory, char *name) {
   int rc;
   tf_fseek(current_directory, 0, 0);
-
+  // LOG_DEBUG("dir=%s name=%s", current_directory->filename, name);
   tf_printf("\r\n    [DEBUG-tf_find_file] Searching for filename: '%s' in directory '%s' ", name,
             current_directory->filename);
 
@@ -1243,6 +1251,7 @@ figures out formatted name, does comparison, and returns 0:failure, 1:match
 int tf_compare_filename_segment(FatFileEntry *entry, char *name) {  //, char last) {
   int i, j;
   char reformatted_file[16];
+  memset(reformatted_file,0,16);
   char *entryname = entry->msdos.filename;
   tf_printf("\r\n        [DEBUG-tf_compare_filename_segment] -- '%s'", name);
   if (entry->msdos.attributes != TF_ATTR_LONG_NAME) {
@@ -1256,11 +1265,14 @@ int tf_compare_filename_segment(FatFileEntry *entry, char *name) {  //, char las
     }
     reformatted_file[j++] = '.';
     // Extension
+    bool hasAlaph = false;
     for (i = 8; i < 11; i++) {
       if (entryname[i] != ' ') {
+        hasAlaph = true;
         reformatted_file[j++] = entryname[i];
       }
     }
+    if(!hasAlaph) j--;
   } else {
     tf_printf(" LFN Segment: ");
     j = 0;
@@ -1287,6 +1299,7 @@ int tf_compare_filename_segment(FatFileEntry *entry, char *name) {  //, char las
   // avoid using a real retval?
   /// PROBLEM: THIS FUNCTION assumes that if the length of the "name" is tested by the caller.
   ///   if the LFN pieces all match, but the "name" is longer... this will never fail.
+  // LOG_DEBUG("name=%s entry=%s i=%d", name, reformatted_file,i);
   if (i > 13) {
     if (strncasecmp(name, reformatted_file, 13)) {
       tf_printf("  - 0 (doesn't match)\r\n");
@@ -1297,6 +1310,7 @@ int tf_compare_filename_segment(FatFileEntry *entry, char *name) {  //, char las
     }
   } else {
     if (reformatted_file[i] != 0 || strncasecmp(name, reformatted_file, i)) {
+      // LOG_DEBUG("does't match %d", reformatted_file[i]);
       i = 0;
       tf_printf("  - 0 (doesn't match)\r\n");
     } else {

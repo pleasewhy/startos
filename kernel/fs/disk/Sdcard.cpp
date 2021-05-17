@@ -1,3 +1,4 @@
+
 #include "common/printk.hpp"
 #include "common/string.hpp"
 #include "driver/gpiohs.hpp"
@@ -23,25 +24,43 @@ static void sd_lowlevel_init(uint8_t spi_index) {
   // spi_set_clk_rate(SPI_DEVICE_0, 200000);     /*set clk rate*/
 }
 
+// #define SPI_CHIP_SELECT_0
 static void sd_write_data(uint8_t const *data_buff, uint32_t length) {
   spi_init(SPI_DEVICE_0, SPI_WORK_MODE_0, SPI_FF_STANDARD, 8, 0);
+#ifdef SUBMIT
+  spi_send_data_standard(SPI_DEVICE_0, SPI_CHIP_SELECT_0, NULL, 0, data_buff, length);
+#else
   spi_send_data_standard(SPI_DEVICE_0, SPI_CHIP_SELECT_3, NULL, 0, data_buff, length);
+#endif
 }
 
 static void sd_read_data(uint8_t *data_buff, uint32_t length) {
   spi_init(SPI_DEVICE_0, SPI_WORK_MODE_0, SPI_FF_STANDARD, 8, 0);
+#ifdef SUBMIT
+  spi_receive_data_standard(SPI_DEVICE_0, SPI_CHIP_SELECT_0, NULL, 0, data_buff, length);
+#else
   spi_receive_data_standard(SPI_DEVICE_0, SPI_CHIP_SELECT_3, NULL, 0, data_buff, length);
+#endif
 }
 
 static void sd_write_data_dma(uint8_t const *data_buff, uint32_t length) {
   spi_init(SPI_DEVICE_0, SPI_WORK_MODE_0, SPI_FF_STANDARD, 8, 0);
+#ifdef SUBMIT
+  spi_send_data_standard_dma(DMAC_CHANNEL0, SPI_DEVICE_0, SPI_CHIP_SELECT_0, NULL, 0, data_buff, length);
+#else
   spi_send_data_standard_dma(DMAC_CHANNEL0, SPI_DEVICE_0, SPI_CHIP_SELECT_3, NULL, 0, data_buff, length);
+#endif
 }
 
 static void sd_read_data_dma(uint8_t *data_buff, uint32_t length) {
   spi_init(SPI_DEVICE_0, SPI_WORK_MODE_0, SPI_FF_STANDARD, 8, 0);
+#ifdef SUBMIT
+  spi_receive_data_standard_dma((dmac_channel_number_t)-1, DMAC_CHANNEL0, SPI_DEVICE_0, SPI_CHIP_SELECT_0, NULL, 0,
+                                data_buff, length);
+#else
   spi_receive_data_standard_dma((dmac_channel_number_t)-1, DMAC_CHANNEL0, SPI_DEVICE_0, SPI_CHIP_SELECT_3, NULL, 0,
                                 data_buff, length);
+#endif
 }
 
 /*
@@ -318,7 +337,6 @@ void sdcard_read_sector(uint8_t *buf, int sectorno) {
   uint8_t result;
   uint32_t address;
   uint8_t dummy_crc[2];
-  printf("read sector=%d\n",sectorno);
   memset(buf, 0, 512);
 #ifdef DEBUG
   printf("sdcard_read_sector()\n");
@@ -364,7 +382,6 @@ void sdcard_write_sector(uint8_t *buf, int sectorno) {
   uint32_t address;
   static uint8_t const START_BLOCK_TOKEN = 0xfe;
   uint8_t dummy_crc[2] = {0xff, 0xff};
-  printf("write sector=%d\n",sectorno);
 #ifdef DEBUG
   printf("sdcard_write_sector()\n");
 #endif
@@ -465,3 +482,4 @@ void test_sdcard(void) {
   while (1)
     ;
 }
+

@@ -63,7 +63,17 @@ k210 = $T/k210.bin
 
 
 fs.img:
-	cd user;$(MAKE) fs.img
+	# cd user;$(MAKE) fs.img
+
+oscmp:
+	@if [ ! -f "fs.img" ]; then \
+	echo "making fs image..."; \
+	dd if=/dev/zero of=fs.img bs=512k count=512; \
+	mkfs.vfat -F 32 fs.img; fi
+	@sudo mount fs.img /mnt
+	sudo cp -r submit/riscv64 /mnt
+	@sudo umount /mnt
+
 
 sd = /dev/sdb
 
@@ -96,7 +106,7 @@ k210: $T/kernel
 clean:
 	cd kernel;$(MAKE) clean
 	cd user;$(MAKE) clean
-	rm -f $T/* fs.img
+	# rm -f $T/* fs.img
 
 cleansbi:
 	cd ./rustsbi/rustsbi-k210; cargo clean

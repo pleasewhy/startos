@@ -32,11 +32,12 @@ int exec(char *path, char **argv) {
   // lock_inode(ip);
 
   // 检查ELF头
-
+    LOG_DEBUG("exec0");
   if (vfs::direct_read(path, reinterpret_cast<char *>(&elf), sizeof(elf), 0) != sizeof(elf)) {
-    LOG_DEBUG("aaa");
+    LOG_DEBUG("exec read error");
     goto bad;
   }
+  LOG_DEBUG("exec1");
   // if (read_inode(ip, 0, (uint64_t) &elf, 0, sizeof(elf)) != sizeof(elf))
   //     goto bad;
   if (elf.magic != ELF_MAGIC) goto bad;
@@ -59,7 +60,7 @@ int exec(char *path, char **argv) {
   }
   // unlock_and_putback(ip);
   // ip = 0;
-
+  LOG_DEBUG("exec2");
   // 设置用户空间栈
   // 用户空间栈大小为一页(4096字节), 其被放置在程序空间最后一页
   // 的下一页, 注意，栈是从上向下增长的。
@@ -104,6 +105,7 @@ int exec(char *path, char **argv) {
   task->pagetable = pagetable;
   task->sz = sz;
   task->trapframe->epc = elf.entry;
+  LOG_DEBUG("elf.entry=%p",elf.entry);
   task->trapframe->sp = sp;
   return argc;
 

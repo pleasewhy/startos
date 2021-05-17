@@ -18,10 +18,14 @@ uint64_t sys_exit(void) {
   return 0;  // not reached
 }
 
-uint64_t sys_fork(void) { return fork(); }
+uint64_t sys_fork(void) { 
+  LOG_DEBUG("fork");
+  return fork(); 
+}
 
 uint64_t sys_exec(void) {
   char path[MAXPATH], *argv[MAXARG];
+  LOG_DEBUG("exec");
   uint64_t uargv, uarg = 0;
   int ret = 0;
   if (argstr(0, path, MAXPATH) < 0 || argaddr(1, &uargv) < 0) return -1;
@@ -38,10 +42,10 @@ uint64_t sys_exec(void) {
     if (argv[i] == 0) goto bad;
     if (fetchstr(uarg, argv[i], PGSIZE) < 0) goto bad;
   }
-  LOG_TRACE("path=%s", path);
+  LOG_DEBUG("path=%s", path);
   ret = exec(path, argv);
   for (int i = 0; i <= MAXARG && argv[i] != 0; i++) memAllocator.free(argv[i]);
-  LOG_TRACE("exec over");
+  LOG_DEBUG("exec over");
   return ret;
 
 bad:
