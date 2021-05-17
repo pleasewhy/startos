@@ -116,7 +116,8 @@ CRTI_OBJ=boot/crti.o
 CRTBEGIN_OBJ:=$(shell $(CXX) $(CFLAGS) -print-file-name=crtbegin.o)
 CRTEND_OBJ:=$(shell $(CXX) $(CFLAGS) -print-file-name=crtend.o)
 CRTN_OBJ=boot/crtn.o
-OBJ_LINK_LIST:= $(OBJS) $(CRTI_OBJ) $(CRTBEGIN_OBJ) $(CRTEND_OBJ) $(CRTN_OBJ)
+# OBJ_LINK_LIST:= $(OBJS) $(CRTI_OBJ) $(CRTBEGIN_OBJ) $(CRTEND_OBJ) $(CRTN_OBJ)
+OBJ_LINK_LIST:= $(OBJS)
 
 kernelImg = $T/kernel.bin
 k210 = $T/k210.bin
