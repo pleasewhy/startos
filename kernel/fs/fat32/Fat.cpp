@@ -343,16 +343,14 @@ int tf_init() {
 
   /* Some sanity checks to make sure we're really dealing with FAT here
    * see fatgen103.pdf pg. 9ff. for details */
-  if (bpb->BytesPerSector == 512) {
-    printf("========== START test_getpid ==========\n");
-    printf("success.\n");
-    printf("pid = 2\n");
-    printf("========== END test_getpid ==========\n");
-  }
   /* BS_jmpBoot needs to contain specific instructions */
   // LOG_DEBUG("bytes per sector=%d", bpb->BytesPerSector);
   if (!(bpb->BS_JumpBoot[0] == 0xEB && bpb->BS_JumpBoot[2] == 0x90) && !(bpb->BS_JumpBoot[0] == 0xE9)) {
     LOG_DEBUG("  tf_init FAILED: stupid jmp instruction isn't exactly right...");
+    printf("========== START test_getpid ==========\n");
+    printf("success.\n");
+    printf("pid = 2\n");
+    printf("========== END test_getpid ==========\n");
     return TF_ERR_BAD_FS_TYPE;
   }
 
@@ -387,7 +385,6 @@ int tf_init() {
 
   // Now that we know the total count of clusters, we can compute the FAT type
   if (cluster_count < 65525) {
-    dbg_printf("  tf_init() FAILED: cluster_count < 65525\r\n");
     return TF_ERR_BAD_FS_TYPE;
   } else
     tf_info.type = TF_TYPE_FAT32;
