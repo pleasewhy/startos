@@ -107,9 +107,10 @@ uint64_t sys_dup(void) {
 
 uint64_t sys_dup3(void) {
   int oldfd, newfd, ansfd;
-  if (argint(0, &oldfd) < 0 || argint(0, &newfd) < 0) {
+  if (argint(0, &oldfd) < 0 || argint(1, &newfd) < 0) {
     return -1;
   }
+  LOG_DEBUG("old fd=%d new fd=%d", oldfd, newfd);
   struct file *fp = getFileByfd(oldfd);
   vfs::dup(fp);
   ansfd = registerFileHandle(fp, newfd);

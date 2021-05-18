@@ -115,6 +115,7 @@ void main() {
   // test("/clone", NULL);
   test("/chdir", NULL);
   test("/execve", NULL);
+  test("/dup2", NULL);
   while (1) {
   };
 }

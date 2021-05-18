@@ -328,7 +328,6 @@ struct file *dup(struct file *fp) {
   fileTableLock.lock();
   if (fp->ref < 1) {
     panic("vfs::dup");
-    panic("vfs::dup");
   }
   fp->ref++;
   fileTableLock.unlock();
