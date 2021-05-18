@@ -77,3 +77,8 @@ uint64_t sys_wait4(void) {
 
 uint64_t sys_getpid() { return myTask()->pid; }
 uint64_t sys_getppid() { return myTask()->parent->pid; }
+
+uint64_t sys_sched_yield(){
+  yield();
+  return 0;
+}

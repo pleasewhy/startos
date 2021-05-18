@@ -86,6 +86,9 @@ void main() {
   char *exit[] = {"exit", 0};
   char *mkdir_[] = {"mkdir_", 0};
   char *dup[] = {"dup", 0};
+  char *write[] = {"write", 0};
+  char *wait[] = {"wait", 0};
+  char *waitpid[] = {"waitpid", 0};
   test("/getpid", getpid);
   test("/getppid", getppid);
   test("/getcwd", getcwd);
@@ -93,6 +96,9 @@ void main() {
   test("/exit", exit);
   test("/mkdir_", mkdir_);
   test("/dup", dup);
+  test("/write", write);
+  test("/wait", wait);
+  test("/waitpid", waitpid);
   while (1) {
   };
 }

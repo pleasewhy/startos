@@ -98,6 +98,7 @@ extern uint64_t sys_chdir(void);
 extern uint64_t sys_close(void);
 extern uint64_t sys_mkdirat(void);
 extern uint64_t sys_openat(void);
+extern uint64_t sys_sched_yield(void);
 
 static uint64_t (*syscalls[400])(void);
 
@@ -122,6 +123,7 @@ void syscall_init() {
   syscalls[SYS_close] = sys_close;
   syscalls[SYS_mkdirat] = sys_mkdirat;
   syscalls[SYS_openat] = sys_openat;
+  syscalls[SYS_sched_yield] = sys_sched_yield;
 }
 
 void syscall(void) {
