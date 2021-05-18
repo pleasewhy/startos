@@ -19,7 +19,7 @@ void Fat32FileSystem::init() {
 
 int Fat32FileSystem::open(const char *filePath, uint64_t flags, struct file *fp) {
   TFFile *tf;
-  LOG_INFO("flag=%x",flags);
+  // LOG_INFO("flag=%x",flags);
   if (flags & O_CREATE) {
     tf = tf_fopen(filePath, "w");
   } else {
@@ -384,7 +384,7 @@ int tf_init() {
   tf_info.reservedSectors = bpb->ReservedSectorCount;
   tf_info.firstDataSector = bpb->ReservedSectorCount + (bpb->NumFATs * fat_size) + root_dir_sectors;
 
-  LOG_INFO("cluster count=%d", cluster_count);
+  // LOG_INFO("cluster count=%d", cluster_count);
   // Now that we know the total count of clusters, we can compute the FAT type
   // if (cluster_count < 65525) {
   //   return TF_ERR_BAD_FS_TYPE;
