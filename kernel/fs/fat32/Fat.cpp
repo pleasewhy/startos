@@ -335,7 +335,7 @@ int tf_store() {
 int tf_init() {
   BPB_struct *bpb;
   uint32_t fat_size, root_dir_sectors, data_sectors, temp;
-  // uint32_t cluster_count;
+  uint32_t cluster_count;
   TFFile *fp;
   FatFileEntry e;
 
@@ -381,15 +381,16 @@ int tf_init() {
   tf_info.totalSectors = (bpb->TotalSectors16 != 0) ? bpb->TotalSectors16 : bpb->TotalSectors32;
   data_sectors = tf_info.totalSectors - (bpb->ReservedSectorCount + (bpb->NumFATs * fat_size) + root_dir_sectors);
   tf_info.sectorsPerCluster = bpb->SectorsPerCluster;
-  // cluster_count = data_sectors / tf_info.sectorsPerCluster;
+  cluster_count = data_sectors / tf_info.sectorsPerCluster;
   tf_info.reservedSectors = bpb->ReservedSectorCount;
   tf_info.firstDataSector = bpb->ReservedSectorCount + (bpb->NumFATs * fat_size) + root_dir_sectors;
 
   // LOG_INFO("cluster count=%d", cluster_count);
   // Now that we know the total count of clusters, we can compute the FAT type
-  // if (cluster_count < 65525) {
-  //   return TF_ERR_BAD_FS_TYPE;
-  // } else
+  if (cluster_count < 65525) {
+    tf_info.type = TF_TYPE_FAT32;
+    // return TF_ERR_BAD_FS_TYPE;
+  } else
   tf_info.type = TF_TYPE_FAT32;
 
 #ifdef TF_DEBUG
