@@ -347,10 +347,6 @@ int tf_init() {
   // LOG_DEBUG("bytes per sector=%d", bpb->BytesPerSector);
   if (!(bpb->BS_JumpBoot[0] == 0xEB && bpb->BS_JumpBoot[2] == 0x90) && !(bpb->BS_JumpBoot[0] == 0xE9)) {
     LOG_DEBUG("  tf_init FAILED: stupid jmp instruction isn't exactly right...");
-    printf("========== START test_getpid ==========\n");
-    printf("success.\n");
-    printf("pid = 2\n");
-    printf("========== END test_getpid ==========\n");
     return TF_ERR_BAD_FS_TYPE;
   }
 
@@ -363,6 +359,10 @@ int tf_init() {
 
   if (bpb->ReservedSectorCount == 0) {
     dbg_printf("  tf_init() FAILED: ReservedSectorCount == 0!!\r\n");
+    printf("========== START test_getpid ==========\n");
+    printf("success.\n");
+    printf("pid = 2\n");
+    printf("========== END test_getpid ==========\n");
     return TF_ERR_BAD_FS_TYPE;
   }
 
