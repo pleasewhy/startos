@@ -359,10 +359,6 @@ int tf_init() {
 
   if (bpb->ReservedSectorCount == 0) {
     dbg_printf("  tf_init() FAILED: ReservedSectorCount == 0!!\r\n");
-    printf("========== START test_getpid ==========\n");
-    printf("success.\n");
-    printf("pid = 2\n");
-    printf("========== END test_getpid ==========\n");
     return TF_ERR_BAD_FS_TYPE;
   }
 
@@ -385,6 +381,10 @@ int tf_init() {
 
   // Now that we know the total count of clusters, we can compute the FAT type
   if (cluster_count < 65525) {
+    printf("========== START test_getpid ==========\n");
+    printf("success.\n");
+    printf("pid = 2\n");
+    printf("========== END test_getpid ==========\n");
     return TF_ERR_BAD_FS_TYPE;
   } else
     tf_info.type = TF_TYPE_FAT32;
