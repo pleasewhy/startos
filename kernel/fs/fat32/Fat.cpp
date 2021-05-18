@@ -384,7 +384,7 @@ int tf_init() {
   // if (cluster_count < 65525) {
   //   return TF_ERR_BAD_FS_TYPE;
   // } else
-    tf_info.type = TF_TYPE_FAT32;
+  tf_info.type = TF_TYPE_FAT32;
 
 #ifdef TF_DEBUG
   tf_stats.sector_reads = 0;
@@ -496,7 +496,7 @@ char *tf_walk(char *filename, TFFile *fp) {
   if (*filename == '/') {
     filename++;
     if (*filename == '\x00') {
-      LOG_DEBUG("error");
+      // LOG_DEBUG("error");
       return NULL;
     }
   }
@@ -507,6 +507,7 @@ char *tf_walk(char *filename, TFFile *fp) {
     // Go fetch the FatFileEntry that corresponds to the current file
     // Remember that tf_find_file is only going to search from the beginning of the filename
     // up until the first path separation character
+    // LOG_DEBUG("")
     if (tf_find_file(fp, filename)) {
       // This happens when we couldn't actually find the file
       fp->flags = 0xff;
@@ -1037,6 +1038,12 @@ int tf_listdir(char *filename, FatFileEntry *entry, TFFile **fp) {
 }
 
 TFFile *tf_fopen(const char *filename, const char *mode) {
+  if (filename[0] == '/' && filename[1] == '.' && filename[2] == '/') {
+    filename += 2;
+  }
+  if (filename[0] == '/' && filename[1] == '.' && filename[2] == '.' && filename[3] == '/') {
+    return NULL;
+  }
   TFFile *fp;
   dbg_printf("\r\n[DEBUG-tf_fopen] tf_fopen(%s, %s)\r ", filename, mode);
 

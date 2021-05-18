@@ -87,8 +87,11 @@ void main() {
   char *mkdir_[] = {"mkdir_", 0};
   char *dup[] = {"dup", 0};
   char *write[] = {"write", 0};
+  char *open[] = {"open", 0};
   char *wait[] = {"wait", 0};
   char *waitpid[] = {"waitpid", 0};
+  char *yield[] = {"yield", 0};
+  char *read[] = {"read", 0};
   test("/getpid", getpid);
   test("/getppid", getppid);
   test("/getcwd", getcwd);
@@ -97,8 +100,11 @@ void main() {
   test("/mkdir_", mkdir_);
   test("/dup", dup);
   test("/write", write);
+  test("/read", read);
+  test("/open", open);
   test("/wait", wait);
   test("/waitpid", waitpid);
+  test("/yield", yield);
   while (1) {
   };
 }
