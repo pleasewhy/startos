@@ -18,18 +18,22 @@ void Fat32FileSystem::init() {
 }
 
 int Fat32FileSystem::open(const char *filePath, uint64_t flags, struct file *fp) {
-  TFFile *tf;
-  // LOG_INFO("flag=%x",flags);
+  TFFile *tf = NULL;
   if (flags & O_CREATE) {
     tf = tf_fopen(filePath, "w");
   } else {
+    tf = tf_fopen(filePath, "r");
+  }
+  // LOG_INFO("tf=%p flags=%x", tf, flags);
+  if (tf == NULL && flags == O_DIRECTORY) {
+    mkdir(filePath);
     tf = tf_fopen(filePath, "r");
   }
   if (tf == NULL) {
     return -1;
   }
   // 若flags包含O_DIRECTORY,且path为文件类型，应该打开失败
-  if(tf->attributes & TF_ATTR_DIRECTORY && flags == O_DIRECTORY){
+  if (flags == O_DIRECTORY && !(tf->attributes & TF_ATTR_DIRECTORY)) {
     return -1;
   }
   fp->size = tf->size;
@@ -391,7 +395,7 @@ int tf_init() {
     tf_info.type = TF_TYPE_FAT32;
     // return TF_ERR_BAD_FS_TYPE;
   } else
-  tf_info.type = TF_TYPE_FAT32;
+    tf_info.type = TF_TYPE_FAT32;
 
 #ifdef TF_DEBUG
   tf_stats.sector_reads = 0;
@@ -895,8 +899,15 @@ returns 1 on failure
 returns 0 on success
 */
 int tf_mkdir(const char *filename, int mkParents) {
+  LOG_DEBUG("tf_mkdir=%s", filename);
   // FIXME: verify that we can't create multiples of the same one.
   // FIXME: figure out how the root directory location is determined.
+  if (filename[0] == '/' && filename[1] == '.' && filename[2] == '/') {
+    filename += 2;
+  }
+  if (filename[0] == '/' && filename[1] == '.' && filename[2] == '.' && filename[3] == '/') {
+    return NULL;
+  }
   char orig_fn[TF_MAX_PATH];
   TFFile *fp;
   FatFileEntry entry, blank;

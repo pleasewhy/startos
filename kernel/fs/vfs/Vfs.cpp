@@ -349,6 +349,7 @@ int chdir(char *filepath) {
   }
 
   if (!fp->directory) {
+    LOG_DEBUG("chdir a file=%s",path);
     freeFileHandle(fp);
     return -1;
   }

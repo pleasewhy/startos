@@ -131,10 +131,10 @@ uint64_t sys_mkdirat(void) {
 
 uint64_t sys_chdir(void) {
   char path[MAXPATH];
-
   memset(path, 0, MAXPATH);
   if (argstr(0, path, MAXPATH) < 0) {
     return -1;
   }
+  LOG_DEBUG("chdir path=%s",path);
   return vfs::chdir(path);
 }
