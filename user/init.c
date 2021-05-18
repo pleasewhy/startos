@@ -65,7 +65,7 @@
 // }
 
 void test_getpid() {
-  const char *argc = "/riscv64/getpid";
+  const char *argc = "/getpid";
   char *argv[] = {"getpid", 0};
   int pid = fork();
   if (pid == 0) {
@@ -76,7 +76,7 @@ void test_getpid() {
 }
 
 void test_getppid() {
-  const char *argc = "/riscv64/getppid";
+  const char *argc = "/getppid";
   char *argv[] = {"getppid", 0};
   int pid = fork();
   if (pid == 0) {
@@ -87,7 +87,7 @@ void test_getppid() {
 }
 
 void test_getcwd() {
-  const char *argc = "/riscv64/getcwd";
+  const char *argc = "/getcwd";
   char *argv[] = {"getcwd", 0};
   int pid = fork();
   if (pid == 0) {
@@ -98,7 +98,7 @@ void test_getcwd() {
 }
 
 void test_fork() {
-  const char *argc = "/riscv64/fork";
+  const char *argc = "/fork";
   char *argv[] = {"fork", 0};
   int pid = fork();
   if (pid == 0) {
@@ -109,7 +109,7 @@ void test_fork() {
 }
 
 void test_exit() {
-  const char *argc = "/riscv64/exit";
+  const char *argc = "/exit";
   char *argv[] = {"exit", 0};
   int pid = fork();
   if (pid == 0) {
