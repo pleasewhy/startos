@@ -64,53 +64,7 @@
 //   }
 // }
 
-void test_getpid() {
-  const char *argc = "/getpid";
-  char *argv[] = {"getpid", 0};
-  int pid = fork();
-  if (pid == 0) {
-    execve(argc, argv, NULL);
-  } else {
-    wait(0);
-  }
-}
-
-void test_getppid() {
-  const char *argc = "/getppid";
-  char *argv[] = {"getppid", 0};
-  int pid = fork();
-  if (pid == 0) {
-    execve(argc, argv, NULL);
-  } else {
-    wait(0);
-  }
-}
-
-void test_getcwd() {
-  const char *argc = "/getcwd";
-  char *argv[] = {"getcwd", 0};
-  int pid = fork();
-  if (pid == 0) {
-    execve(argc, argv, NULL);
-  } else {
-    wait(0);
-  }
-}
-
-void test_fork() {
-  const char *argc = "/fork";
-  char *argv[] = {"fork", 0};
-  int pid = fork();
-  if (pid == 0) {
-    execve(argc, argv, NULL);
-  } else {
-    wait(0);
-  }
-}
-
-void test_exit() {
-  const char *argc = "/exit";
-  char *argv[] = {"exit", 0};
+void test(char *argc, char *argv[]) {
   int pid = fork();
   if (pid == 0) {
     execve(argc, argv, NULL);
@@ -125,11 +79,20 @@ void main() {
   open("dev/tty", O_RDWR);
   dup(0);
   dup(0);
-  test_getpid();
-  test_getppid();
-  test_getcwd();
-  test_fork();
-  test_exit();
+  char *getpid[] = {"getpid", 0};
+  char *getppid[] = {"getppid", 0};
+  char *getcwd[] = {"getcwd", 0};
+  char *fork[] = {"fork", 0};
+  char *exit[] = {"exit", 0};
+  char *mkdir_[] = {"mkdir_", 0};
+  char *dup[] = {"dup", 0};
+  test("/getpid", getpid);
+  test("/getppid", getppid);
+  test("/getcwd", getcwd);
+  test("/fork", fork);
+  test("/exit", exit);
+  test("/mkdir_", mkdir_);
+  test("/dup", dup);
   while (1) {
   };
 }

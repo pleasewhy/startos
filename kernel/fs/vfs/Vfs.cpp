@@ -120,7 +120,6 @@ void init() {
 int open(const char *filename, size_t flags) {
   char path[MAXPATH];
   memset(path, 0, MAXPATH);
-  LOG_DEBUG("cwd=%s filename=%s\n", myTask()->currentDir, filename);
   getAbsolutePath((char *)filename, path);
 
   auto fs = getFs(path);
@@ -244,11 +243,30 @@ int mkdirat(int dirfd, const char *filepath) {
       memcpy(path + strlen(fp->filepath), filepath, strlen(filepath));
     }
   }
-  printf("mkdir=%s\n", path);
-  // auto fs = getFs(path);
-  // return fs->mkdir(path);
-  return 0;
+  LOG_DEBUG("mkdir=%s\n", path);
+  auto fs = getFs(path);
+  return fs->mkdir(path);
+  // return 0;
 };
+
+int openat(int dirfd, const char *filepath, int flags) {
+  char path[MAXPATH];
+  memset(path, 0, MAXPATH);
+  struct file *fp;
+  if (dirfd == AT_FDCWD) {
+    getAbsolutePath((char *)filepath, path);
+  } else {
+    if (filepath[0] == '/') {
+      memcpy(path, filepath, strlen(filepath));
+    } else {
+      fp = getFileByfd(dirfd);
+      memcpy(path, fp->filepath, strlen(fp->filepath));
+      memcpy(path + strlen(fp->filepath), filepath, strlen(filepath));
+    }
+  }
+  LOG_DEBUG("openat=%s", path);
+  return open(filepath, flags);
+}
 
 void rm(const char *file){};
 
@@ -256,7 +274,7 @@ size_t clear(int fd, size_t count, size_t offset) { return 0; }
 
 void truncate(int fd, size_t size) {}
 
-size_t ls(int fd, char *buffer, bool user=false) {
+size_t ls(int fd, char *buffer, bool user = false) {
   struct file *fp = getFileByfd(fd);
   if (fp == NULL || !fp->directory) {
     LOG_DEBUG("not directory");

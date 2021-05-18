@@ -105,7 +105,6 @@ int exec(char *path, char **argv) {
   task->pagetable = pagetable;
   task->sz = sz;
   task->trapframe->epc = elf.entry;
-  LOG_DEBUG("elf.entry=%p",elf.entry);
   task->trapframe->sp = sp;
   return argc;
 

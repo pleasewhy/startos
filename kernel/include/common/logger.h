@@ -28,9 +28,9 @@ static constexpr cstr PastLastSlash(cstr a) { return PastLastSlash(a, a); }
   })
 
 #ifndef LOG_LEVEL
-// #define LOG_LEVEL  LOG_LEVEL_DEBUG
+#define LOG_LEVEL  LOG_LEVEL_DEBUG
 // #define LOG_LEVEL  LOG_LEVEL_TRACE
-#define LOG_LEVEL  LOG_LEVEL_INFO
+// #define LOG_LEVEL  LOG_LEVEL_INFO
 #endif
 
 void OutputLogHeader(const char *file, int line, const char *func, int level);

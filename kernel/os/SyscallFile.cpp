@@ -40,6 +40,23 @@ uint64_t sys_open(void) {
   return fd;
 }
 
+uint64_t sys_openat(void) {
+  char filename[MAXPATH];
+  int fd, mode, flags;
+  int n;
+  LOG_DEBUG("sys_open");
+  if (argint(0, &fd) < 0 || (n = argstr(1, filename, MAXPATH)) < 0) {
+    return -1;
+  }
+
+  if (argint(2, &flags) || argint(3, &mode)) {
+    return -1;
+  }
+
+  fd = vfs::open(filename, mode);
+  return fd;
+}
+
 uint64_t sys_close(void) {
   int fd;
   if (argint(0, &fd) < 0) {

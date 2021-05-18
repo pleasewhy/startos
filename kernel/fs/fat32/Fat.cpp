@@ -492,7 +492,6 @@ uint32_t tf_first_sector(uint32_t cluster) {
 char *tf_walk(char *filename, TFFile *fp) {
   FatFileEntry entry;
   tf_printf("\r\n  [DEBUG-tf_walk] Walking path '%s'", filename);
-  LOG_DEBUG("walk0");
   // We're out of path. this walk is COMPLETE
   if (*filename == '/') {
     filename++;
@@ -503,7 +502,6 @@ char *tf_walk(char *filename, TFFile *fp) {
   }
   // There's some path left
   if (*filename != '\x00') {
-    LOG_DEBUG("walk1");
     // fp is the handle for the current directory
     // filename is the name of the current file in that directory
     // Go fetch the FatFileEntry that corresponds to the current file
@@ -916,7 +914,6 @@ int tf_mkdir(const char *filename, int mkParents) {
     dbg_printf("\r\n[DEBUG-tf_mkdir] Hey there, duffy, DUPLICATES are not allowed.");
     return 1;
   }
-
   dbg_printf("\r\n[DEBUG-tf_mkdir] The directory does not currently exist... Creating now.  %s", filename);
   fp = tf_parent(filename, "r+", mkParents);
   if (!fp) {
