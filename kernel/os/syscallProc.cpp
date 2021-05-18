@@ -8,6 +8,7 @@
 #include "param.hpp"
 #include "riscv.hpp"
 #include "types.hpp"
+#include "fs/vfs/Vfs.hpp"
 
 extern MemAllocator memAllocator;
 
@@ -33,8 +34,8 @@ uint64_t sys_exec(void) {
   memset(argv, 0, sizeof(argv));
   for (int i = 0;; i++) {
     if (i > MAXARG) goto bad;
-    if (fetchaddr(uargv + sizeof(uint64_t) * i, &uarg) < 0) goto bad;
-    if (uarg == 0) {
+    if (uargv !=0 && fetchaddr(uargv + sizeof(uint64_t) * i, &uarg) < 0) goto bad;
+    if (uarg == 0 || uargv == 0) {
       argv[i] = 0;
       break;
     }
@@ -42,6 +43,7 @@ uint64_t sys_exec(void) {
     if (argv[i] == 0) goto bad;
     if (fetchstr(uarg, argv[i], PGSIZE) < 0) goto bad;
   }
+  vfs::calAbsolute(path);
   LOG_DEBUG("path=%s", path);
   ret = exec(path, argv);
   for (int i = 0; i <= MAXARG && argv[i] != 0; i++) memAllocator.free(argv[i]);
@@ -49,7 +51,7 @@ uint64_t sys_exec(void) {
   return ret;
 
 bad:
-  LOG_TRACE("exec bad");
+  LOG_DEBUG("exec bad");
   for (int i = 0; i <= MAXARG && argv[i] != 0; i++) memAllocator.free(argv[i]);
   return -1;
 }

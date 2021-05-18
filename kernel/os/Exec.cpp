@@ -32,7 +32,7 @@ int exec(char *path, char **argv) {
   // lock_inode(ip);
 
   // 检查ELF头
-    LOG_DEBUG("exec0");
+  LOG_DEBUG("exec0");
   if (vfs::direct_read(path, reinterpret_cast<char *>(&elf), sizeof(elf), 0) != sizeof(elf)) {
     LOG_DEBUG("exec read error");
     goto bad;

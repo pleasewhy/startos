@@ -270,7 +270,7 @@ int tf_compare_filename(TFFile *fp, char *name);
 uint32_t tf_first_sector(uint32_t cluster);
 char *tf_walk(char *filename, TFFile *fp);
 TFFile *tf_fopen(const char *filename, const char *mode);
-int tf_fwrite(const char *src, int sz, TFFile *fp);
+int tf_fwrite(const char *src, int sz, TFFile *fp, bool user=false);
 int tf_fputs(char *src, TFFile *fp);
 int tf_mkdir(const char *filename, int mkParents);
 int tf_remove(char *filename);

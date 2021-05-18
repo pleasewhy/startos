@@ -93,6 +93,22 @@ void getAbsolutePath(char *oldpath, char *newPath) {
   }
 }
 
+void calAbsolute(char *oldpath) {
+  char newPath[MAXPATH];
+  memset(newPath, 0, MAXPATH);
+  const char *curdir = myTask()->currentDir;
+
+  if (oldpath[0] == '/') {
+    memcpy(newPath, oldpath, strlen(oldpath));
+  } else {
+    myTask()->lock.lock();
+    memcpy(newPath, curdir, strlen(curdir));
+    memcpy(newPath + strlen(curdir), oldpath, strlen(oldpath));
+    myTask()->lock.unlock();
+  }
+  memcpy(oldpath, newPath, sizeof(newPath));
+}
+
 /**
  * @brief 初始化虚拟文件系统，其将会初始化fileSystems和fileTable,
  *
@@ -185,7 +201,7 @@ size_t write(int fd, bool user, const char *buffer, size_t count, size_t offset)
     return -1;
   }
 
-  LOG_TRACE("write filename=%s", f->filepath);
+  // LOG_DEBUG("write filename=%s", f->filepath);
 
   switch (f->type) {
     case f->FD_PIPE:

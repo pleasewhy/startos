@@ -190,6 +190,15 @@ struct file *dup(struct file *fp);
  * @return int 成功返回0，失败返回-1
  */
 int chdir(char *filepath);
+
+/**
+ * @brief 通过相对路径计算绝对路径，若是相对路径
+ *        则newpath=oldpath
+ * 
+ * @param oldpath 
+ * @param newPath 
+ */
+void calAbsolute(char *oldpath);
 }  // end of namespace vfs
 
 #endif

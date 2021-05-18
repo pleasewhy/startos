@@ -32,7 +32,7 @@ uint64_t sys_open(void) {
   int fd, mode;
   int n;
   LOG_DEBUG("sys_open");
-  if ((n = argstr(0, path, MAXPATH)) < 0 || argint(1, &mode)) {
+  if ((n = argstr(0, path, MAXPATH)) < 0 || argint(1, &mode)<0) {
     return -1;
   }
 
@@ -44,7 +44,7 @@ uint64_t sys_openat(void) {
   char filename[MAXPATH];
   int fd, mode, flags;
   int n;
-  LOG_DEBUG("sys_open");
+  LOG_DEBUG("sys_openat");
   if (argint(0, &fd) < 0 || (n = argstr(1, filename, MAXPATH)) < 0) {
     return -1;
   }
@@ -52,8 +52,8 @@ uint64_t sys_openat(void) {
   if (argint(2, &flags) || argint(3, &mode)) {
     return -1;
   }
-
-  fd = vfs::open(filename, mode);
+  fd = vfs::open(filename, flags);
+  LOG_DEBUG("openat fd=%d",fd);
   return fd;
 }
 

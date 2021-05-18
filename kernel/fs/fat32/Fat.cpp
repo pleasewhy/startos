@@ -19,12 +19,17 @@ void Fat32FileSystem::init() {
 
 int Fat32FileSystem::open(const char *filePath, uint64_t flags, struct file *fp) {
   TFFile *tf;
+  LOG_INFO("flag=%x",flags);
   if (flags & O_CREATE) {
     tf = tf_fopen(filePath, "w");
   } else {
     tf = tf_fopen(filePath, "r");
   }
   if (tf == NULL) {
+    return -1;
+  }
+  // 若flags包含O_DIRECTORY,且path为文件类型，应该打开失败
+  if(tf->attributes & TF_ATTR_DIRECTORY && flags == O_DIRECTORY){
     return -1;
   }
   fp->size = tf->size;
@@ -53,7 +58,7 @@ size_t Fat32FileSystem::read(const char *path, bool user, char *buf, int offset,
 size_t Fat32FileSystem::write(const char *path, bool user, const char *buf, int offset, int n) {
   TFFile *fp = tf_fopen(path, "+");
   tf_fseek(fp, 0, offset);
-  int x = tf_fwrite(buf, n, fp);
+  int x = tf_fwrite(buf, n, fp, user);
   tf_fclose(fp);
   return x;
 }
@@ -1444,7 +1449,7 @@ int tf_fread(char *dest, int size, TFFile *fp, bool user) {
   return n;
 }
 
-int tf_fwrite(const char *src, int sz, TFFile *fp) {
+int tf_fwrite(const char *src, int sz, TFFile *fp, bool user) {
   int tracking;
   uint32_t sector;
   int n = 0;  // count that have been read
@@ -1465,7 +1470,8 @@ int tf_fwrite(const char *src, int sz, TFFile *fp) {
       x = sz;
     }
 
-    memcpy(&tf_info.buffer[tracking], src, x);
+    // memcpy(&tf_info.buffer[tracking], src, x);
+    either_copyin(user, &tf_info.buffer[tracking], (uint64_t)src, x);
     tf_info.sectorFlags |= TF_FLAG_DIRTY;  // Mark this sector as dirty
 
     if (fp->pos + x > fp->size) {
