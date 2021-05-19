@@ -117,6 +117,7 @@ void main() {
   test("/execve", NULL);
   test("/dup2", NULL);
   test("/brk", NULL);
+  test("/uname", NULL);
   while (1) {
   };
 }

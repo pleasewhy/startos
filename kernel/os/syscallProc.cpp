@@ -8,6 +8,7 @@
 #include "os/TaskScheduler.hpp"
 #include "param.hpp"
 #include "riscv.hpp"
+#include "utsname.h"
 #include "types.hpp"
 
 extern MemAllocator memAllocator;
@@ -95,4 +96,43 @@ uint64_t sys_brk(void) {
   if (addr == 0) return task->sz;
   growtask(addr - task->sz);
   return task->sz;
+}
+
+const char *sysname = "startos";
+const char *nodename = "test";
+const char *release = "statos hasn't been released yet";
+const char *version = "0.0.1";
+#ifdef K210
+const char *machine = "Sipeed M1 DOCK";
+#else
+const char *machine = "QEMU emulator version 4.2.1";
+#endif
+const char *domainname = "NIS domain name";
+
+#define OFFSET(structure, member) ((uint64_t)(&((structure *)0)->member));
+
+uint64_t sys_uname(void) {
+  uint64_t addr, off;
+  if (argaddr(0, &addr) < 0) {
+    return -1;
+  }
+
+  off = OFFSET(struct utsname, sysname);
+  either_copyout(true, addr + off, (void *)sysname, strlen(sysname));
+
+  off = OFFSET(struct utsname, nodename);
+  either_copyout(true, addr + off, (void *)nodename, strlen(nodename));
+
+  off = OFFSET(struct utsname, release);
+  either_copyout(true, addr + off, (void *)release, strlen(release));
+
+  off = OFFSET(struct utsname, version);
+  either_copyout(true, addr + off, (void *)version, strlen(version));
+
+  off = OFFSET(struct utsname, machine);
+  either_copyout(true, addr + off, (void *)machine, strlen(machine));
+
+  off = OFFSET(struct utsname, version);
+  either_copyout(true, addr + off, (void *)domainname, strlen(domainname));
+  return 0;
 }
