@@ -101,12 +101,14 @@ extern uint64_t sys_openat(void);
 extern uint64_t sys_sched_yield(void);
 extern uint64_t sys_brk(void);
 extern uint64_t sys_uname(void);
+extern uint64_t sys_pipe(void);
 
 static uint64_t (*syscalls[400])(void);
 
 // #define NELEM(x) (sizeof(x) / sizeof((x)[0]))
 
 void syscall_init() {
+  memset((void*)syscalls, 0, sizeof(uint64_t)*400);
   syscalls[SYS_execve] = sys_exec;
   syscalls[SYS_open] = sys_open;
   syscalls[SYS_write] = sys_write;
@@ -128,6 +130,7 @@ void syscall_init() {
   syscalls[SYS_sched_yield] = sys_sched_yield;
   syscalls[SYS_brk] = sys_brk;
   syscalls[SYS_uname] = sys_uname;
+  syscalls[SYS_pipe2] = sys_pipe;
 }
 
 void syscall(void) {

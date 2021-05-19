@@ -85,7 +85,8 @@ OBJS += \
 	fs/fat32/Fat.o \
 	fs/disk/Disk.o \
 	fs/vfs/Vfs.o \
-	fs/devfs/DeviceFileSystem.o
+	fs/devfs/DeviceFileSystem.o \
+	fs/Pipe.o
 
 # device:
 OBJS += \

@@ -88,12 +88,12 @@ size_t read(int fd, bool user, char *dst, size_t count, size_t offset = 0);
 /**
  * @brief 写文件，这个文件可以是设备，磁盘文件，管道等。
  * @param fd 文件描述符，用来找到对应的文件
- * @param buffer 需要写入的数据
- * @param count 写入数据的sz
+ * @param src 需要写入的数据
+ * @param n 写入数据的sz
  * @param offset 写入的开始位置
  * @return 成功返回写入字节数，失败返回-1
  */
-size_t write(int fd, bool user, const char *buffer, size_t count, size_t offset = 0);
+size_t write(int fd, bool user, const char *src, size_t n, size_t offset = 0);
 
 /**
  * @brief Clear parts of a file content
@@ -194,11 +194,19 @@ int chdir(char *filepath);
 /**
  * @brief 通过相对路径计算绝对路径，若是相对路径
  *        则newpath=oldpath
- * 
- * @param oldpath 
- * @param newPath 
+ *
+ * @param oldpath
+ * @param newPath
  */
 void calAbsolute(char *oldpath);
+
+/**
+ * @brief 创建管道
+ *
+ * @param fds 接收管道的读写文件描述符
+ * @return int 成功返回0，失败返回-1
+ */
+int createPipe(int fds[]);
 }  // end of namespace vfs
 
 #endif

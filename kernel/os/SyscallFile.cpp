@@ -32,7 +32,7 @@ uint64_t sys_open(void) {
   int fd, mode;
   int n;
   LOG_DEBUG("sys_open");
-  if ((n = argstr(0, path, MAXPATH)) < 0 || argint(1, &mode)<0) {
+  if ((n = argstr(0, path, MAXPATH)) < 0 || argint(1, &mode) < 0) {
     return -1;
   }
 
@@ -53,7 +53,7 @@ uint64_t sys_openat(void) {
     return -1;
   }
   fd = vfs::open(filename, flags);
-  LOG_DEBUG("openat fd=%d",fd);
+  LOG_DEBUG("openat fd=%d", fd);
   return fd;
 }
 
@@ -136,6 +136,25 @@ uint64_t sys_chdir(void) {
   if (argstr(0, path, MAXPATH) < 0) {
     return -1;
   }
-  LOG_DEBUG("chdir path=%s",path);
+  LOG_DEBUG("chdir path=%s", path);
   return vfs::chdir(path);
+}
+
+uint64_t sys_pipe(void) {
+  uint64_t fdarray;
+  int fds[2];
+  LOG_DEBUG("pipe");
+  Task *task = myTask();
+  if (argaddr(0, &fdarray) < 0) {
+    return -1;
+  }
+
+  vfs::createPipe(fds);
+  if (copyout(task->pagetable, fdarray, (char *)&fds[0], sizeof(fds[0])) < 0 ||
+      copyout(task->pagetable, fdarray + sizeof(fds[0]), (char *)&fds[1], sizeof(fds[0])) < 0) {
+    vfs::close(getFileByfd(fds[0]));
+    vfs::close(getFileByfd(fds[1]));
+    return -1;
+  }
+  return 0;
 }

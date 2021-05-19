@@ -7,6 +7,7 @@
 #include "fs/fat/Fat32.hpp"
 #include "os/SpinLock.hpp"
 #include "os/TaskScheduler.hpp"
+
 #include "param.hpp"
 
 // Fat32FileSystem *fat32;
@@ -35,8 +36,9 @@ struct file *allocFileHandle() {
   fileTableLock.lock();
   struct file *fp;
   for (fp = fileTable; fp < fileTable + NFILE; fp++) {
-    if (fp->type == fp->FD_NONE) {
+    if (fp->ref == 0 && fp->type == fp->FD_NONE) {
       fileTableLock.unlock();
+      fp->ref = 1;
       return fp;
     }
   }
@@ -149,7 +151,6 @@ int open(const char *filename, size_t flags) {
   safestrcpy(fp->filepath, path, strlen(path) + 1);
   fp->readable = !(flags & O_WRONLY);
   fp->writable = (flags & O_WRONLY) || (flags & O_RDWR);
-  fp->ref++;
   int fd = registerFileHandle(fp);
   LOG_DEBUG("fd=%d fp=%p fp->ref=%d", fd, fp);
   return fd;
@@ -170,12 +171,9 @@ size_t read(int fd, bool user, char *dst, size_t n, size_t offset) {
 
   switch (f->type) {
     case f->FD_PIPE:
-      // r = piperead(f->pipe, addr, n);
-      panic("vfs::read");
+      r = f->pipe->read(reinterpret_cast<uint64_t>(dst), n);
       break;
     case f->FD_DEVICE:
-      // if (f->major < 0 || f->major >= NDEV || !devsw[f->major].read) return -1;
-      // r = devsw[f->major].read(1, addr, n);
       r = fs->read(f->filepath, user, dst, 0, n);
       break;
     case f->FD_ENTRY:
@@ -187,33 +185,28 @@ size_t read(int fd, bool user, char *dst, size_t n, size_t offset) {
   return r;
 }
 
-size_t write(int fd, bool user, const char *buffer, size_t count, size_t offset) {
+size_t write(int fd, bool user, const char *src, size_t n, size_t offset) {
   int r = 0;
   struct file *f = getFileByfd(fd);
-
-  if (f == NULL || !f->readable) {
-    return -1;
-  }
-
-  auto fs = getFs(f->filepath);
 
   if (f == NULL || !f->writable) {
     return -1;
   }
 
+  auto fs = getFs(f->filepath);
+
   // LOG_DEBUG("write filename=%s", f->filepath);
 
   switch (f->type) {
     case f->FD_PIPE:
-      // r = piperead(f->pipe, addr, n);
-      panic("vfs::write");
+      f->pipe->write(reinterpret_cast<uint64_t>(src), n);
       break;
     case f->FD_DEVICE:
-      r = fs->write(f->filepath, user, buffer, 0, count);
+      r = fs->write(f->filepath, user, src, 0, n);
       break;
     case f->FD_ENTRY:
       // fat32->read(f->filepath, user, dst, f->position, 0);
-      fs->write(f->filepath, user, buffer, 0, count);
+      fs->write(f->filepath, user, src, 0, n);
       break;
     default:
       panic("vfs::write");
@@ -239,6 +232,8 @@ void close(struct file *fp) {
   fileTableLock.unlock();
 
   if (ff.type == ff.FD_PIPE) {
+    if (ff.writable) ff.pipe->close(ff.pipe->WRITE_END);
+    if (ff.readable) ff.pipe->close(ff.pipe->READ_END);
   } else if (ff.type == ff.FD_ENTRY) {
   } else if (ff.type == ff.FD_DEVICE) {
   }
@@ -322,6 +317,7 @@ size_t direct_read(const char *file, char *buffer, size_t count, size_t offset) 
   LOG_TRACE("bytes of read=%d", r);
   return r;
 }
+
 size_t direct_write(const char *file, const char *buffer, size_t count, size_t offset) { return 0; }
 
 struct file *dup(struct file *fp) {
@@ -348,10 +344,11 @@ int chdir(char *filepath) {
   }
 
   if (!fp->directory) {
-    LOG_DEBUG("chdir a file=%s",path);
+    LOG_DEBUG("chdir a file=%s", path);
     freeFileHandle(fp);
     return -1;
   }
+
   int n = strlen(path);
   if (path[n - 1] != '/') {
     path[n] = '/';
@@ -361,6 +358,22 @@ int chdir(char *filepath) {
   safestrcpy(task->currentDir, path, strlen(path) + 1);
   task->lock.unlock();
   freeFileHandle(fp);
+  return 0;
+}
+
+int createPipe(int fds[]) {
+  struct file *f0 = allocFileHandle();
+  struct file *f1 = allocFileHandle();
+  Pipe *pipe = new Pipe(f0, f1);
+  if (pipe == NULL) {
+    freeFileHandle(f0);
+    freeFileHandle(f1);
+    return -1;
+  }
+  int fd0 = registerFileHandle(f0);
+  int fd1 = registerFileHandle(f1);
+  fds[0] = fd0;
+  fds[1] = fd1;
   return 0;
 }
 

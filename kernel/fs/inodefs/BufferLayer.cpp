@@ -3,7 +3,6 @@
 //
 
 #include "common/printk.hpp"
-#include "fs/fs.hpp"
 #include "os/SleepLock.hpp"
 #include "fs/inodefs/BufferLayer.hpp"
 #include "fs/disk/Disk.hpp"

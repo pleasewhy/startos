@@ -16,12 +16,11 @@ void* operator new(uint64_t size){
 }
 
 void operator delete(void* p){
-    LOG_ERROR("not support delete");
+    return memAllocator.free(p);
 }
 
 void* operator new[](uint64_t size){
     LOG_ERROR("not support new[]");
-
     return NULL;
 }
 
