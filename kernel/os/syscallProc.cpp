@@ -2,13 +2,13 @@
 #include "common/logger.h"
 #include "common/string.hpp"
 #include "fs/vfs/FileSystem.hpp"
+#include "fs/vfs/Vfs.hpp"
 #include "memory/MemAllocator.hpp"
 #include "os/Syscall.hpp"
 #include "os/TaskScheduler.hpp"
 #include "param.hpp"
 #include "riscv.hpp"
 #include "types.hpp"
-#include "fs/vfs/Vfs.hpp"
 
 extern MemAllocator memAllocator;
 
@@ -19,9 +19,9 @@ uint64_t sys_exit(void) {
   return 0;  // not reached
 }
 
-uint64_t sys_fork(void) { 
+uint64_t sys_fork(void) {
   LOG_DEBUG("fork");
-  return fork(); 
+  return fork();
 }
 
 uint64_t sys_exec(void) {
@@ -34,7 +34,7 @@ uint64_t sys_exec(void) {
   memset(argv, 0, sizeof(argv));
   for (int i = 0;; i++) {
     if (i > MAXARG) goto bad;
-    if (uargv !=0 && fetchaddr(uargv + sizeof(uint64_t) * i, &uarg) < 0) goto bad;
+    if (uargv != 0 && fetchaddr(uargv + sizeof(uint64_t) * i, &uarg) < 0) goto bad;
     if (uarg == 0 || uargv == 0) {
       argv[i] = 0;
       break;
@@ -71,7 +71,7 @@ uint64_t sys_wait4(void) {
     return -1;
   }
   LOG_DEBUG("wait4");
-  if(pid == -1){
+  if (pid == -1) {
     return wait(uaddr);
   }
   return wait4(pid, uaddr);
@@ -80,7 +80,19 @@ uint64_t sys_wait4(void) {
 uint64_t sys_getpid() { return myTask()->pid; }
 uint64_t sys_getppid() { return myTask()->parent->pid; }
 
-uint64_t sys_sched_yield(){
+uint64_t sys_sched_yield() {
   yield();
   return 0;
+}
+
+uint64_t sys_brk(void) {
+  uint64_t addr;
+  if (argaddr(0, &addr) < 0) {
+    return -1;
+  }
+  LOG_DEBUG("sys_brk");
+  Task *task = myTask();
+  if (addr == 0) return task->sz;
+  growtask(addr - task->sz);
+  return task->sz;
 }

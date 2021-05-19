@@ -93,7 +93,6 @@ Task *myTask();
  */
 pagetable_t taskPagetable(Task *task);
 
-
 /**
  * @brief 创建一个与当前进程一致的新进程
  * 
@@ -108,6 +107,14 @@ int fork();
  * @return 成功返回0，失败返回-1
  */
 int wait(uint64_t vaddr);
+
+/**
+ * @brief 增加或者减少用户内存n字节
+ * 
+ * @param n 大于0增加，小于0减少
+ * @return int 成功返回0，失败返回-1
+ */
+int growtask(int n);
 
 /**
  * @brief 等待某一子进程退出

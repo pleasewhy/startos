@@ -116,6 +116,7 @@ void main() {
   test("/chdir", NULL);
   test("/execve", NULL);
   test("/dup2", NULL);
+  test("/brk", NULL);
   while (1) {
   };
 }

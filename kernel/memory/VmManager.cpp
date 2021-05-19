@@ -7,13 +7,11 @@
 #include "param.hpp"
 #include "riscv.hpp"
 
-
 extern "C" char trampoline[];  // trampoline.S
 
 extern "C" MemAllocator memAllocator;
 extern "C" char etext[];  // 链接器会设置这个为内核代码结束
 pagetable_t kernel_pagetable;
-
 
 void initKernelVm() {
   kernel_pagetable = (pagetable_t)memAllocator.alloc();
@@ -130,6 +128,41 @@ void kernel_vm_map(uint64_t va, uint64_t pa, uint64_t sz, int perm) {
   if (mappages(kernel_pagetable, va, sz, pa, perm) != 0) panic("kvmmap");
 }
 
+/**
+ * @brief 递归的释放页表，该页表不能包含任何映射
+ * 关系。
+ *
+ * @param pagetable 需要释放的页表
+ */
+void freewalk(pagetable_t pagetable) {
+  // there are 2^9 = 512 PTEs in a page table.
+  for (int i = 0; i < 512; i++) {
+    pte_t pte = pagetable[i];
+    if ((pte & PTE_V) && (pte & (PTE_R | PTE_W | PTE_X)) == 0) {
+      // this PTE points to a lower-level page table.
+      uint64_t child = PTE2PA(pte);
+      freewalk((pagetable_t)child);
+      pagetable[i] = 0;
+    } else if (pte & PTE_V) {
+      panic("freewalk: leaf");
+    }
+  }
+  memAllocator.free((void *)pagetable);
+}
+
+/**
+ * @brief 释放用户页表, 首先移除全部映射关系
+ * 并且释放相应的物理内存，然后释放页表包含的
+ * 全部页表项
+ *
+ * @param pagetable 需要释放的页表
+ * @param sz 页表的大小
+ */
+void userFreePagetable(pagetable_t pagetable, uint64_t sz) {
+  if (sz > 0) userUnmap(pagetable, 0, PGROUNDUP(sz) / PGSIZE, 1);
+  freewalk(pagetable);
+}
+
 uint64_t userAlloc(pagetable_t pagetable, uint64_t oldsz, uint64_t newsz) {
   char *mem;
   uint64_t a;
@@ -139,18 +172,47 @@ uint64_t userAlloc(pagetable_t pagetable, uint64_t oldsz, uint64_t newsz) {
   for (a = oldsz; a < newsz; a += PGSIZE) {
     mem = static_cast<char *>(memAllocator.alloc());
     if (mem == 0) {
-      //            uvmdealloc(pagetable, a, oldsz);
-      // TODO 失败释放
+      LOG_WARN("user alloc failed");
+      userDealloc(pagetable, a, oldsz);
       return 0;
     }
     memset(mem, 0, PGSIZE);
     if (mappages(pagetable, a, PGSIZE, (uint64_t)mem, PTE_W | PTE_X | PTE_R | PTE_U) != 0) {
+      LOG_WARN("user map page failed");
       memAllocator.free(mem);
-      //            uvmdealloc(pagetable, a, oldsz);
-      // TODO 失败释放
+      userDealloc(pagetable, a, oldsz);
       return 0;
     }
   }
+  return newsz;
+}
+
+void userUnmap(pagetable_t pagetable, uint64_t va, uint64_t npages, bool do_free) {
+  uint64_t a;
+  pte_t *pte;
+
+  if ((va % PGSIZE) != 0) panic("uvmunmap: not aligned");
+
+  for (a = va; a < va + npages * PGSIZE; a += PGSIZE) {
+    if ((pte = walk(pagetable, a, 0)) == 0) panic("uvmunmap: walk");
+    if ((*pte & PTE_V) == 0) panic("uvmunmap: not mapped");
+    if (PTE_FLAGS(*pte) == PTE_V) panic("uvmunmap: not a leaf");
+    if (do_free) {
+      uint64_t pa = PTE2PA(*pte);
+      memAllocator.free(reinterpret_cast<void *>(pa));
+    }
+    *pte = 0;
+  }
+}
+
+uint64_t userDealloc(pagetable_t pagetable, uint64_t oldsz, uint64_t newsz) {
+  if (newsz >= oldsz) return oldsz;
+
+  if (PGROUNDUP(newsz) < PGROUNDUP(oldsz)) {
+    int npages = (PGROUNDUP(oldsz) - PGROUNDUP(newsz)) / PGSIZE;
+    userUnmap(pagetable, PGROUNDUP(newsz), npages, true);
+  }
+
   return newsz;
 }
 
@@ -162,7 +224,7 @@ pagetable_t userCreate() {
   return pagetable;
 }
 
-void user_vm_init(pagetable_t pagetable, uchar_t *src, uint_t sz) {
+void UserVmInit(pagetable_t pagetable, uchar_t *src, uint_t sz) {
   char *mem;
 
   if (sz >= PGSIZE) panic("inituvm: more than a page");
@@ -250,28 +312,28 @@ int copyout(pagetable_t pagetable, uint64_t vdst, char *src, int len) {
   return 0;
 }
 
-int user_vm_copy(pagetable_t oldPg, pagetable_t newPg, int sz) {
+int userVmCopy(pagetable_t oldPg, pagetable_t newPg, int sz) {
   pte_t *pte;
   uint64_t pa;
   uint_t flags;
   char *mem;
   for (int i = 0; i < sz; i += PGSIZE) {
     if ((pte = walk(oldPg, i, 0)) == 0) {
-      panic("user_vm_copy: pte not present");
+      panic("userVmCopy: pte not present");
     }
     if ((*pte & PTE_V) == 0) {
-      panic("user_vm_copy: pte invalid");
+      panic("userVmCopy: pte invalid");
     }
     pa = PTE2PA(*pte);
     flags = PTE_FLAGS(*pte);
 
     if ((mem = static_cast<char *>(memAllocator.alloc())) == 0) {
-      panic("user_vm_copy: alloc mem fail");
+      panic("userVmCopy: alloc mem fail");
     }
     memmove(mem, (void *)pa, PGSIZE);
     if (mappages(newPg, i, PGSIZE, (uint64_t)mem, flags) < 0) {
       memAllocator.free(mem);
-      panic("user_vm_copy: mappages fail");
+      panic("userVmCopy: mappages fail");
     }
   }
   return 0;

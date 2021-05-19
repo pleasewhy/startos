@@ -74,15 +74,38 @@ typedef uint64_t *pagetable_t;  // 512 PTEs
  void kernel_vm_map(uint64_t va, uint64_t pa, uint64_t sz, int perm);
 
 /**
+ * @brief 移除以va为起始地址的n页, va必须按页对齐，并且
+ * 这个映射关系必须存在。可以根据需要移除物理页
+ * 
+ * @param pagetable va所在的页表
+ * @param va 虚拟地址，需要按页对齐
+ * @param npages 移除页的数量
+ * @param do_free 是否释放物理内存
+ */
+void userUnmap(pagetable_t pagetable, uint64_t va, uint64_t npages, bool do_free);
+
+void userFreePagetable(pagetable_t pagetable, uint64_t sz);
+/**
  * 增长进程的sz从oldsz到newsz, 并分配相应PTE和物理内存
  * ，newsz不需要对齐页，返回新的sz，错误返回0
  *
  * @param pagetable 用户页表
  * @param oldsz 当前sz
- * @param newsz 需要增长的sz
+ * @param newsz 新sz
  * @return
  */
  uint64_t userAlloc(pagetable_t pagetable, uint64_t oldsz, uint64_t newsz);
+
+ /**
+ * 缩减进程的sz从oldsz到newsz, 并释放相应PTE和物理内存
+ * ，newsz不需要对齐页，返回新的sz，错误返回0
+ *
+ * @param pagetable 用户页表
+ * @param oldsz 当前sz
+ * @param newsz 新sz
+ * @return
+ */
+ uint64_t userDealloc(pagetable_t pagetable, uint64_t oldsz, uint64_t newsz);
 
 /**
  * 创建空的用户页表
@@ -96,7 +119,7 @@ typedef uint64_t *pagetable_t;  // 512 PTEs
  * 初始化第一个进程时才会调用该函数，sz必须
  * 小于PGSIZE
  */
- void user_vm_init(pagetable_t pagetable, uchar_t *src, uint_t sz);
+ void UserVmInit(pagetable_t pagetable, uchar_t *src, uint_t sz);
 
 /**
  * 将用户页表中的数据copy到内核中。
@@ -116,6 +139,7 @@ typedef uint64_t *pagetable_t;  // 512 PTEs
  * @return 成功返回0，错误返回-1。
  */
  int copyinstr(pagetable_t pagetable, char *dst, uint64_t vsrc, int maxsz);
+
 /**
  * 复制内核数据到用户页表中
  * @param pagetable 用户页表
@@ -125,12 +149,13 @@ typedef uint64_t *pagetable_t;  // 512 PTEs
  * @return 成功返回0，失败返回-1
  */
  int copyout(pagetable_t pagetable, uint64_t vdst, char *src, int len);
+
 /**
  * 将父进程的内存复制到子进程中，页表和物理内存都会被复制。
  * 成功返回0, 失败返回-1。
  * 失败会释放任何已经分配的页。
  */
- int user_vm_copy(pagetable_t oldPg, pagetable_t newPg, int sz);
+ int userVmCopy(pagetable_t oldPg, pagetable_t newPg, int sz);
 
 /**
  * @brief 打印一个页表，用于调试
