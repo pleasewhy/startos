@@ -20,9 +20,9 @@ struct DeviceFileSystem final : public FileSystem {
    * @brief
    *
    */
-  DeviceFileSystem(const char *mountPoint, const char *dev) {
+  DeviceFileSystem(const char *mountPoint, const char *specialDev) {
     safestrcpy(this->mountPoint, mountPoint, strlen(mountPoint)+1);
-    safestrcpy(this->dev, dev, strlen(dev)+1);
+    safestrcpy(this->specialDev, specialDev, strlen(specialDev)+1);
   };
 
   /**

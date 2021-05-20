@@ -146,9 +146,9 @@ struct Fat32FileSystem final : public FileSystem {
    * @brief 带参构造函数
    *
    */
-  Fat32FileSystem(const char *mountPoint, const char *dev) {
+  Fat32FileSystem(const char *mountPoint, const char *specialDev) {
     safestrcpy(this->mountPoint, mountPoint, strlen(mountPoint) + 1);
-    safestrcpy(this->dev, dev, strlen(dev) + 1);
+    safestrcpy(this->specialDev, specialDev, strlen(specialDev) + 1);
   };
 
   /**

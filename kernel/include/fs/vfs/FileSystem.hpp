@@ -11,7 +11,8 @@
 class FileSystem {
  public:
   char mountPoint[MAXPATH];
-  char dev[MAXPATH];
+  int dev;
+  char specialDev[MAXPATH];
 
  public:
   ~FileSystem(){};

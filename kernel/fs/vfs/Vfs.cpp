@@ -19,12 +19,12 @@ struct file fileTable[NFILE];
 SpinLock fileTableLock;
 FileSystem *mountedFS[NFILESYSTEM];
 
-FileSystem *createFileSystem(FileSystemType type, const char *mountPoint, const char *dev) {
+FileSystem *createFileSystem(FileSystemType type, const char *mountPoint, const char *specialDev, int dev) {
   switch (type) {
     case FileSystemType::DEVFS:
-      return new DeviceFileSystem(mountPoint, dev);
+      return new DeviceFileSystem(mountPoint, specialDev);
     case FileSystemType::FAT32:
-      return new Fat32FileSystem(mountPoint, dev);
+      return new Fat32FileSystem(mountPoint, specialDev);
     default:
       panic("create file system");
       break;
@@ -298,8 +298,8 @@ size_t ls(int fd, char *buffer, bool user = false) {
 
 size_t mounts(char *buffer, size_t size) { return 0; }
 
-void mount(FileSystemType type, const char *mountPoint, const char *device) {
-  auto fs = createFileSystem(type, mountPoint, device);
+void mount(FileSystemType type, const char *mountPoint, const char *specialDev) {
+  auto fs = createFileSystem(type, mountPoint, specialDev, 0);
   fs->init();
   for (int i = 0; i < NFILESYSTEM; i++) {
     if (mountedFS[i] == NULL) {
