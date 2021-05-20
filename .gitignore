@@ -20,3 +20,4 @@ target/*.asm
 submit/*
 .gdb_history
 .gitignore
+.vscode/settings.json

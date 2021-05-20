@@ -13,4 +13,6 @@ int strncmp(const char *p, const char *q, uint_t n);
 int strncasecmp(const char *s1, const char *s2, size_t n);
 char* strchr(const char *s, char c);
 char* strrchr(const char *s, char c);
+void snstr(char *dst, wchar_t const *src, int len);
+void wnstr(wchar_t *dst, char const *src, int len);
 #endif

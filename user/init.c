@@ -119,6 +119,7 @@ void main() {
   test("/brk", NULL);
   test("/uname", NULL);
   test("/pipe", NULL);
+  test("/getdents", NULL);
   while (1) {
   };
 }

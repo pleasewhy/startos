@@ -11,6 +11,7 @@
     "sysctl.hpp": "c",
     "fpioa.hpp": "c",
     "riscv.hpp": "c",
-    "memlayout.hpp": "c"
+    "memlayout.hpp": "c",
+    "typeinfo": "cpp"
   }
 }

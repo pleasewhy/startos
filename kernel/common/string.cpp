@@ -115,3 +115,35 @@ char *strrchr(const char *s, char c) {
     if (*s == c) ans = (char *)s;
   return ans;
 }
+
+// convert uchar string into wide char string 
+void wnstr(wchar_t *dst, char const *src, int len) {
+  while (len -- && *src) {
+    *(uchar_t*)dst = *src++;
+    dst ++;
+  }
+
+  *dst = 0;
+}
+
+// convert wide char string into uchar string 
+void snstr(char *dst, wchar_t const *src, int len) {
+  while (len -- && *src) {
+    *dst++ = (uchar_t)(*src & 0xff);
+    src ++;
+  }
+  while(len-- > 0)
+    *dst++ = 0;
+}
+
+int wcsncmp(wchar_t const *s1, wchar_t const *s2, int len) {
+  int ret = 0;
+
+  while (len-- && *s1) {
+    ret = (int)(*s1++ - *s2++);
+    if (ret) break;
+  }
+
+  return ret;
+}
+

@@ -158,3 +158,16 @@ uint64_t sys_pipe(void) {
   }
   return 0;
 }
+
+uint64_t sys_getdents64(void) {
+  uint64_t addr;
+  int fd;
+  int len;
+  LOG_DEBUG("getdents64 fd=%d",fd);
+  if (argint(0, &fd) < 0 || argaddr(1, &addr) || argint(2, &len)) {
+    return -1;
+  }
+  int n = vfs::ls(fd, (char *)addr, true);
+  LOG_DEBUG("getdents64 nread=%d", n);
+  return n;
+}

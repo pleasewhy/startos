@@ -94,12 +94,15 @@ size_t Fat32FileSystem::rm(const char *filepath) {
 
 int copysfn(char *sfn, char *dst, bool user) {
   int n = 0, i = 0;
+  // 计算文件名的长度
   for (i = 0; i < 8 && sfn[i] != 0x20; i++) {
     n++;
   }
   either_copyout(user, reinterpret_cast<uint64_t>(dst), sfn, i);
+  // 计算扩展名的长度
   for (i = 8; i < 11 && sfn[i] != 0x20; i++) {
   }
+  // 扩展名为空
   if (i == 8) {
     return n;
   }
@@ -109,44 +112,167 @@ int copysfn(char *sfn, char *dst, bool user) {
   return n + i - 8;
 }
 
+#define LFN_NAME1_OFFSET 0
+#define LFN_NAME2_OFFSET 10
+#define LFN_NAME3_OFFSET 22
+
+// fat32长文件目录项的文件名的储存格式为unicode
+// 其宽度为2, 为了方便处理将所有的Unicode都装换为
+// 单字节格式
+int copylfn(FatFileEntry &entry, uint64_t dst, bool user) {
+  int sno = entry.lfn.sequence_number & ~0x40;
+
+  // 通过长文件名目录项的序列号，计算当前lfn的name偏移量
+  int offset = 13 * (sno - 1);
+  // 复制第一部分1-5字节, unincode编码，0xff为空
+  int i = 0, n = 0;
+  // note:
+  // uint16_t *name = entry.lfn.name1;
+  // 通过name[i]这种方式进行访问会LoadMisaligned
+  //
+  // printf("size=%d", NELEM(entry.lfn.name1));
+  char tmp[10];
+  for (i = 0; i < 5 && entry.lfn.name1[i] != 0xffff; i++) {
+    tmp[i] = entry.lfn.name1[i] & 0xff;
+  }
+  // printf("name1=%d", i);
+  if (either_copyout(user, dst + offset, tmp, i) < 0) {
+    panic("either copyout");
+  }
+  n += i;
+  // 6-11
+  // name = entry.lfn.name2;
+  for (i = 0; i < 6 && entry.lfn.name2[i] != 0xffff; i++) {
+    tmp[i] = entry.lfn.name2[i] & 0xff;
+  }
+  // printf("name2=%d", i);
+  either_copyout(user, dst + n + offset, tmp, i);
+  n += i;
+  // 11-13
+  // name = entry.lfn.name3;
+  for (i = 0; i < 2 && entry.lfn.name3[i] != 0xffff; i++) {
+    tmp[i] = entry.lfn.name3[i] & 0xff;
+  }
+  // printf("name3=%d", i);
+  either_copyout(user, dst + n + offset, tmp, i);
+  n += i;
+  return n;
+}
+
+// void setDirent(FatFileEntry *entry, struct dirent *dt, TFFile *fp) {
+//   dt->d_ino = entry->msdos.firstCluster;
+//   if (fp->attributes & TF_ATTR_DIRECTORY) {
+//     dt->d_type = DT_DIR;
+//   } else {
+//     dt->d_type = DT_FIFO;
+//   }
+// }
+
 int Fat32FileSystem::ls(const char *filepath, char *contents, bool user) {
   LOG_DEBUG("fat32 ls");
-  FatFileEntry entry;
   struct dirent *dirent;
   struct dirent dt;
-  int cnt;
+  FatFileEntry entry;
+  int readn = 0, lfn_entries = 0;
   TFFile *fp = tf_fopen(filepath, "r");
   if (fp == NULL || (fp->attributes & TF_ATTR_DIRECTORY) == 0) {
     return -1;
   }
   while (tf_fread((char *)&entry, sizeof(FatFileEntry), fp) == sizeof(FatFileEntry)) {
     if (entry.msdos.filename[0] == 0x00) {  // 结束
-      return cnt;
+      return readn;
     }
     // 短文件目录项
     if (entry.msdos.attributes != TF_ATTR_LONG_NAME) {
+      // 设置ino，由于fat32不存在ino，所以这里使用第一个簇号作为ino
       dt.d_ino = entry.msdos.firstCluster;
-      if (fp->attributes & TF_ATTR_DIRECTORY) {
+
+      // 设置目录项类型
+      if (entry.msdos.attributes & TF_ATTR_DIRECTORY) {
         dt.d_type = DT_DIR;
       } else {
         dt.d_type = DT_FIFO;
       }
+      // 将contents转换为struct dirent *类型，方便得到d_name的偏移量
       dirent = reinterpret_cast<struct dirent *>(contents);
+      // 将sfn的文件名复制到目录项对应位置中
       int n = copysfn(entry.msdos.filename, dirent->d_name, user);
+
+      // 计算该目录项的总长度
       dt.d_reclen = DIENT_BASE_LEN + n;  // n为短文件目录项的文件名长度
+
+      // 计算下一个目录项的偏移量
       dt.d_off = reinterpret_cast<uint64_t>(contents) + dt.d_reclen;
+
+      // 将dt的数据copy到对应的位置
       either_copyout(user, (uint64_t)contents, (void *)&dt, DIENT_BASE_LEN);
       LOG_DEBUG("sfn=%s", dirent->d_name);
-      contents += dt.d_reclen;
-      cnt++;
-    } else {  // 长文件名目录项
 
-      // return cnt;
+      // 更新content
+      contents += dt.d_reclen;
+      readn += dt.d_reclen;
+    } else if ((entry.lfn.sequence_number & 0xc0) == 0x40) {  // 长文件名目录项
+      dirent = reinterpret_cast<struct dirent *>(contents);
+
+      // 计算lfn的数量
+      lfn_entries = entry.lfn.sequence_number & ~0x40;
+
+      LOG_DEBUG("lfn sno=%p  lfns=%d", entry.lfn.sequence_number, lfn_entries);
+      // LOG_DEBUG("temp lfn len=%d name1=%p", sizeof(FatFileEntry), entry.lfn.name1);
+
+      // 将当前lfn储存的name copy到对应位置中
+      int n = copylfn(entry, (uint64_t)dirent->d_name, user);  // 将当前name copy到指定位置
+
+      // copy剩余的长文件目录项
+      for (int i = 1; i < lfn_entries; i++) {
+        if (tf_fread((char *)&entry, sizeof(FatFileEntry), fp) != sizeof(FatFileEntry)) {
+          LOG_DEBUG("expect lfn entry, but not found");
+          return -1;
+        }
+        if (entry.lfn.attributes != TF_ATTR_LONG_NAME) {
+          LOG_DEBUG("expect lfn entry, but not sfn entry");
+          return -1;
+        }
+        n += copylfn(entry, (uint64_t)dirent->d_name, user);  // 将当前name copy到指定位置
+      }
+
+      // 读取对应的短文件目录项
+      if (tf_fread((char *)&entry, sizeof(FatFileEntry), fp) != sizeof(FatFileEntry)) {
+        LOG_DEBUG("expect sfn entry, but not found");
+        return -1;
+      }
+
+      // 设置ino，由于fat32不存在ino，所以这里使用第一个簇号作为ino
+      dt.d_ino = entry.msdos.firstCluster;
+
+      // 设置目录项类型
+      if (entry.msdos.attributes & TF_ATTR_DIRECTORY) {
+        dt.d_type = DT_DIR;
+      } else {
+        dt.d_type = DT_FIFO;
+      }
+
+      // 计算该目录项的总长度
+      dt.d_reclen = DIENT_BASE_LEN + n;  // n为长文件目录项的文件名长度
+
+      // 计算下一个目录项的偏移量
+      dt.d_off = reinterpret_cast<uint64_t>(contents) + dt.d_reclen;
+
+      // 将dt的数据copy到对应的位置
+      either_copyout(user, (uint64_t)contents, (void *)&dt, DIENT_BASE_LEN);
+
+      // LOG_DEBUG("lfn=%s n=%d", dirent->d_name, n);
+      // 更新content
+      contents += dt.d_reclen;
+      readn += dt.d_reclen;
+
+    } else {
+      LOG_ERROR("fat file system format error");
     }
   }
-  return cnt;
+  return readn;
 }
-// int tf_compare_filename(TFFile *fp, char *name) {
+// int tf_compare_filename11(TFFile *fp, char *name) {
 //   uint32_t i;
 //   uint32_t namelen;
 //   FatFileEntry entry;
@@ -1056,11 +1182,11 @@ int tf_listdir(char *filename, FatFileEntry *entry, TFFile **fp) {
 }
 
 TFFile *tf_fopen(const char *filename, const char *mode) {
-  if (filename[0] == '/' && filename[1] == '.' && filename[2] == '/') {
-    filename += 2;
-  }
   if (filename[0] == '/' && filename[1] == '.' && filename[2] == '.' && filename[3] == '/') {
     return NULL;
+  }
+  if (filename[0] == '/' && filename[1] == '.') {
+    filename += 2;
   }
   TFFile *fp;
   dbg_printf("\r\n[DEBUG-tf_fopen] tf_fopen(%s, %s)\r ", filename, mode);

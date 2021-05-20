@@ -102,6 +102,7 @@ extern uint64_t sys_sched_yield(void);
 extern uint64_t sys_brk(void);
 extern uint64_t sys_uname(void);
 extern uint64_t sys_pipe(void);
+extern uint64_t sys_getdents64(void);
 
 static uint64_t (*syscalls[400])(void);
 
@@ -131,6 +132,7 @@ void syscall_init() {
   syscalls[SYS_brk] = sys_brk;
   syscalls[SYS_uname] = sys_uname;
   syscalls[SYS_pipe2] = sys_pipe;
+  syscalls[SYS_getdents64] = sys_getdents64;
 }
 
 void syscall(void) {
