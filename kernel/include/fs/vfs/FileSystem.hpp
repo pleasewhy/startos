@@ -15,7 +15,7 @@ class FileSystem {
   char specialDev[MAXPATH];
 
  public:
-  ~FileSystem(){};
+  virtual ~FileSystem(){};
   /**
    * @brief 初始化文件系统
    *

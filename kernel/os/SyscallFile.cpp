@@ -163,11 +163,35 @@ uint64_t sys_getdents64(void) {
   uint64_t addr;
   int fd;
   int len;
-  LOG_DEBUG("getdents64 fd=%d",fd);
+  LOG_DEBUG("getdents64 fd=%d", fd);
   if (argint(0, &fd) < 0 || argaddr(1, &addr) || argint(2, &len)) {
     return -1;
   }
   int n = vfs::ls(fd, (char *)addr, true);
   LOG_DEBUG("getdents64 nread=%d", n);
   return n;
+}
+
+uint64_t sys_mount() {
+  char special[MAXPATH];
+  char dir[MAXPATH];
+  char fstype[MAXFSTYPE];
+  if (argstr(0, special, MAXPATH) < 0 || argstr(1, dir, MAXPATH) < 0 || argstr(2, fstype, MAXFSTYPE) < 0) {
+    return -1;
+  }
+
+  if (strncmp(fstype, "vfat", 4) == 0) {
+    vfs::mount(vfs::FileSystemType::FAT32, dir, special);
+    return 0;
+  }
+  return -1;
+}
+
+uint64_t sys_umount2() {
+  char dir[MAXPATH];
+  int type;
+  if (argstr(0, dir, MAXPATH) < 0 || argint(1, &type) < 0) {
+    return -1;
+  }
+  return vfs::umount(dir);
 }

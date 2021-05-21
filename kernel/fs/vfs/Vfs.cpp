@@ -18,6 +18,7 @@ namespace vfs {
 struct file fileTable[NFILE];
 SpinLock fileTableLock;
 FileSystem *mountedFS[NFILESYSTEM];
+SpinLock mountedFsLock;
 
 FileSystem *createFileSystem(FileSystemType type, const char *mountPoint, const char *specialDev, int dev) {
   switch (type) {
@@ -80,10 +81,16 @@ FileSystem *getFs(const char *filepath) {
 }
 
 /**
- * @brief 计算oldpath的绝对路径
+ * @brief 计算oldpath的绝对路径，newpath用于新的路径
  */
-void getAbsolutePath(char *oldpath, char *newPath) {
+void getAbsolutePath(const char *path, char *newPath) {
   const char *curdir = myTask()->currentDir;
+  const char *oldpath = path;
+  memset(newPath, 0, MAXPATH);
+
+  if (oldpath[0] == '.' && oldpath[1] == '/') {
+    oldpath += 2;
+  }
 
   if (oldpath[0] == '/') {
     memcpy(newPath, oldpath, strlen(oldpath));
@@ -95,10 +102,20 @@ void getAbsolutePath(char *oldpath, char *newPath) {
   }
 }
 
-void calAbsolute(char *oldpath) {
+/**
+ * @brief 获取绝对路径原地修改
+ *
+ * @param path
+ */
+void calAbsolute(char *path) {
   char newPath[MAXPATH];
+  char *oldpath = path;
   memset(newPath, 0, MAXPATH);
   const char *curdir = myTask()->currentDir;
+
+  if (oldpath[0] == '.' && oldpath[1] == '/') {
+    oldpath += 2;
+  }
 
   if (oldpath[0] == '/') {
     memcpy(newPath, oldpath, strlen(oldpath));
@@ -108,7 +125,7 @@ void calAbsolute(char *oldpath) {
     memcpy(newPath + strlen(curdir), oldpath, strlen(oldpath));
     myTask()->lock.unlock();
   }
-  memcpy(oldpath, newPath, sizeof(newPath));
+  memcpy(path, newPath, sizeof(newPath));
 }
 
 /**
@@ -131,6 +148,7 @@ void init() {
   }
   fileTableLock.init("fileTable");
 
+  mountedFsLock.init("mount fs");
   mount(FileSystemType::DEVFS, "/dev", "");
   mount(FileSystemType::FAT32, "/", "/dev/hda1");
 }
@@ -281,10 +299,6 @@ int openat(int dirfd, const char *filepath, int flags) {
 
 void rm(const char *file){};
 
-size_t clear(int fd, size_t count, size_t offset) { return 0; }
-
-void truncate(int fd, size_t size) {}
-
 size_t ls(int fd, char *buffer, bool user = false) {
   struct file *fp = getFileByfd(fd);
   if (fp == NULL || !fp->directory) {
@@ -298,16 +312,48 @@ size_t ls(int fd, char *buffer, bool user = false) {
 
 size_t mounts(char *buffer, size_t size) { return 0; }
 
-void mount(FileSystemType type, const char *mountPoint, const char *specialDev) {
-  auto fs = createFileSystem(type, mountPoint, specialDev, 0);
+int mount(FileSystemType type, const char *mountPoint, const char *specialDev) {
+  char absolutMp[MAXPATH];
+  getAbsolutePath(mountPoint, absolutMp);
+  auto fs = createFileSystem(type, absolutMp, specialDev, 0);
   fs->init();
+  mountedFsLock.lock();
   for (int i = 0; i < NFILESYSTEM; i++) {
     if (mountedFS[i] == NULL) {
+      mountedFsLock.unlock();
+      LOG_DEBUG("mount fs: specialDev = %s mount point=%s", specialDev, fs->mountPoint);
       mountedFS[i] = fs;
-      return;
+      return 0;
     }
   }
+  mountedFsLock.unlock();
   panic("mount file system");
+  return -1;
+}
+
+int umount(const char *mpdir) {
+  char absolutMp[MAXPATH];
+  getAbsolutePath(mpdir, absolutMp);
+  FileSystem *fs;
+  int absolutMpLen = strlen(absolutMp);
+  int n = 0;
+  mountedFsLock.lock();
+  for (int i = 0; i < NFILESYSTEM; i++) {
+    fs = mountedFS[i];
+    if (fs == NULL) {
+      continue;
+    }
+    n = strlen(fs->mountPoint);
+    if (strncmp(fs->mountPoint, absolutMp, max(n, absolutMpLen)) == 0) {
+      mountedFS[i] = NULL;
+      mountedFsLock.unlock();
+      LOG_DEBUG("umount fs: specialDev = %s mount point=%s", fs->specialDev, fs->mountPoint);
+      delete fs;
+      return 0;
+    }
+  }
+  mountedFsLock.unlock();
+  return -1;
 }
 
 size_t direct_read(const char *file, char *buffer, size_t count, size_t offset) {
@@ -318,7 +364,13 @@ size_t direct_read(const char *file, char *buffer, size_t count, size_t offset) 
   return r;
 }
 
-size_t direct_write(const char *file, const char *buffer, size_t count, size_t offset) { return 0; }
+size_t direct_write(const char *file, const char *buffer, size_t count, size_t offset) {
+  auto fs = getFs(file);
+  LOG_TRACE("fs mount point=%s", fs->mountPoint);
+  int r = fs->write(file, false, buffer, offset, count);
+  LOG_TRACE("bytes of write=%d", r);
+  return r;
+}
 
 struct file *dup(struct file *fp) {
   fileTableLock.lock();

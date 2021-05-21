@@ -6,6 +6,8 @@
 #include "types.hpp"
 
 #define NFILESYSTEM 5
+#define MAXFSTYPE 10
+
 namespace vfs {
 
 // using int = size_t;
@@ -95,86 +97,66 @@ size_t read(int fd, bool user, char *dst, size_t count, size_t offset = 0);
  */
 size_t write(int fd, bool user, const char *src, size_t n, size_t offset = 0);
 
-/**
- * @brief Clear parts of a file content
- * @param fd The file descriptor to the file
- * @param count The number of bytes to write
- * @param offset The index where to start writting the file
- * @return a status code
- */
-size_t clear(int fd, size_t count, size_t offset = 0);
 
 /**
- * @brief Truncate the size of a file
- * @param fd The file descriptor
- * @param size The new size
- * @return a status code
- */
-void truncate(int fd, size_t size);
-
-/**
- * @brief List entries in the given directory
- * @param fd The file descriptor
- * @param buffer The buffer to fill with the entries
- * @param size The maximum size of the buffer
- * @return a status code
+ * @brief 列出一个目录下的全部目录项
+ * @param fd 目录的文件描述符
+ * @param buffer 输出缓存区
+ * @param size 缓存区的大小
+ * @return 成功返回写入缓存区的字节数，失败返回-1
  */
 size_t ls(int fd, char *buffer, bool user);
 
 /**
- * @brief List mounted file systems.
- * @param buffer The buffer to fill with the entries
- * @param size The maximum size of the buffer
- * @return a status code
+ * @brief 显示已挂载的设备
+ * @param buffer 输出缓存区
+ * @param size 缓存区的到校
+ * @return 成功返回0，失败返回-1
  */
 size_t mounts(char *buffer, size_t size);
 
 /**
- * @brief Mount a new partition
- * @param type The type of partition
- * @param mp_fd Mount point file descriptor
- * @param dev_fd Device file descriptor
- * @return a status code
+ * @brief 挂载一个设备到指定位置
+ *
+ * @param type 文件系统的类型
+ * @param mount_point 挂载的位置
+ * @param device 挂载的设备
+ * @return 成功返回0，失败返回-1
  */
-// void mount(partition_type type, int mp_fd, int dev_fd);
+int mount(FileSystemType type, const char *mountPoint, const char *specialDev);
 
 /**
- * @brief Mount a new partition
+ * @brief 卸载一个设备
  *
- * This function is intended for direct mount from the OS code.
  *
- * @param type The type of partition
- * @param mount_point Mount point path
- * @param device Device path
- * @return a status code
+ * @param mpdir 挂载路径
+ * @return 成功返回0，失败返回-1
  */
-void mount(FileSystemType type, const char *mountPoint, const char *device);
+int umount(const char *mpdir);
 
 /**
- * @brief Directly read a file or a device
+ * @brief 直接通过path读取一个设备或者文件的数据
  *
- * This is meant to be used by file system drivers.
  *
- * @param file Path to the file (or device)
- * @param buffer The output buffer
- * @param count The number of bytes to read
- * @param offset The offset where to start reading
+ * @param file 文件或者设备的路径
+ * @param buffer 输出混缓冲区
+ * @param count 读取字节数
+ * @param offset 读取的起始点偏移量
  *
- * @return An error code if something went wrong, 0 otherwise
+ * @return 失败返回-1，成功返回0
  */
 size_t direct_read(const char *file, char *buffer, size_t count, size_t offset = 0);
 
 /**
- * @brief Directly write a file or a device
+ * @brief 直接通过path向一个设备或者文件写入数据
  *
- * This is meant to be used by file system drivers.
  *
- * @param file Path to the file (or device)
- * @param buffer The input buffer
- * @param count The number of bytes to write
- * @param offset The offset where to start writing
+ * @param file 文件或者设备的路径
+ * @param buffer 输入混缓冲区
+ * @param count 写入字节数
+ * @param offset 写入的起始点偏移量
  *
- * @return An error code if something went wrong, 0 otherwise
+ * @return 失败返回-1，成功返回0
  */
 size_t direct_write(const char *file, const char *buffer, size_t count, size_t offset = 0);
 

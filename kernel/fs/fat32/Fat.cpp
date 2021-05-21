@@ -7,6 +7,7 @@
 #include "fs/fat/Fat32.hpp"
 #include "fs/fat/thinternal.h"
 #include "fs/inodefs/BufferLayer.hpp"
+#include "fs/vfs/Vfs.hpp"
 #include "os/TaskScheduler.hpp"
 #include "types.hpp"
 
@@ -56,6 +57,7 @@ size_t Fat32FileSystem::read(const char *path, bool user, char *buf, int offset,
   tf_fseek(fp, 0, offset);
   int x = tf_fread(buf, n, fp, user);
   tf_fclose(fp);
+  LOG_DEBUG("read filepath=%s r=%d", path, x);
   return x;
 }
 
@@ -272,104 +274,15 @@ int Fat32FileSystem::ls(const char *filepath, char *contents, bool user) {
   }
   return readn;
 }
-// int tf_compare_filename11(TFFile *fp, char *name) {
-//   uint32_t i;
-//   uint32_t namelen;
-//   FatFileEntry entry;
-//   char *compare_name = name;
-//   uint32_t lfn_entries;
-
-//   // Read a single directory entry
-//   tf_printf("\r\n      [DEBUG-tf_compare_filename] Comparing filename @ %d ", fp->pos);
-//   tf_fread((char *)&entry, sizeof(FatFileEntry), fp);
-
-//   // Fail if its bogus
-//   if (entry.msdos.filename[0] == 0x00) return -1;
-
-//   // If it's a DOS entry, then:
-//   if (entry.msdos.attributes != TF_ATTR_LONG_NAME) {
-//     // If it's a match, seek back an entry to the beginning of it, return 1
-//     if (1 == tf_compare_filename_segment(&entry, name)) {  //, true)) {
-//       tf_fseek(fp, -sizeof(FatFileEntry), fp->pos);
-//       tf_printf("\r\n      [DEBUG-tf_compare_filename] 8.3 Exiting... returning 1 (match)");
-//       return 1;
-//     } else {
-//       tf_printf("\r\n      [DEBUG-tf_compare_filename] 8.3 Exiting... returning 0 (doesn't match)");
-//       return 0;
-//     }
-//   } else if ((entry.lfn.sequence_number & 0xc0) == 0x40) {
-//     // CHECK FOR 0x40 bit set or this is not the first (last) LFN entry!
-//     // If this is the first LFN entry, mask off the extra bit (0x40) and you get the number of entries in the chain
-//     lfn_entries = entry.lfn.sequence_number & ~0x40;
-//     dbg_printf("\r\n=== LFN entries: %x   pos: %x  last entry:", lfn_entries, fp->pos);
-//     dbg_printHex((char *)&entry, 32);
-
-//     // Seek to the last entry in the chain (LFN entries store name in reverse, so the last shall be first)
-//     tf_fseek(fp, (int32_t)sizeof(FatFileEntry) * (lfn_entries - 1), fp->pos);
-//     tf_printf("\r\n pos: %x", fp->pos);
-
-//     // get the length of the file first off.  LFN count should be easily checked from here.
-//     namelen = strlen(name);
-//     if (((namelen + 12) / LFN_ENTRY_CAPACITY) != lfn_entries) {
-//       // skip this LFN, it isn't it.
-//       //  not necessary, we're already there.  // tf_fseek(fp, (int32_t)((i))*sizeof(FatFileEntry), fp->pos);
-//       tf_printf("\r\n pos: %x", fp->pos);
-//       tf_printf("\r\n      [DEBUG-tf_compare_filename] LFN Exiting... returning 0  (no match)");
-//       return 0;
-//     }
-
-//     for (i = 0; i < lfn_entries; i++) {
-//       // Seek back one and read it
-//       tf_printf("\r\n      [DEBUG-tf_compare_filename] LFN loop... %x::%x", i, lfn_entries);
-//       tf_fseek(fp, -sizeof(FatFileEntry), fp->pos);
-//       tf_printf("\r\n pos: %x", fp->pos);
-//       tf_fread((char *)&entry, sizeof(FatFileEntry), fp);
-//       tf_printf("\r\n pos: %x", fp->pos);
-
-//       // Compare it.  If it's not a match, jump to the end of the chain, return failure
-//       // Otherwise, continue looping until there's no entries left.
-//       if (!tf_compare_filename_segment(&entry, compare_name)) {  //, (i==lfn_entries-1))) {
-//         tf_fseek(fp, (int32_t)((i)) * sizeof(FatFileEntry), fp->pos);
-//         tf_printf("\r\n pos: %x", fp->pos);
-//         tf_printf("\r\n      [DEBUG-tf_compare_filename] LFN Exiting... returning 0  (no match)");
-//         return 0;
-//       }
-//       tf_fseek(fp, -sizeof(FatFileEntry), fp->pos);
-//       tf_printf("\r\n pos: %x", fp->pos);
-
-//       compare_name += 13;
-//     }
-//     // If we made it here, match was a success!  Return so...
-//     // ONLY if next entry is valid!
-//     tf_fseek(fp, (int32_t)sizeof(FatFileEntry) * lfn_entries, fp->pos);
-//     tf_printf("\r\n      [DEBUG-tf_compare_filename] LFN Exiting... returning 1 ");
-//     return 1;
-//   }
-//   tf_printf("\r\n      [DEBUG-tf_compare_filename] (---) Exiting... returning -1 ");
-//   return -1;
-// }
-
-// int read(const char *path, char *buf, int offset, int n) {
-//   int cluster = offset / tf_info.sectorsPerCluster;
-//   TFFile* fp;
-//   if (strlen(path) > TF_MAX_PATH / 4) {
-//     panic("path length > 64");
-//   }
-//   char buf[TF_MAX_PATH / 4];
-//   char *tmp_name = buf;
-//   strncpy(buf, path, strlen(path));
-//   while(){
-
-//   }
-//   tf_walk(tmp_name, fp) return 0;
-// }
 
 extern BufferLayer bufferLayer;
 // USERLAND
-int read_sector(char *data, uint32_t sector) {
+int read_sector(const char *specialDev, char *data, uint32_t sector) {
   // LOG_TRACE("begin read sector=%d", sector);
+  // LOG_DEBUG("begin read sector=%d", sector);
 #ifdef K210
-  sdcard_read_sector(reinterpret_cast<uint8_t *>(data), sector);
+  vfs::direct_read(specialDev, data, 512, sector*512);
+  // sdcard_read_sector(reinterpret_cast<uint8_t *>(data), sector);
 #else
   struct buf *b = bufferLayer.read(0, sector);
   memmove(data, b->data, BSIZE);
@@ -379,10 +292,11 @@ int read_sector(char *data, uint32_t sector) {
   return 0;
 }
 
-int write_sector(char *data, uint32_t sector) {
-  // LOG_TRACE("begin write sector=%d", sector);
+int write_sector(const char *specialDev, char *data, uint32_t sector) {
+  // LOG_DEBUG("begin write sector=%d", sector);
 #ifdef K210
-  sdcard_write_sector(reinterpret_cast<uint8_t *>(data), sector);
+  vfs::direct_write(specialDev, data, 512, sector*512);
+  // sdcard_write_sector(reinterpret_cast<uint8_t *>(data), sector);
 #else
   struct buf *b = bufferLayer.allocBuffer(0, sector);
   memmove(b->data, data, BSIZE);
@@ -395,11 +309,8 @@ int write_sector(char *data, uint32_t sector) {
 
 //#define TF_DEBUG
 
-TFInfo tf_info;
-alignas(4096) TFFile tf_file_handles[TF_FILE_HANDLES];
-#ifdef TF_DEBUG
-TFStats tf_stats;
-#endif
+// TFInfo tf_info;
+// alignas(4096) TFFile tf_file_handles[TF_FILE_HANDLES];
 
 /*
  * Fetch a single sector from disk.
@@ -413,7 +324,7 @@ TFStats tf_stats;
  * RETURN
  *   the return code given by the users read_sector() (should be zero for NO ERROR, nonzero otherwise)
  */
-int tf_fetch(uint32_t sector) {
+int Fat32FileSystem::tf_fetch(uint32_t sector) {
   int rc = 0;
   // Don't actually do the fetch if we already have it in memory
   if (sector == tf_info.currentSector) {
@@ -435,7 +346,7 @@ int tf_fetch(uint32_t sector) {
   tf_stats.sector_reads += 1;
 #endif
   // Do the read, pass up the error flag
-  rc |= read_sector(tf_info.buffer, sector);
+  rc |= read_sector(this->specialDev, tf_info.buffer, sector);
   if (!rc) tf_info.currentSector = sector;
   return rc;
 }
@@ -447,10 +358,10 @@ int tf_fetch(uint32_t sector) {
  * RETURN
  *   the error code given by the users write_sector() (should be zero for NO ERROR, nonzero otherwise)
  */
-int tf_store() {
+int Fat32FileSystem::tf_store() {
   dbg_printf("\r\n[DEBUG-tf_store] Writing sector (%d) to disk.", tf_info.currentSector);
   tf_info.sectorFlags &= ~TF_FLAG_DIRTY;
-  return write_sector(tf_info.buffer, tf_info.currentSector);
+  return write_sector(this->specialDev, tf_info.buffer, tf_info.currentSector);
 }
 
 /*
@@ -462,7 +373,7 @@ int tf_store() {
  * RETURN
  *   0 for a successfully initialized filesystem, nonzero otherwise.
  */
-int tf_init() {
+int Fat32FileSystem::tf_init() {
   BPB_struct *bpb;
   uint32_t fat_size, root_dir_sectors, data_sectors, temp;
   uint32_t cluster_count;
@@ -564,7 +475,7 @@ int tf_init() {
  * RETURN
  *   The value of the fat entry for the specified cluster.
  */
-uint32_t tf_get_fat_entry(uint32_t cluster) {
+uint32_t Fat32FileSystem::tf_get_fat_entry(uint32_t cluster) {
   tf_printf("\r\n        [DEBUG-tf_get_fat_entry] %x ", cluster);
   uint32_t offset = cluster * 4;
   tf_fetch(tf_info.reservedSectors + (offset / 512));  // 512 is hardcoded bpb->bytesPerSector
@@ -584,7 +495,7 @@ uint32_t tf_get_fat_entry(uint32_t cluster) {
  * TODO
  *   Does the sector modified here need to be flagged as dirty?
  */
-int tf_set_fat_entry(uint32_t cluster, uint32_t value) {
+int Fat32FileSystem::tf_set_fat_entry(uint32_t cluster, uint32_t value) {
   uint32_t offset;
   int rc;
   tf_printf("\r\n        [DEBUG-tf_set_fat_entry] %x  %x ", cluster, value);
@@ -605,7 +516,7 @@ int tf_set_fat_entry(uint32_t cluster, uint32_t value) {
  * RETURN
  *   The first sector of the provided cluster
  */
-uint32_t tf_first_sector(uint32_t cluster) {
+uint32_t Fat32FileSystem::tf_first_sector(uint32_t cluster) {
   return ((cluster - 2) * tf_info.sectorsPerCluster) + tf_info.firstDataSector;
 }
 
@@ -626,7 +537,7 @@ uint32_t tf_first_sector(uint32_t cluster) {
  * RETURN
  *   A string pointer to the next level in the path, or NULL if this is the end of the path
  */
-char *tf_walk(char *filename, TFFile *fp) {
+char *Fat32FileSystem::tf_walk(char *filename, TFFile *fp) {
   FatFileEntry entry;
   tf_printf("\r\n  [DEBUG-tf_walk] Walking path '%s'", filename);
   // We're out of path. this walk is COMPLETE
@@ -674,13 +585,13 @@ char *tf_walk(char *filename, TFFile *fp) {
   return NULL;
 }
 
-TFFile *tf_get_free_handle();
+// TFFile *tf_get_free_handle();
 /*
  * Searches the list of system file handles for a free one, and returns it.
  * RETURN
  *   NULL if no system file handles are free, or the free handle if one is available.
  */
-TFFile *tf_get_free_handle() {
+TFFile *Fat32FileSystem::Fat32FileSystem::tf_get_free_handle() {
   int i;
   TFFile *fp;
   for (i = 0; i < TF_FILE_HANDLES; i++) {
@@ -696,7 +607,7 @@ TFFile *tf_get_free_handle() {
 /*
  * Release a filesystem handle (mark as available)
  */
-void tf_release_handle(TFFile *fp) { fp->flags &= ~TF_FLAG_OPEN; }
+void Fat32FileSystem::tf_release_handle(TFFile *fp) { fp->flags &= ~TF_FLAG_OPEN; }
 
 // Convert a character to uppercase
 // TODO: Re-do how filename conversions are done.
@@ -710,7 +621,7 @@ char upper(char c) {
 
 char temp[13];
 
-void tf_choose_sfn(char *dest, char *src, TFFile *fp) {
+void Fat32FileSystem::tf_choose_sfn(char *dest, char *src, TFFile *fp) {
   int results, num = 1;
   TFFile xfile;
   // throwaway fp that doesn't muck with the original
@@ -756,7 +667,7 @@ void tf_choose_sfn(char *dest, char *src, TFFile *fp) {
  * TODO: Test for short filenames, (<7 characters)
  * TODO: Modify this to use the basis name generation algorithm described in the FAT32 whitepaper.
  */
-int tf_shorten_filename(char *dest, char *src, char num) {
+int Fat32FileSystem::tf_shorten_filename(char *dest, char *src, char num) {
   // int l = strlen(src);
   int i;
   int lossy_flag = 0;
@@ -890,7 +801,7 @@ int tf_shorten_filename(char *dest, char *src, char num) {
  * TODO
  *   Test and further improve on this function
  */
-char *tf_create_lfn_entry(char *filename, FatFileEntry *entry) {
+char *Fat32FileSystem::tf_create_lfn_entry(char *filename, FatFileEntry *entry) {
   int i, done = 0;
   tf_printf("\r\n--tf_create_lfn_entry: %s", filename);
   for (i = 0; i < 5; i++) {
@@ -934,7 +845,7 @@ char tf_lfn_checksum(const char *pFcbName) {
   return sum;
 }
 
-int tf_place_lfn_chain(TFFile *fp, char *filename, char *sfn) {
+int Fat32FileSystem::tf_place_lfn_chain(TFFile *fp, char *filename, char *sfn) {
   // Windows does reverse chaining:  0x44, 0x03, 0x02, 0x01
   char *strptr = filename;
   int entries = 1;
@@ -972,7 +883,7 @@ int tf_place_lfn_chain(TFFile *fp, char *filename, char *sfn) {
   return 0;
 }
 
-int tf_create(const char *filename) {
+int Fat32FileSystem::tf_create(const char *filename) {
   TFFile *fp = tf_parent(filename, "r", false);
   FatFileEntry entry;
   uint32_t cluster;
@@ -1024,7 +935,7 @@ are *not* allowed!
 returns 1 on failure
 returns 0 on success
 */
-int tf_mkdir(const char *filename, int mkParents) {
+int Fat32FileSystem::tf_mkdir(const char *filename, int mkParents) {
   LOG_DEBUG("tf_mkdir=%s", filename);
   // FIXME: verify that we can't create multiples of the same one.
   // FIXME: figure out how the root directory location is determined.
@@ -1134,54 +1045,7 @@ int tf_mkdir(const char *filename, int mkParents) {
   return 0;
 }
 
-//**** COMPLETE UNTESTED tf_listdir ****//
-// this may be better served by simply opening the directory directly through C2
-// parsing is not a huge deal...
-// returns 1 when valid entry, 0 when done.
-int tf_listdir(char *filename, FatFileEntry *entry, TFFile **fp) {
-  // May Require a terminating "/."
-  // FIXME: What do we do with the results?!  perhaps take in a fp and assume
-  //  that if not NULL, it's already in the middle of a listdir!  if NULL
-  //  we do the tf_parent thing and then start over.  if not, we return the
-  //  next FatFileEntry almost like a callback...  and return NULL when we've
-  //  reached the end.  almost like.. gulp... strtok.  ugh.  maybe not.
-  //  still, it may suck less than other things... i mean, by nature, listdir
-  //  is inherently dynamic in size, and we have no re/malloc.
-  // uint32_t cluster;
-  // char *temp;
-
-  if (*fp == NULL) *fp = tf_parent(filename, "r", false);
-
-  dbg_printf("\r\n[DEBUG-tf_listdir] listing directory: '%s' ", filename);
-  if (!*fp) return 1;
-  // do magic here.
-  while (1) {
-    tf_fread((char *)entry, sizeof(FatFileEntry), *fp);
-    switch (((char *)entry)[0]) {
-      case 0x05:
-        // pending delete files under some implementations.  ignore it.
-        break;
-      case 0xe5:
-        // freespace (deleted file)
-        break;
-      case 0x2e:
-        // '.' or '..'
-        break;
-      case 0x00:
-        // no further entries exist, and this one is available
-        tf_fclose(*fp);
-        *fp = NULL;
-        return 0;
-
-      default:
-        return 1;
-    }
-  }
-
-  return 0;
-}
-
-TFFile *tf_fopen(const char *filename, const char *mode) {
+TFFile *Fat32FileSystem::tf_fopen(const char *filename, const char *mode) {
   if (filename[0] == '/' && filename[1] == '.' && filename[2] == '.' && filename[3] == '/') {
     return NULL;
   }
@@ -1204,7 +1068,7 @@ TFFile *tf_fopen(const char *filename, const char *mode) {
 
 //
 // Just like fopen, but only look at n uint8_tacters of the path
-TFFile *tf_fnopen(const char *filename, const char *mode, int n) {
+TFFile *Fat32FileSystem::tf_fnopen(const char *filename, const char *mode, int n) {
   // Request a new file handle from the system
   TFFile *fp = tf_get_free_handle();
   char myfile[256];
@@ -1271,7 +1135,7 @@ TFFile *tf_fnopen(const char *filename, const char *mode, int n) {
   return fp;
 }
 
-int tf_free_clusterchain(uint32_t cluster) {
+int Fat32FileSystem::tf_free_clusterchain(uint32_t cluster) {
   uint32_t fat_entry;
   dbg_printf("\r\n[DEBUG-tf_free_clusterchain] Freeing clusterchain starting at cluster %d... ", cluster);
   fat_entry = tf_get_fat_entry(cluster);
@@ -1291,7 +1155,7 @@ int tf_free_clusterchain(uint32_t cluster) {
   return 0;
 }
 
-int tf_fseek(TFFile *fp, size_t base, long offset) {
+int Fat32FileSystem::tf_fseek(TFFile *fp, size_t base, long offset) {
   long pos = base + offset;
   if (pos >= fp->size) {
     return TF_ERR_INVALID_SEEK;
@@ -1302,7 +1166,7 @@ int tf_fseek(TFFile *fp, size_t base, long offset) {
 /*
  * TODO: Make it so seek fails aren't destructive to the file handle
  */
-int tf_unsafe_fseek(TFFile *fp, int32_t base, long offset) {
+int Fat32FileSystem::tf_unsafe_fseek(TFFile *fp, int32_t base, long offset) {
   uint32_t cluster_idx;
   long pos = base + offset;
   uint32_t mark = tf_info.type ? TF_MARK_EOC32 : TF_MARK_EOC16;
@@ -1369,7 +1233,7 @@ int tf_unsafe_fseek(TFFile *fp, int32_t base, long offset) {
  * SIDE EFFECT: the position in current_directory will be set to the beginning of the fatfile entry (for overwriting
  * purposes) returns 0 on match, -1 on fail
  */
-int tf_find_file(TFFile *current_directory, char *name) {
+int Fat32FileSystem::tf_find_file(TFFile *current_directory, char *name) {
   int rc;
   tf_fseek(current_directory, 0, 0);
   // LOG_DEBUG("dir=%s name=%s", current_directory->filename, name);
@@ -1476,7 +1340,7 @@ int tf_compare_filename_segment(FatFileEntry *entry, char *name) {  //, char las
 //   0 for entry doesn't match filename.  Side effect: fp seeks to next entry
 //   -1 for couldn't read an entry, due to EOF or other fread error
 //
-int tf_compare_filename(TFFile *fp, char *name) {
+int Fat32FileSystem::tf_compare_filename(TFFile *fp, char *name) {
   uint32_t i;
   uint32_t namelen;
   FatFileEntry entry;
@@ -1553,7 +1417,7 @@ int tf_compare_filename(TFFile *fp, char *name) {
   return -1;
 }
 
-int tf_fread(char *dest, int size, TFFile *fp, bool user) {
+int Fat32FileSystem::tf_fread(char *dest, int size, TFFile *fp, bool user) {
   uint32_t sector;
   int n = 0;  // count that have been read
   while (size > 0) {
@@ -1588,7 +1452,7 @@ int tf_fread(char *dest, int size, TFFile *fp, bool user) {
   return n;
 }
 
-int tf_fwrite(const char *src, int sz, TFFile *fp, bool user) {
+int Fat32FileSystem::tf_fwrite(const char *src, int sz, TFFile *fp, bool user) {
   int tracking;
   uint32_t sector;
   int n = 0;  // count that have been read
@@ -1628,9 +1492,9 @@ int tf_fwrite(const char *src, int sz, TFFile *fp, bool user) {
   return n;
 }
 
-int tf_fputs(char *src, TFFile *fp) { return tf_fwrite(src, strlen(src), fp); }
+int Fat32FileSystem::tf_fputs(char *src, TFFile *fp) { return tf_fwrite(src, strlen(src), fp); }
 
-int tf_fclose(TFFile *fp) {
+int Fat32FileSystem::tf_fclose(TFFile *fp) {
   int rc;
 
   dbg_printf("\r\n[DEBUG-tf_close] Closing file... ");
@@ -1644,7 +1508,7 @@ int tf_fclose(TFFile *fp) {
 
 returns basically a fp the tf_fnopen returns
 */
-TFFile *tf_parent(const char *filename, const char *mode, int mkParents) {
+TFFile *Fat32FileSystem::tf_parent(const char *filename, const char *mode, int mkParents) {
   TFFile *retval;
   char *f2;
   dbg_printf("\r\n[DEBUG-tf_parent] Opening parent of '%s' ", filename);
@@ -1671,7 +1535,7 @@ TFFile *tf_parent(const char *filename, const char *mode, int mkParents) {
   return retval;
 }
 
-int tf_fflush(TFFile *fp) {
+int Fat32FileSystem::tf_fflush(TFFile *fp) {
   int rc = 0;
   TFFile *dir;
   FatFileEntry entry;
@@ -1725,7 +1589,7 @@ int tf_fflush(TFFile *fp) {
  * @param filename - The full path of the file to be removed
  * @return
  */
-int tf_remove(char *filename) {
+int Fat32FileSystem::tf_remove(char *filename) {
   TFFile *fp;
   FatFileEntry entry;
   int rc;
@@ -1761,7 +1625,7 @@ int tf_remove(char *filename) {
 // Walk the FAT from the very first data sector and find a cluster that's available
 // Return the cluster index
 // TODO: Rewrite this function so that you can start finding a free cluster at somewhere other than the beginning
-uint32_t tf_find_free_cluster() {
+uint32_t Fat32FileSystem::tf_find_free_cluster() {
   uint32_t i, entry, totalClusters;
 
   dbg_printf("\r\n[DEBUG-tf_find_free_cluster] Searching for a free cluster... ");
@@ -1776,7 +1640,7 @@ uint32_t tf_find_free_cluster() {
 }
 
 /* Optimize search for a free cluster */
-uint32_t tf_find_free_cluster_from(uint32_t c) {
+uint32_t Fat32FileSystem::tf_find_free_cluster_from(uint32_t c) {
   uint32_t i, entry, totalClusters;
   dbg_printf("\r\n[DEBUG-tf_find_free_cluster_from] Searching for a free cluster from %x... ", c);
   totalClusters = tf_info.totalSectors / tf_info.sectorsPerCluster;
@@ -1797,7 +1661,7 @@ uint32_t tf_find_free_cluster_from(uint32_t c) {
 
 /* Initialize the FileSystem metadata on the media (yes, the "FORMAT" command
     that Windows doesn't allow for large volumes */
-uint32_t tf_initializeMedia(
+uint32_t Fat32FileSystem::tf_initializeMedia(
     uint32_t totalSectors)  // this should take in some lun number to make this all good...   but we'll do that when we
                             // get read/write_sector lun-aware. also, hardcoded sector configuration
 {
@@ -1861,7 +1725,7 @@ uint32_t tf_initializeMedia(
   // ending signatures
   sectorBuf0[0x1fe] = 0x55;
   sectorBuf0[0x1ff] = 0xAA;
-  write_sector(sectorBuf0, 0);
+  write_sector(this->specialDev,sectorBuf0, 0);
 
   // set up key sectors...
   // dbg_printf("\n\rFATSize=%u\n\rNumFATs=%u\n\fat=%u\n\r",bpb.FSTypeSpecificData.fat32.FATSize,bpb.NumFATs,fat);
@@ -1880,17 +1744,17 @@ uint32_t tf_initializeMedia(
   *((uint32_t *)(sectorBuf + 0x1f4)) = 0;           // reserved
   *((uint32_t *)(sectorBuf + 0x1f8)) = 0;           // reserved
   *((uint32_t *)(sectorBuf + 0x1fc)) = 0xaa550000;
-  write_sector(sectorBuf, 1);
+  write_sector(this->specialDev,sectorBuf, 1);
   fat = (bpb.ReservedSectorCount);
 
   dbg_printf("\r\n     clear rest of Cluster");
   memset(sectorBuf, 0x00, 0x200);
   for (scl = 2; scl < bpb.SectorsPerCluster; scl++) {
     memset(sectorBuf, 0x00, 0x200);
-    write_sector(sectorBuf, scl);
+    write_sector(this->specialDev, sectorBuf, scl);
   }
   // write backup copy of metadata
-  write_sector(sectorBuf0, 6);
+  write_sector(this->specialDev, sectorBuf0, 6);
 
   dbg_printf("\r\n initialize DATA section starting in Section 2:");
   // make Root Directory
@@ -1900,7 +1764,7 @@ uint32_t tf_initializeMedia(
   memset(sectorBuf, 0x00, 0x200);  // 0x00000000 is the unallocated marker
   for (scl = ssa + bpb.SectorsPerCluster; scl >= ssa; scl--) {
     dbg_printf("wiping sector %x  ", scl);
-    write_sector(sectorBuf, scl);
+    write_sector(this->specialDev, sectorBuf, scl);
   }
 
   /*// whack a few clusters 1/4th through the partition as well.
@@ -1915,8 +1779,8 @@ uint32_t tf_initializeMedia(
   dbg_printf("\r\n    // write all 00's to all (%d) FAT sectors", ssa - fat);
   memset(sectorBuf, 0x00, 0x200);  // 0x00000000 is the unallocated marker
   for (scl = fat; scl < ssa / 2; scl++) {
-    write_sector(sectorBuf, scl);
-    write_sector(sectorBuf, scl + (ssa / 2));
+    write_sector(this->specialDev,sectorBuf, scl);
+    write_sector(this->specialDev, sectorBuf, scl + (ssa / 2));
   }
 
   // SSA = RSC + FN x SF + ceil((32 x RDE)/SS)  and LSN = SSA + (CN-2) x SC
@@ -1925,13 +1789,13 @@ uint32_t tf_initializeMedia(
   *((uint32_t *)(sectorBuf + 0x000)) = 0x0ffffff8;  // special - EOF marker
   *((uint32_t *)(sectorBuf + 0x004)) = 0x0fffffff;  // special and clean
   *((uint32_t *)(sectorBuf + 0x008)) = 0x0ffffff8;  // root directory (one cluster)
-  write_sector(sectorBuf, bpb.SectorsPerCluster);
+  write_sector(this->specialDev, sectorBuf, bpb.SectorsPerCluster);
 
   dbg_printf(" initialization complete\r\n");
   return 0;
 }
 
-uint32_t tf_initializeMediaNoBlock(uint32_t totalSectors, int start) {
+uint32_t Fat32FileSystem::tf_initializeMediaNoBlock(uint32_t totalSectors, int start) {
   char sectorBuf0[512];
   char sectorBuf[512];
   BPB_struct bpb;  // = (BPB_struct*)sectorBuf0;
@@ -1995,7 +1859,7 @@ uint32_t tf_initializeMediaNoBlock(uint32_t totalSectors, int start) {
     // ending signatures
     sectorBuf0[0x1fe] = 0x55;
     sectorBuf0[0x1ff] = 0xAA;
-    write_sector(sectorBuf0, 0);
+    write_sector(this->specialDev, sectorBuf0, 0);
 
     // set up key sectors...
     // dbg_printf("\n\rFATSize=%u\n\rNumFATs=%u\n\fat=%u\n\r",bpb.FSTypeSpecificData.fat32.FATSize,bpb.NumFATs,fat);
@@ -2014,17 +1878,17 @@ uint32_t tf_initializeMediaNoBlock(uint32_t totalSectors, int start) {
     *((uint32_t *)(sectorBuf + 0x1f4)) = 0;           // reserved
     *((uint32_t *)(sectorBuf + 0x1f8)) = 0;           // reserved
     *((uint32_t *)(sectorBuf + 0x1fc)) = 0xaa550000;
-    write_sector(sectorBuf, 1);
+    write_sector(this->specialDev,sectorBuf, 1);
     fat = (bpb.ReservedSectorCount);
 
     dbg_printf("\r\n     clear rest of Cluster");
     memset(sectorBuf, 0x00, 0x200);
     for (scl = 2; scl < sectors_per_cluster; scl++) {
       memset(sectorBuf, 0x00, 0x200);
-      write_sector(sectorBuf, scl);
+      write_sector(this->specialDev,sectorBuf, scl);
     }
     // write backup copy of metadata
-    write_sector(sectorBuf0, 6);
+    write_sector(this->specialDev,sectorBuf0, 6);
 
     dbg_printf("\r\n initialize DATA section starting in Section 2:");
     // make Root Directory
@@ -2034,7 +1898,7 @@ uint32_t tf_initializeMediaNoBlock(uint32_t totalSectors, int start) {
     memset(sectorBuf, 0x00, 0x200);  // 0x00000000 is the unallocated marker
     for (scl = ssa + bpb.SectorsPerCluster; scl >= ssa; scl--) {
       dbg_printf("wiping sector %x  ", scl);
-      write_sector(sectorBuf, scl);
+      write_sector(this->specialDev, sectorBuf, scl);
     }
 
     /*// whack a few clusters 1/4th through the partition as well.
@@ -2055,8 +1919,8 @@ uint32_t tf_initializeMediaNoBlock(uint32_t totalSectors, int start) {
     memset(sectorBuf, 0x00, 0x200);  // 0x00000000 is the unallocated marker
     dbg_printf("~", scl, stop);
     for (; scl < stop; scl++) {
-      write_sector(sectorBuf, scl);
-      write_sector(sectorBuf, scl + (ssa / 2));
+      write_sector(this->specialDev,sectorBuf, scl);
+      write_sector(this->specialDev,sectorBuf, scl + (ssa / 2));
     }
     if (scl < ssa / 2) return false;
 
@@ -2066,13 +1930,13 @@ uint32_t tf_initializeMediaNoBlock(uint32_t totalSectors, int start) {
     *((uint32_t *)(sectorBuf + 0x000)) = 0x0ffffff8;  // special - EOF marker
     *((uint32_t *)(sectorBuf + 0x004)) = 0x0fffffff;  // special and clean
     *((uint32_t *)(sectorBuf + 0x008)) = 0x0ffffff8;  // root directory (one cluster)
-    write_sector(sectorBuf, sectors_per_cluster);
+    write_sector(this->specialDev,sectorBuf, sectors_per_cluster);
 
     dbg_printf(" initialization complete\r\n");
   }
   return true;
 }
-void tf_print_open_handles(void) {
+void Fat32FileSystem::tf_print_open_handles(void) {
   int i;
   TFFile *fp;
   dbg_printf("\r\n-=-=- Open File Handles : ");
@@ -2088,7 +1952,7 @@ void tf_print_open_handles(void) {
     returns a bitfield where the handles are open (1) or free (0)
     assumes there are <64 handles
 */
-uint64_t tf_get_open_handles(void) {
+uint64_t Fat32FileSystem::tf_get_open_handles(void) {
   int i;
   TFFile *fp;
   uint64_t retval = 0;

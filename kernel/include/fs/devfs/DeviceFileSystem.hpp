@@ -7,22 +7,22 @@
 #include "types.hpp"
 
 struct DeviceFileSystem final : public FileSystem {
-  //  public:
-  // virtual ~Fat32FileSystem(){};
  public:
+ /**
+  * @brief 析构函数
+  */
+  ~DeviceFileSystem() override{};
   /**
    * @brief 默认构造函数
-   *
    */
   DeviceFileSystem(){};
 
   /**
    * @brief
-   *
    */
   DeviceFileSystem(const char *mountPoint, const char *specialDev) {
-    safestrcpy(this->mountPoint, mountPoint, strlen(mountPoint)+1);
-    safestrcpy(this->specialDev, specialDev, strlen(specialDev)+1);
+    safestrcpy(this->mountPoint, mountPoint, strlen(mountPoint) + 1);
+    safestrcpy(this->specialDev, specialDev, strlen(specialDev) + 1);
   };
 
   /**
@@ -89,7 +89,7 @@ struct DeviceFileSystem final : public FileSystem {
    */
   int get_file(const char *filepath, struct file *fp) override;
 
-   /**
+  /**
    * @brief 获取给定目录下的目录项
    * @param filepath 目录的绝对路径
    * @param contents

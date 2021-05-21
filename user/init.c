@@ -120,6 +120,8 @@ void main() {
   test("/uname", NULL);
   test("/pipe", NULL);
   test("/getdents", NULL);
+  test("/mount", NULL);
+  test("/umount", NULL);
   while (1) {
   };
 }

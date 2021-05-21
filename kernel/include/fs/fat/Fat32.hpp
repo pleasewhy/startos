@@ -3,6 +3,7 @@
 
 #include "StartOS.hpp"
 #include "common/string.hpp"
+#include "fs/fat/thinternal.h"
 #include "fs/vfs/FileSystem.hpp"
 #include "types.hpp"
 
@@ -98,7 +99,7 @@ typedef struct struct_TFFILE {
   char mode;
   uint32_t size;
   char filename[TF_MAX_PATH];
-}  TFFile;
+} TFFile;
 
 #define TF_MODE_READ 0x01
 #define TF_MODE_WRITE 0x02
@@ -115,8 +116,6 @@ typedef struct struct_TFFILE {
 #define TF_ATTR_DEVICE 0x40  // Should never happen!
 #define TF_ATTR_UNUSED 0x80
 
-int read_sector(char *data, uint32_t blocknum);
-int write_sector(char *data, uint32_t blocknum);
 // New error codes
 #define TF_ERR_NO_ERROR 0
 #define TF_ERR_BAD_BOOT_SIGNATURE 1
@@ -133,9 +132,8 @@ extern TFInfo tf_info;
 extern TFFile tf_file;
 
 struct Fat32FileSystem final : public FileSystem {
-  //  public:
-  // virtual ~Fat32FileSystem(){};
  public:
+  ~Fat32FileSystem() override{};
   /**
    * @brief 默认构造函数
    *
@@ -215,13 +213,13 @@ struct Fat32FileSystem final : public FileSystem {
    */
   int get_file(const char *filepath, struct file *fp) override;
 
-   /**
+  /**
    * @brief 获取给定目录下的目录项
    * @param filepath 目录的绝对路径
    * @param contents
    * @return 返回该目录下的目录项的数量
    */
-  int ls(const char *filepath, char *contents, bool user=false) override;
+  int ls(const char *filepath, char *contents, bool user = false) override;
 
   /**
    * @brief Create the given file on the file system
@@ -243,50 +241,54 @@ struct Fat32FileSystem final : public FileSystem {
    * @return 0 on success, an error code otherwise
    */
   size_t rm(const char *filepath) override;
+
+  // New backend functions
+  int tf_fetch(uint32_t sector);
+  int tf_store(void);
+  uint32_t tf_get_fat_entry(uint32_t cluster);
+  int tf_set_fat_entry(uint32_t cluster, uint32_t value);
+  int tf_unsafe_fseek(TFFile *fp, int32_t base, long offset);
+  TFFile *tf_fnopen(const char *filename, const char *mode, int n);
+  int tf_free_clusterchain(uint32_t cluster);
+  int tf_create(const char *filename);
+  void tf_release_handle(TFFile *fp);
+  TFFile *tf_parent(const char *filename, const char *mode, int mkParents);
+  int tf_shorten_filename(char *dest, char *src, char num);
+
+  // New frontend functions
+  int tf_init();
+  int tf_fflush(TFFile *fp);
+  int tf_fseek(TFFile *fp, size_t base, long offset);
+  int tf_fclose(TFFile *fp);
+  int tf_fread(char *dest, int size, TFFile *fp, bool user = false);
+  int tf_find_file(TFFile *current_directory, char *name);
+  int tf_compare_filename(TFFile *fp, char *name);
+  uint32_t tf_first_sector(uint32_t cluster);
+  char *tf_walk(char *filename, TFFile *fp);
+  TFFile *tf_fopen(const char *filename, const char *mode);
+  int tf_fwrite(const char *src, int sz, TFFile *fp, bool user = false);
+  int tf_fputs(char *src, TFFile *fp);
+  int tf_mkdir(const char *filename, int mkParents);
+  int tf_remove(char *filename);
+  void tf_print_open_handles(void);
+
+  uint32_t tf_find_free_cluster();
+  uint32_t tf_find_free_cluster_from(uint32_t c);
+
+  uint32_t tf_initializeMedia(uint32_t totalSectors);
+  uint32_t tf_initializeMediaNoBlock(uint32_t totalSectors, int start);
+
+  // hidden functions... IAR requires that all functions be declared
+  TFFile *tf_get_free_handle();
+  uint64_t tf_get_open_handles();
+
+  int tf_place_lfn_chain(TFFile *fp, char *filename, char *sfn);
+  void tf_choose_sfn(char *dest, char *src, TFFile *fp);
+  char *tf_create_lfn_entry(char *filename, FatFileEntry *entry);
+  // New Datas
+  TFInfo tf_info;
+  TFFile tf_file_handles[TF_FILE_HANDLES];
 };
 
-// New backend functions
-int tf_init(void);
-int tf_fetch(uint32_t sector);
-int tf_store(void);
-uint32_t tf_get_fat_entry(uint32_t cluster);
-int tf_set_fat_entry(uint32_t cluster, uint32_t value);
-int tf_unsafe_fseek(TFFile *fp, int32_t base, long offset);
-TFFile *tf_fnopen(const char *filename, const char *mode, int n);
-int tf_free_clusterchain(uint32_t cluster);
-int tf_create(const char *filename);
-void tf_release_handle(TFFile *fp);
-TFFile *tf_parent(const char *filename, const char *mode, int mkParents);
-int tf_shorten_filename(char *dest, char *src, char num);
-
-// New frontend functions
-int tf_init();
-int tf_fflush(TFFile *fp);
-int tf_fseek(TFFile *fp, size_t base, long offset);
-int tf_fclose(TFFile *fp);
-int tf_fread(char *dest, int size, TFFile *fp, bool user = false);
-int tf_find_file(TFFile *current_directory, char *name);
-int tf_compare_filename(TFFile *fp, char *name);
-uint32_t tf_first_sector(uint32_t cluster);
-char *tf_walk(char *filename, TFFile *fp);
-TFFile *tf_fopen(const char *filename, const char *mode);
-int tf_fwrite(const char *src, int sz, TFFile *fp, bool user=false);
-int tf_fputs(char *src, TFFile *fp);
-int tf_mkdir(const char *filename, int mkParents);
-int tf_remove(char *filename);
-void tf_print_open_handles(void);
-
-uint32_t tf_find_free_cluster();
-uint32_t tf_find_free_cluster_from(uint32_t c);
-
-uint32_t tf_initializeMedia(uint32_t totalSectors);
-uint32_t tf_initializeMediaNoBlock(uint32_t totalSectors, int start);
-
-// hidden functions... IAR requires that all functions be declared
-TFFile *tf_get_free_handle();
 char upper(char c);
-
-// New Datas
-extern TFInfo tf_info;
-extern TFFile tf_file_handles[TF_FILE_HANDLES];
 #endif
