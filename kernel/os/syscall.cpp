@@ -105,6 +105,8 @@ extern uint64_t sys_pipe(void);
 extern uint64_t sys_getdents64(void);
 extern uint64_t sys_mount(void);
 extern uint64_t sys_umount2(void);
+extern uint64_t sys_times(void);
+extern uint64_t sys_gettimeofday(void);
 
 static uint64_t (*syscalls[400])(void);
 
@@ -137,6 +139,8 @@ void syscall_init() {
   syscalls[SYS_getdents64] = sys_getdents64;
   syscalls[SYS_mount] = sys_mount;
   syscalls[SYS_umount2] = sys_umount2;
+  syscalls[SYS_times] = sys_times;
+  syscalls[SYS_gettimeofday] = sys_gettimeofday;
 }
 
 void syscall(void) {

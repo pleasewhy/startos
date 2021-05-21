@@ -20,27 +20,28 @@
 #define DISK_IRQ 27
 #endif
 
+// RTC tick and alarm interrupt
+#define IRQN_RTC_INTERRUPT 20
 
-class Plic {
- public:
-  /**
-   * 初始化PLIC
-   */
-  void init();
 
-  void initHart();
+#ifdef __cplusplus
+namespace plic {
+/**
+ * 初始化PLIC
+ */
+void init();
 
-  /**
-   * 向PLIC询问中断
-   */
-  int claim();
+void initHart();
 
-  /**
-   * 告知PLIC已经处理了当前IRQ
-   */
-  void complete(int irq);
+/**
+ * 向PLIC询问中断
+ */
+int claim();
 
- private:
-  /* data */
-};
+/**
+ * 告知PLIC已经处理了当前IRQ
+ */
+void complete(int irq);
+};  // namespace plic
+#endif
 #endif

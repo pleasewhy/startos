@@ -176,4 +176,22 @@ struct file *getFileByfd(int fd);
  */
 int exec(char *path, char **argv);
 
+/**
+ * @brief 获取进程的CPU使用ticks
+ * 
+ * @param tm 保存相关的时间信息
+ * @return int 
+ */
+int taskTimes(struct tms *tm);
+
+/**
+ * @brief 获取进程的时间用户态运行时间和内核态运行时间
+ * 及其子进程时间信息
+ * 
+ * @param tm 储存时间系统
+ * @return int 成功返回0，失败返回-1
+ */
+int taskTimes(struct tms *tm);
+
+
 #endif  // TASK_SCHEDULER_HPP

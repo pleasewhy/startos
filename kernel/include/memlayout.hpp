@@ -66,7 +66,7 @@
 #define PLIC_MCLAIM(hart)       (PLIC_V + 0x200004 + (hart) * 0x2000)
 #define PLIC_SCLAIM(hart)       (PLIC_V + 0x201004 + (hart) * 0x2000)
 
-// #ifdef  K210
+#ifdef  K210
 #define GPIOHS                  0x38001000
 #define DMAC                    0x50000000
 #define GPIO                    0x50200000
@@ -76,6 +76,8 @@
 #define SPI1                    0x53000000
 #define SPI2                    0x54000000
 #define SYSCTL                  0x50440000
+#define RTC                     0x50460000
+
 
 
 #define GPIOHS_V                (0x38001000 + VIRT_OFFSET)
@@ -87,7 +89,8 @@
 #define SPI1_V                  (0x53000000 + VIRT_OFFSET)
 #define SPI2_V                  (0x54000000 + VIRT_OFFSET)
 #define SYSCTL_V                (0x50440000 + VIRT_OFFSET)
-// #endif
+#define RTC_V                   (0x50460000 + VIRT_OFFSET)
+#endif
 
 // the physical address of rustsbi
 #define RUSTSBI_BASE            0x80000000

@@ -87,7 +87,8 @@ class Task {
   struct file *openFiles[NOFILE];  // 用户打开文件，其下标为文件描述符。
   char currentDir[MAXPATH];
   uint64_t entry;
-
+  int sticks;               // 程序在用户态下运行的时间
+  int uticks;               // 程序在内核态下运行的时间
   uint64_t kstack;         // 进程的内核空间栈。
   struct context context;  // 被保存的寄存器，用于pswitch
   char name[16];           // 进程名

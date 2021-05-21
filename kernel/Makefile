@@ -105,7 +105,9 @@ OBJS += \
   driver/utils.o \
   fs/disk/Sdcard.o \
   driver/dmac.o \
-  driver/sysctl.o
+  driver/sysctl.o \
+	driver/rtc.o \
+	device/Clock.o
 else
 OBJS += \
 	fs/disk/VirtioDisk.o

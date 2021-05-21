@@ -1,15 +1,18 @@
 #include "StartOS.hpp"
 #include "common/logger.h"
 #include "common/string.hpp"
+#include "device/Clock.hpp"
 #include "fs/vfs/FileSystem.hpp"
 #include "fs/vfs/Vfs.hpp"
 #include "memory/MemAllocator.hpp"
 #include "os/Syscall.hpp"
 #include "os/TaskScheduler.hpp"
+#include "os/Timer.hpp"
 #include "param.hpp"
 #include "riscv.hpp"
-#include "utsname.h"
+#include "time.h"
 #include "types.hpp"
+#include "utsname.h"
 
 extern MemAllocator memAllocator;
 
@@ -98,6 +101,8 @@ uint64_t sys_brk(void) {
   return task->sz;
 }
 
+#define OFFSET(structure, member) ((uint64_t)(&((structure *)0)->member));
+
 const char *sysname = "startos";
 const char *nodename = "test";
 const char *release = "statos hasn't been released yet";
@@ -107,9 +112,8 @@ const char *machine = "Sipeed M1 DOCK";
 #else
 const char *machine = "QEMU emulator version 4.2.1";
 #endif
-const char *domainname = "NIS domain name";
 
-#define OFFSET(structure, member) ((uint64_t)(&((structure *)0)->member));
+const char *domainname = "NIS domain name";
 
 uint64_t sys_uname(void) {
   uint64_t addr, off;
@@ -134,5 +138,29 @@ uint64_t sys_uname(void) {
 
   off = OFFSET(struct utsname, version);
   either_copyout(true, addr + off, (void *)domainname, strlen(domainname));
+  return 0;
+}
+
+uint64_t sys_times(void) {
+  struct tms tm;
+  uint64_t utmaddr;
+  int start = timer::ticks;
+  if (argaddr(0, &utmaddr) < 0) {
+    return -1;
+  }
+  taskTimes(&tm);
+  copyout(myTask()->pagetable, utmaddr, (char *)&tm, sizeof(struct tms));
+  return timer::ticks - start;
+}
+
+uint64_t sys_gettimeofday() {
+  uint64_t addr;
+  if (argaddr(0, &addr) < 0) {
+    return -1;
+  }
+  TimeVal tm;
+  tm.sec = clock::getTimestamp();
+  tm.usec = 0;
+  copyout(myTask()->pagetable, addr, reinterpret_cast<char *>(&tm), sizeof(TimeVal));
   return 0;
 }

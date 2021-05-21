@@ -66,12 +66,15 @@ void initKernelVm() {
   // SYSCTL
   kernel_vm_map(SYSCTL_V, SYSCTL, 0x1000, PTE_R | PTE_W);
 
+  // clock
+  kernel_vm_map(RTC_V, RTC, 0x1000, PTE_R | PTE_W);
 #endif
 }
 
 void initHartVm() {
   w_satp(MAKE_SATP(kernel_pagetable));
   sfence_vma();
+  sfence_vm();
 }
 
 pte_t *walk(pagetable_t pagetable, uint64_t va, int alloc) {

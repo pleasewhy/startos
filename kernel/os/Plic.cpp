@@ -1,17 +1,18 @@
 #include "os/Plic.hpp"
+#include "StartOS.hpp"
 #include "common/printk.hpp"
 #include "memlayout.hpp"
 #include "os/Cpu.hpp"
 #include "types.hpp"
-#include "StartOS.hpp"
 
-void Plic::init() {
+namespace plic {
+void init() {
   // 设置IRQ的属性为非零，即启用plic
   *(uint32_t *)(PLIC_V + UART_IRQ * 4) = 1;
   *(uint32_t *)(PLIC_V + DISK_IRQ * 4) = 1;
 }
 
-void Plic::initHart(void) {
+void initHart(void) {
   int hart = Cpu::cpuid();
 #ifdef QEMU
   // 为当前hart的S模式设置uart的enable
@@ -27,7 +28,7 @@ void Plic::initHart(void) {
 }
 
 // 向PLIC询问中断
-int Plic::claim(void) {
+int claim(void) {
   int hart = Cpu::cpuid();
   int irq;
 #ifndef QEMU
@@ -39,7 +40,7 @@ int Plic::claim(void) {
 }
 
 // 告知PLIC已经处理了当前IRQ
-void Plic::complete(int irq) {
+void complete(int irq) {
   int hart = Cpu::cpuid();
 #ifndef QEMU
   *(uint32_t *)PLIC_MCLAIM(hart) = irq;
@@ -47,3 +48,4 @@ void Plic::complete(int irq) {
   *(uint32_t *)PLIC_SCLAIM(hart) = irq;
 #endif
 }
+}  // namespace plic

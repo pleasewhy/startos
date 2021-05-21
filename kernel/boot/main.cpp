@@ -2,6 +2,7 @@
 #include "common/logger.h"
 #include "common/printk.hpp"
 #include "common/sbi.h"
+#include "device/Clock.hpp"
 #include "device/Console.hpp"
 #include "driver/dmac.hpp"
 #include "driver/fpioa.hpp"
@@ -21,8 +22,6 @@
 
 Console console;
 Cpu cpus[2];
-Plic plic;
-Timer timer(1000000);
 MemAllocator memAllocator;
 BufferLayer bufferLayer;
 
@@ -53,14 +52,13 @@ extern "C" void main(unsigned long hartid, unsigned long dtb_pa) {
     memAllocator.init();  // 初始化内存
     initKernelVm();       // 初始化内核虚拟内存
     initHartVm();         // 启用分页
-
-    timer.init();
-    trapinithart();  // 初始化trap
-    syscall_init();  // 初始化系统调用
-    plic.init();     // 初始化plic
-    plic.initHart();
+    trapinithart();       // 初始化trap
+    syscall_init();       // 初始化系统调用
+    plic::init();         // 初始化plic
+    plic::initHart();
 
 #ifdef K210
+    clock::init();  // 初始化时钟
     fpioa_pin_init();
     dmac_init();
 #endif
@@ -83,12 +81,12 @@ extern "C" void main(unsigned long hartid, unsigned long dtb_pa) {
     while (started == 0)
       ;
     __sync_synchronize();
-    initHartVm();     //  启用分页
-    trapinithart();   // 初始化trap
-    plic.initHart();  // ask PLIC for device interrupts
+    initHartVm();      //  启用分页
+    trapinithart();    // 初始化trap
+    plic::initHart();  // ask PLIC for device interrupts
     printf("hart %d finish init\n", r_tp());
-    // while (1) {
-    // };
+    while (1) {
+    }
   }
   scheduler();
 }

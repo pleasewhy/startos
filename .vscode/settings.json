@@ -12,6 +12,9 @@
     "fpioa.hpp": "c",
     "riscv.hpp": "c",
     "memlayout.hpp": "c",
-    "typeinfo": "cpp"
+    "typeinfo": "cpp",
+    "time.h": "c",
+    "plic.hpp": "c",
+    "rtc.h": "c"
   }
 }

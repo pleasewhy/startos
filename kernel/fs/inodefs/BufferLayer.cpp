@@ -14,7 +14,6 @@
 #include "StartOS.hpp"
 
 #define BUFFER_NUM 100
-extern Timer timer;
 
 void BufferLayer::init() {
   this->spinlock.init("cache buffer");
@@ -36,7 +35,7 @@ struct buf *BufferLayer::allocBuffer(int dev, int blockno) {
     if (b->blockno == blockno) {
       this->spinlock.unlock();
       b->refcnt++;
-      b->last_use_tick = timer.ticks;
+      b->last_use_tick = timer::ticks;
       b->sleeplock.lock();
       return b;
     }
@@ -50,7 +49,7 @@ struct buf *BufferLayer::allocBuffer(int dev, int blockno) {
   b->refcnt = 1;
   b->blockno = blockno;
   b->dev = dev;
-  b->last_use_tick = timer.ticks;
+  b->last_use_tick = timer::ticks;
   b->sleeplock.lock();
   return b;
 }

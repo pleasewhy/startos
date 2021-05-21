@@ -1,6 +1,7 @@
 #ifndef START_OS_HPP
 #define START_OS_HPP
 #include "types.hpp"
+
 void* operator new(uint64_t size);
 void operator delete(void* p);
 

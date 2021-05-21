@@ -17,6 +17,17 @@
 
 #include "types.hpp"
 
+// #define CSR_MCYCLE            0xb00U
+// #define CSR_CYCLE             0xc00U
+// #define mcycle CSR_MCYCLE
+// #define cycle_ CSR_CYCLE
+
+#define read_csr(reg) ({ unsigned long __tmp; \
+  asm volatile ("csrr %0, " #reg : "=r"(__tmp)); \
+  __tmp; })
+
+#define read_cycle() read_csr(cycle)
+
 #ifdef __cplusplus
 extern "C" {
 #endif

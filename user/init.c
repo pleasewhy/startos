@@ -122,6 +122,8 @@ void main() {
   test("/getdents", NULL);
   test("/mount", NULL);
   test("/umount", NULL);
+  test("/times", NULL);
+  test("/gettimeofday", NULL);
   while (1) {
   };
 }

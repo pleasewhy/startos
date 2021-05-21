@@ -22,9 +22,7 @@ extern "C" void kernelvec();
 
 extern int device_intr();
 
-extern Plic plic;
 extern Console console;
-extern Timer timer;
 
 extern "C" char trampoline[], uservec[], userret[];
 
@@ -36,7 +34,7 @@ void trapinithart(void) {
   w_sstatus(r_sstatus() | SSTATUS_SIE);
   // enable supervisor-mode timer interrupts.
   w_sie(r_sie() | SIE_SEIE | SIE_SSIE | SIE_STIE);
-  timer.setTimeout();
+  timer::setTimeout();
 }
 
 void trapframedump(struct trapframe *tf);
@@ -168,7 +166,7 @@ int device_intr() {
   if (0x8000000000000001L == scause && 9 == r_stval())
 #endif
   {
-    int irq = plic.claim();
+    int irq = plic::claim();
     if (UART_IRQ == irq) {
       // LOG_DEBUG("uart");
       // keyboard input
@@ -185,7 +183,7 @@ int device_intr() {
     }
 
     if (irq) {
-      plic.complete(irq);
+      plic::complete(irq);
     }
 
 #ifndef QEMU
@@ -195,7 +193,7 @@ int device_intr() {
 
     return 1;
   } else if (0x8000000000000005L == scause) {
-    timer.handleIntr();
+    timer::handleIntr();
     return 2;
   } else {
     return 0;

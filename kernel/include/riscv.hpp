@@ -335,6 +335,15 @@ sfence_vma()
   asm volatile("sfence.vma");
 }
 
+// flush the TLB. k210
+static inline void
+sfence_vm()
+{
+  // the zero, zero means flush all TLB entries.
+  // asm volatile("sfence.vma zero, zero");
+  asm volatile("sfence.vm");
+}
+
 
 #define PGSIZE 4096 // bytes per page
 #define PGSHIFT 12  // bits of offset within a page
