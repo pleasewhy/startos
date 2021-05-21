@@ -19,7 +19,7 @@ OBJ_LINK_LIST:=$(CRTI_OBJ) $(CRTBEGIN_OBJ) $(OBJS) $(CRTEND_OBJ) $(CRTN_OBJ)
 INTERNAL_OBJS:=$(CRTI_OBJ) $(OBJS) $(CRTN_OBJ)
 
 
-FLAGS = -Wall -Werror -fno-omit-frame-pointer -ggdb -g
+FLAGS = -Wall -Werror -O -fno-omit-frame-pointer -ggdb -g
 FLAGS += -MD
 FLAGS += -mcmodel=medany
 FLAGS += -ffreestanding -fno-common -nostdlib -mno-relax -fcheck-new
@@ -40,15 +40,12 @@ endif
 # endif
 
 LDFLAGS = -z max-page-size=4096
-
 CXXFLAGS = -std=c++11 
-CXXFLAGS += -O
 # CXXFLAGS += -fno-use-cxa-atexit
 CXXFLAGS += -fno-rtti
 CXXFLAGS += -fno-exceptions
 CXXFLAGS += $(FLAGS)
 CFLAGS = $(FLAGS)
-CFLAGS += -O0
 
 
 # boot

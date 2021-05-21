@@ -578,7 +578,8 @@ uint32_t sysctl_pll_get_freq(sysctl_pll_t pll) {
    * Get final PLL output freq
    * FOUT = FIN / NR * NF / OD
    */
-  freq_out = (double)freq_in / (double)nr * (double)nf / (double)od;
+  // freq_out = (double)freq_in / (double)nr * (double)nf / (double)od;
+  freq_out = freq_in / nr * nf / od;
   return freq_out;
 }
 
