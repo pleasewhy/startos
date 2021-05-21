@@ -19,7 +19,7 @@ OBJ_LINK_LIST:=$(CRTI_OBJ) $(CRTBEGIN_OBJ) $(OBJS) $(CRTEND_OBJ) $(CRTN_OBJ)
 INTERNAL_OBJS:=$(CRTI_OBJ) $(OBJS) $(CRTN_OBJ)
 
 
-FLAGS = -Wall -Werror -O -fno-omit-frame-pointer -ggdb -g
+FLAGS = -Wall -Werror -fno-omit-frame-pointer -ggdb -g
 FLAGS += -MD
 FLAGS += -mcmodel=medany
 FLAGS += -ffreestanding -fno-common -nostdlib -mno-relax -fcheck-new
@@ -42,11 +42,13 @@ endif
 LDFLAGS = -z max-page-size=4096
 
 CXXFLAGS = -std=c++11 
+CXXFLAGS += -O
 # CXXFLAGS += -fno-use-cxa-atexit
 CXXFLAGS += -fno-rtti
 CXXFLAGS += -fno-exceptions
 CXXFLAGS += $(FLAGS)
 CFLAGS = $(FLAGS)
+CFLAGS += -O0
 
 
 # boot
@@ -127,7 +129,7 @@ k210 = $T/k210.bin
 RUSTSBI = ../rustsbi/sbi-k210
 
 kernel: $(link) $(OBJ_LINK_LIST)
-	$(LD) $(LDFLAGS) -T $(link) -o $T/kernel $(OBJ_LINK_LIST)
+	$(LD) $(LDFLAGS) -T $(link) -o $T/kernel $(OBJ_LINK_LIST) -nostdlib
 	$(OBJDUMP) -S $T/kernel > $T/kernel.asm
 	@$(OBJDUMP) -t $T/kernel | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $T/kernel.sym
 # just for oscomp competition
