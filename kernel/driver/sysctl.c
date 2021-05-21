@@ -15,6 +15,7 @@
 
 #include "types.hpp"
 #include "stdint-gcc.h"
+#include "stdint.h"
 // #include "StartOS.hpp"
 #include "driver/sysctl.hpp"
 #include "memlayout.hpp"
