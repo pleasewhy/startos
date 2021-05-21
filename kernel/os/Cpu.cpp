@@ -5,7 +5,7 @@
 extern "C" Cpu cpus[];  // cpu数组，定义在boot/main.c
 
 void Cpu::init() {
-  memset(cpus, 0, sizeof(Cpu) * NCPU);
+  // memset(cpus, 0, sizeof(Cpu) * NCPU);
   this->intr_enable = false;
   this->noff = 0;
 }

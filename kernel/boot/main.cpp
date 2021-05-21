@@ -45,6 +45,7 @@ extern "C" void __cxa_pure_virtual() { LOG_DEBUG("error"); }
 
 extern "C" void main(unsigned long hartid, unsigned long dtb_pa) {
   inithartid(hartid);  // 将hartid保存在tp寄存器中
+  cpus[hartid].init();
   if (hartid == 0) {
     console.init();  // 初始化控制台
     printfinit();
@@ -86,9 +87,8 @@ extern "C" void main(unsigned long hartid, unsigned long dtb_pa) {
     trapinithart();   // 初始化trap
     plic.initHart();  // ask PLIC for device interrupts
     printf("hart %d finish init\n", r_tp());
-    while (1) {
-    };
+    // while (1) {
+    // };
   }
-
   scheduler();
 }
