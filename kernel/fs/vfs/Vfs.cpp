@@ -47,7 +47,10 @@ struct file *allocFileHandle() {
   return NULL;
 }
 
-void freeFileHandle(struct file *f) { memset(f, 0, sizeof(struct file)); }
+void freeFileHandle(struct file *f) {
+  memset(f, 0, sizeof(struct file));
+  f->type = f->FD_NONE;
+}
 
 /**
  * @brief 找到filepath所属的文件系统
@@ -170,32 +173,40 @@ int open(const char *filename, size_t flags) {
   fp->readable = !(flags & O_WRONLY);
   fp->writable = (flags & O_WRONLY) || (flags & O_RDWR);
   int fd = registerFileHandle(fp);
-  LOG_DEBUG("fd=%d fp=%p fp->ref=%d", fd, fp);
+  LOG_DEBUG("fd=%d fp=%p fp->ref=%d sz=%d", fd, fp, fp->ref, fp->size);
   return fd;
 }
 
 size_t read(int fd, bool user, char *dst, size_t n, size_t offset) {
-  int r = 0;
   struct file *f = getFileByfd(fd);
   if (f == NULL || !f->readable) {
     return -1;
   }
-  auto fs = getFs(f->filepath);
+  return read(f, user, dst, n, offset);
+}
+
+size_t read(struct file *fp, bool user, char *dst, size_t n, size_t offset) {
+  int r = 0;
+  if (fp == NULL || !fp->readable) {
+    return -1;
+  }
+  auto fs = getFs(fp->filepath);
 
   // if () strncpy(path, dir, strlen(dir));
   // strncpy(path + strlen(dir), f->file_name, strlen(f->file_name));
 
-  LOG_DEBUG("read filename=%s", f->filepath);
+  LOG_DEBUG("read filename=%s", fp->filepath);
 
-  switch (f->type) {
-    case f->FD_PIPE:
-      r = f->pipe->read(reinterpret_cast<uint64_t>(dst), n);
+  switch (fp->type) {
+    case fp->FD_PIPE:
+      r = fp->pipe->read(reinterpret_cast<uint64_t>(dst), n);
       break;
-    case f->FD_DEVICE:
-      r = fs->read(f->filepath, user, dst, 0, n);
+    case fp->FD_DEVICE:
+      r = fs->read(fp->filepath, user, dst, 0, n);
       break;
-    case f->FD_ENTRY:
-      r = fs->read(f->filepath, user, dst, f->position, n);
+    case fp->FD_ENTRY:
+      r = fs->read(fp->filepath, user, dst, fp->position, n);
+      fp->position += r;
       break;
     default:
       panic("vfs::read");
@@ -204,27 +215,38 @@ size_t read(int fd, bool user, char *dst, size_t n, size_t offset) {
 }
 
 size_t write(int fd, bool user, const char *src, size_t n, size_t offset) {
-  int r = 0;
   struct file *f = getFileByfd(fd);
 
   if (f == NULL || !f->writable) {
     return -1;
   }
+  return write(f, user, src, n, offset);
+}
 
-  auto fs = getFs(f->filepath);
+size_t write(struct file *fp, bool user, const char *src, size_t n, size_t offset) {
+  int r = 0;
 
-  // LOG_DEBUG("write filename=%s", f->filepath);
+  if (fp == NULL || !fp->writable) {
+    return -1;
+  }
 
-  switch (f->type) {
-    case f->FD_PIPE:
-      f->pipe->write(reinterpret_cast<uint64_t>(src), n);
+  auto fs = getFs(fp->filepath);
+
+  // LOG_DEBUG("write filename=%s", fp->filepath);
+
+  switch (fp->type) {
+    case fp->FD_PIPE:
+      fp->pipe->write(reinterpret_cast<uint64_t>(src), n);
       break;
-    case f->FD_DEVICE:
-      r = fs->write(f->filepath, user, src, 0, n);
+    case fp->FD_DEVICE:
+      r = fs->write(fp->filepath, user, src, 0, n);
       break;
-    case f->FD_ENTRY:
-      // fat32->read(f->filepath, user, dst, f->position, 0);
-      fs->write(f->filepath, user, src, 0, n);
+    case fp->FD_ENTRY:
+      // fat32->read(fp->filepath, user, dst, fp->position, 0);
+      r = fs->write(fp->filepath, user, src, 0, n);
+      LOG_DEBUG("write file sz=%d pos=%d r=%d n=%d", fp->size, fp->position, r, n);
+      fp->size = fp->position + r < fp->size ? fp->size : fp->position + r;
+      fp->position += r;
       break;
     default:
       panic("vfs::write");
@@ -245,8 +267,8 @@ void close(struct file *fp) {
     return;
   }
   ff = *fp;
-  fp->type = fp->FD_NONE;
-  fp->ref = 0;
+  freeFileHandle(fp);
+
   fileTableLock.unlock();
 
   if (ff.type == ff.FD_PIPE) {
@@ -281,7 +303,7 @@ int mkdirat(int dirfd, const char *filepath) {
 int openat(int dirfd, const char *filepath, int flags) {
   char path[MAXPATH];
   memset(path, 0, MAXPATH);
-  struct file *fp;
+  struct file *fp = NULL;
   if (dirfd == AT_FDCWD) {
     getAbsolutePath((char *)filepath, path);
   } else {
@@ -293,7 +315,7 @@ int openat(int dirfd, const char *filepath, int flags) {
       memcpy(path + strlen(fp->filepath), filepath, strlen(filepath));
     }
   }
-  LOG_DEBUG("openat=%s", path);
+  LOG_DEBUG("openat dir=%s", path);
   return open(filepath, flags);
 }
 
@@ -427,6 +449,14 @@ int createPipe(int fds[]) {
   fds[0] = fd0;
   fds[1] = fd1;
   return 0;
+}
+
+struct file *rewind(struct file *fp) {
+  fileTableLock.lock();
+  if (fp->ref < 1) panic("filerewind");
+  fp->position = 0;
+  fileTableLock.unlock();
+  return fp;
 }
 
 }  // namespace vfs

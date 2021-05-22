@@ -88,6 +88,27 @@ void rm(const char *file);
 size_t read(int fd, bool user, char *dst, size_t count, size_t offset = 0);
 
 /**
+ * @brief 读取文件
+ * @param fp 文件指针
+ * @param user dst是否为用户页表中的地址
+ * @param buffer 写入的位置
+ * @param count 读取字节数
+ * @param offset The index where to start reading the file
+ * @return a status code
+ */
+size_t read(struct file *fp, bool user, char *dst, size_t count, size_t offset = 0);
+
+/**
+ * @brief 写文件，这个文件可以是设备，磁盘文件，管道等。
+ * @param fp 文件指针
+ * @param src 需要写入的数据
+ * @param n 写入数据的sz
+ * @param offset 写入的开始位置
+ * @return 成功返回写入字节数，失败返回-1
+ */
+size_t write(struct file *fp, bool user, const char *src, size_t n, size_t offset = 0);
+
+/**
  * @brief 写文件，这个文件可以是设备，磁盘文件，管道等。
  * @param fd 文件描述符，用来找到对应的文件
  * @param src 需要写入的数据
@@ -96,7 +117,6 @@ size_t read(int fd, bool user, char *dst, size_t count, size_t offset = 0);
  * @return 成功返回写入字节数，失败返回-1
  */
 size_t write(int fd, bool user, const char *src, size_t n, size_t offset = 0);
-
 
 /**
  * @brief 列出一个目录下的全部目录项
@@ -189,6 +209,12 @@ void calAbsolute(char *oldpath);
  * @return int 成功返回0，失败返回-1
  */
 int createPipe(int fds[]);
+
+/**
+ * @brief 将fp偏移量置为0
+ *
+ */
+struct file *rewind(struct file *fp);
 }  // end of namespace vfs
 
 #endif

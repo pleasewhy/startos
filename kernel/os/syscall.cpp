@@ -46,6 +46,26 @@ int argint(int n, int *addr) {
 }
 
 /**
+ * @brief 获取文件描述符合与文件描述符对应的文件
+ *
+ */
+int argfd(int n, int *fdp, struct file **fp) {
+  int fd = 0;
+  struct file *f;
+
+  if (argint(n, &fd) < 0) return -1;
+  f = getFileByfd(fd);
+  if (f == NULL) return -1;
+  if (fdp != 0) {
+    *fdp = fd;
+  }
+  if (fp != 0) {
+    *fp = f;
+  }
+  return 0;
+}
+
+/**
  * 获取传入的指针，这里不需要检验合法性,
  * copyin/copyout会检验。
  *
@@ -107,13 +127,16 @@ extern uint64_t sys_mount(void);
 extern uint64_t sys_umount2(void);
 extern uint64_t sys_times(void);
 extern uint64_t sys_gettimeofday(void);
+extern uint64_t sys_mmap(void);
+extern uint64_t sys_munmap(void);
+extern uint64_t sys_fstat(void);
 
 static uint64_t (*syscalls[400])(void);
 
 // #define NELEM(x) (sizeof(x) / sizeof((x)[0]))
 
 void syscall_init() {
-  memset((void*)syscalls, 0, sizeof(uint64_t)*400);
+  memset((void *)syscalls, 0, sizeof(uint64_t) * 400);
   syscalls[SYS_execve] = sys_exec;
   syscalls[SYS_open] = sys_open;
   syscalls[SYS_write] = sys_write;
@@ -141,6 +164,9 @@ void syscall_init() {
   syscalls[SYS_umount2] = sys_umount2;
   syscalls[SYS_times] = sys_times;
   syscalls[SYS_gettimeofday] = sys_gettimeofday;
+  syscalls[SYS_mmap] = sys_mmap;
+  syscalls[SYS_munmap] = sys_munmap;
+  syscalls[SYS_fstat] = sys_fstat;
 }
 
 void syscall(void) {

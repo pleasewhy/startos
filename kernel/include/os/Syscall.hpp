@@ -8,6 +8,7 @@ void syscall(void);
 void syscall_init();
 uint64_t argraw(int n);
 int argint(int n, int *addr);
+int argfd(int n, int *fdp, struct file **fp);
 int fetchaddr(uint64_t addr, uint64_t *ip);
 int argaddr(int n, uint64_t *ip);
 int fetchstr(uint64_t addr, char *buf, int max);

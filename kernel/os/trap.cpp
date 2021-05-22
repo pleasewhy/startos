@@ -5,9 +5,13 @@
 #include "common/logger.h"
 #include "common/printk.hpp"
 #include "common/sbi.h"
+#include "common/string.hpp"
 #include "device/Console.hpp"
+#include "fcntl.h"
 #include "fs/disk/Disk.hpp"
+#include "fs/vfs/Vfs.hpp"
 #include "memlayout.hpp"
+#include "memory/MemAllocator.hpp"
 #include "os/Cpu.hpp"
 #include "os/Plic.hpp"
 #include "os/SpinLock.hpp"
@@ -23,6 +27,7 @@ extern "C" void kernelvec();
 extern int device_intr();
 
 extern Console console;
+extern MemAllocator memAllocator;
 
 extern "C" char trampoline[], uservec[], userret[];
 
@@ -67,6 +72,30 @@ void usertrap(void) {
     // 之前不能开中断
     intr_on();
     syscall();
+  } else if (r_scause() == 13 || r_scause() == 5) {
+    uint64_t eaddr;
+    struct vma *vma = 0;
+    char *mem;
+    eaddr = r_stval();
+    for (int i = 0; i < NOMMAPFILE; i++) {
+      if (task->vma[i] != 0 && eaddr >= task->vma[i]->addr && eaddr < task->vma[i]->addr + task->vma[i]->length) {
+        vma = task->vma[i];
+        break;
+      }
+    }
+    if (vma != 0) {
+      mem = (char *)memAllocator.alloc();
+      memset(mem, 0, PGSIZE);
+      eaddr = PGROUNDDOWN(eaddr);
+      int perm = PTE_V | PTE_U;
+      if (vma->prot & PROT_READ) perm |= PTE_R;
+      if (vma->prot & PROT_WRITE) perm |= PTE_W;
+      mappages(task->pagetable, eaddr, PGSIZE, (uint64_t)mem, perm);
+      vfs::read(vma->f, false, mem, PGSIZE, eaddr - vma->addr);
+      // filereadoff(vma->f, (uint64_t)mem, eaddr - vma->addr, PGSIZE);
+    } else {
+      task->killed = 1;
+    }
   } else if ((which_dev = device_intr()) != 0) {
     // ok
   } else {

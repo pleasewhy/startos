@@ -1,12 +1,12 @@
 #ifndef TASK_SCHEDULER_HPP
 #define TASK_SCHEDULER_HPP
 
+#include "StartOS.hpp"
 #include "memory/VmManager.hpp"
 #include "os/Process.hpp"
 #include "os/Timer.hpp"
 #include "param.hpp"
 #include "types.hpp"
-#include "StartOS.hpp"
 
 // /**
 //  * @brief 初始化任务表
@@ -47,18 +47,18 @@ extern "C" void pswitch(struct context *, struct context *);
  * @brief sleep在chan上
  *
  */
-void   sleep(void *chan, SpinLock *lock);
+void sleep(void *chan, SpinLock *lock);
 
 /**
  * @brief 睡眠一段时间
- * 
+ *
  * @param sleep_ticks 需要睡眠的tick数
  */
 void sleepTime(uint64_t sleep_ticks);
 
 /**
  * @brief 进入调度线程之前需要检查当前的cpu和线程状态
- * 
+ *
  */
 void prepareSched();
 
@@ -87,15 +87,15 @@ Task *myTask();
 
 /**
  * @brief 获取task可用的页表
- * 
- * @param task 
- * @return pagetable_t 
+ *
+ * @param task
+ * @return pagetable_t
  */
 pagetable_t taskPagetable(Task *task);
 
 /**
  * @brief 创建一个与当前进程一致的新进程
- * 
+ *
  * @return int 子进程返回0，父进程返回子进程的id
  */
 int fork();
@@ -110,7 +110,7 @@ int wait(uint64_t vaddr);
 
 /**
  * @brief 增加或者减少用户内存n字节
- * 
+ *
  * @param n 大于0增加，小于0减少
  * @return int 成功返回0，失败返回-1
  */
@@ -118,7 +118,7 @@ int growtask(int n);
 
 /**
  * @brief 等待某一子进程退出
- * 
+ *
  * @param pid 等待的子进程id
  * @param vaddr 用于子进程exit code，为0时忽略exit code
  * @return int 成功返回子进程id，失败返回-1
@@ -131,7 +131,7 @@ int wait4(int pid, uint64_t vaddr);
  *        若父进程已经exit, 则会由init进
  *        程来完成父进程在exit时，会将其
  *        子进程的parent设置为init进程
- * 
+ *
  */
 void exit(int status);
 
@@ -153,45 +153,50 @@ int either_copyout(bool user_dst, uint64_t dst, void *src, int len);
 
 /**
  * @brief 将fp添加到进程的打开文件列表中
- * 
+ *
  * @param fp 需要添加的文件指针
  * @return 成功返回文件描述符，失败返回-1
  */
-int registerFileHandle(struct file *fp, int fd=-1);
+int registerFileHandle(struct file *fp, int fd = -1);
 
 /**
  * @brief 获取fd对应的文件
- * 
+ *
  * @param fd 文件描述符
- * @return struct file* fd对应的文件 
+ * @return struct file* fd对应的文件
  */
 struct file *getFileByfd(int fd);
 
 /**
  * @brief 执行给定可执行文件
- * 
- * @param path 
- * @param argv 
- * @return int 
+ *
+ * @param path
+ * @param argv
+ * @return int
  */
 int exec(char *path, char **argv);
 
 /**
- * @brief 获取进程的CPU使用ticks
- * 
- * @param tm 保存相关的时间信息
- * @return int 
- */
-int taskTimes(struct tms *tm);
-
-/**
  * @brief 获取进程的时间用户态运行时间和内核态运行时间
  * 及其子进程时间信息
- * 
- * @param tm 储存时间系统
+ *
+ * @param tm 保存相关的时间信息
  * @return int 成功返回0，失败返回-1
  */
 int taskTimes(struct tms *tm);
 
+/**
+ * @brief 获取一个vma结构体
+ *
+ * @return struct vma*
+ */
+struct vma *allocVma();
+
+/**
+ * @brief 释放vma结构体
+ * 
+ * @param a 
+ */
+void freeVma(struct vma *a);
 
 #endif  // TASK_SCHEDULER_HPP

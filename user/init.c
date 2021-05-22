@@ -124,6 +124,9 @@ void main() {
   test("/umount", NULL);
   test("/times", NULL);
   test("/gettimeofday", NULL);
+  test("/mmap", NULL);
+  test("/munmap", NULL);
+  test("/fstat", NULL);
   while (1) {
   };
 }

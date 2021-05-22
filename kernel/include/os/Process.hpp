@@ -1,10 +1,10 @@
 #ifndef PROCESS_HPP
 #define PROCESS_HPP
-#include "types.hpp"
 #include "StartOS.hpp"
 #include "os/SpinLock.hpp"
 #include "param.hpp"
 #include "riscv.hpp"
+#include "types.hpp"
 // 内核切换进程需要保存的寄存器
 struct context {
   uint64_t ra;
@@ -71,6 +71,14 @@ struct trapframe {
 // extern struct cpu cpus[NCPU];
 enum procstate { UNUSED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
+struct vma {
+  uint64_t addr;
+  int length;
+  int prot;
+  struct file *f;
+  int flag;
+};
+
 // 进程
 class Task {
  public:
@@ -87,8 +95,9 @@ class Task {
   struct file *openFiles[NOFILE];  // 用户打开文件，其下标为文件描述符。
   char currentDir[MAXPATH];
   uint64_t entry;
-  int sticks;               // 程序在用户态下运行的时间
-  int uticks;               // 程序在内核态下运行的时间
+  int sticks;  // 程序在用户态下运行的时间
+  int uticks;  // 程序在内核态下运行的时间
+  struct vma *vma[NOMMAPFILE];
   uint64_t kstack;         // 进程的内核空间栈。
   struct context context;  // 被保存的寄存器，用于pswitch
   char name[16];           // 进程名
