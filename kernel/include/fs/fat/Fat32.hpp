@@ -24,7 +24,8 @@
 #define TF_MARK_EOC32 0x0fffffff
 #define TF_MARK_EOC16 0xfff8
 
-#define LFN_ENTRY_CAPACITY 13  // bytes per LFN entry
+#define LFN_ENTRY_CAPACITY 13  // uint16 per LFN entry
+#define LFN_NAME_CAPACITY 26  // byte per LFN entry
 
 #define TF_ATTR_DIRECTORY 0x10
 //  #define TF_DEBUG 1
@@ -217,9 +218,10 @@ struct Fat32FileSystem final : public FileSystem {
    * @brief 获取给定目录下的目录项
    * @param filepath 目录的绝对路径
    * @param contents
+   * @param len contens的长度
    * @return 返回该目录下的目录项的数量
    */
-  int ls(const char *filepath, char *contents, bool user = false) override;
+  int ls(const char *filepath, char *contents, int len, bool user = false) override;
 
   /**
    * @brief Create the given file on the file system

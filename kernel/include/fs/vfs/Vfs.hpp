@@ -122,10 +122,11 @@ size_t write(int fd, bool user, const char *src, size_t n, size_t offset = 0);
  * @brief 列出一个目录下的全部目录项
  * @param fd 目录的文件描述符
  * @param buffer 输出缓存区
+ * @param len 缓冲区的大小
  * @param size 缓存区的大小
  * @return 成功返回写入缓存区的字节数，失败返回-1
  */
-size_t ls(int fd, char *buffer, bool user);
+size_t ls(int fd, char *buffer, int len, bool user);
 
 /**
  * @brief 显示已挂载的设备

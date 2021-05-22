@@ -114,10 +114,6 @@ int copysfn(char *sfn, char *dst, bool user) {
   return n + i - 8;
 }
 
-#define LFN_NAME1_OFFSET 0
-#define LFN_NAME2_OFFSET 10
-#define LFN_NAME3_OFFSET 22
-
 // fat32长文件目录项的文件名的储存格式为unicode
 // 其宽度为2, 为了方便处理将所有的Unicode都装换为
 // 单字节格式
@@ -134,7 +130,7 @@ int copylfn(FatFileEntry &entry, uint64_t dst, bool user) {
   //
   // printf("size=%d", NELEM(entry.lfn.name1));
   char tmp[10];
-  for (i = 0; i < 5 && entry.lfn.name1[i] != 0xffff; i++) {
+  for (i = 0; i < NELEM(entry.lfn.name1) && entry.lfn.name1[i] != 0xffff; i++) {
     tmp[i] = entry.lfn.name1[i] & 0xff;
   }
   // printf("name1=%d", i);
@@ -144,7 +140,7 @@ int copylfn(FatFileEntry &entry, uint64_t dst, bool user) {
   n += i;
   // 6-11
   // name = entry.lfn.name2;
-  for (i = 0; i < 6 && entry.lfn.name2[i] != 0xffff; i++) {
+  for (i = 0; i < NELEM(entry.lfn.name2) && entry.lfn.name2[i] != 0xffff; i++) {
     tmp[i] = entry.lfn.name2[i] & 0xff;
   }
   // printf("name2=%d", i);
@@ -152,7 +148,7 @@ int copylfn(FatFileEntry &entry, uint64_t dst, bool user) {
   n += i;
   // 11-13
   // name = entry.lfn.name3;
-  for (i = 0; i < 2 && entry.lfn.name3[i] != 0xffff; i++) {
+  for (i = 0; i < NELEM(entry.lfn.name3) && entry.lfn.name3[i] != 0xffff; i++) {
     tmp[i] = entry.lfn.name3[i] & 0xff;
   }
   // printf("name3=%d", i);
@@ -170,7 +166,7 @@ int copylfn(FatFileEntry &entry, uint64_t dst, bool user) {
 //   }
 // }
 
-int Fat32FileSystem::ls(const char *filepath, char *contents, bool user) {
+int Fat32FileSystem::ls(const char *filepath, char *contents, int len, bool user) {
   LOG_DEBUG("fat32 ls");
   struct dirent *dirent;
   struct dirent dt;
@@ -181,7 +177,8 @@ int Fat32FileSystem::ls(const char *filepath, char *contents, bool user) {
     return -1;
   }
   while (tf_fread((char *)&entry, sizeof(FatFileEntry), fp) == sizeof(FatFileEntry)) {
-    if (entry.msdos.filename[0] == 0x00) {  // 结束
+    if (entry.msdos.filename[0] == 0x00 || readn + NELEM(entry.msdos.filename) >= len) {  // 结束
+      LOG_DEBUG("over");
       return readn;
     }
     // 短文件目录项
@@ -215,16 +212,17 @@ int Fat32FileSystem::ls(const char *filepath, char *contents, bool user) {
       readn += dt.d_reclen;
     } else if ((entry.lfn.sequence_number & 0xc0) == 0x40) {  // 长文件名目录项
       dirent = reinterpret_cast<struct dirent *>(contents);
-
       // 计算lfn的数量
       lfn_entries = entry.lfn.sequence_number & ~0x40;
-
-      LOG_DEBUG("lfn sno=%p  lfns=%d", entry.lfn.sequence_number, lfn_entries);
+      if (lfn_entries * LFN_NAME_CAPACITY + readn >= len) {
+        LOG_DEBUG("over");
+        return readn;
+      }
+      LOG_DEBUG("lfn sno=%p  lfns=%d readn=%d len=%d", entry.lfn.sequence_number, lfn_entries, readn, len);
       // LOG_DEBUG("temp lfn len=%d name1=%p", sizeof(FatFileEntry), entry.lfn.name1);
 
       // 将当前lfn储存的name copy到对应位置中
       int n = copylfn(entry, (uint64_t)dirent->d_name, user);  // 将当前name copy到指定位置
-
       // copy剩余的长文件目录项
       for (int i = 1; i < lfn_entries; i++) {
         if (tf_fread((char *)&entry, sizeof(FatFileEntry), fp) != sizeof(FatFileEntry)) {
@@ -281,7 +279,7 @@ int read_sector(const char *specialDev, char *data, uint32_t sector) {
   // LOG_TRACE("begin read sector=%d", sector);
   // LOG_DEBUG("begin read sector=%d", sector);
 #ifdef K210
-  vfs::direct_read(specialDev, data, 512, sector*512);
+  vfs::direct_read(specialDev, data, 512, sector * 512);
   // sdcard_read_sector(reinterpret_cast<uint8_t *>(data), sector);
 #else
   struct buf *b = bufferLayer.read(0, sector);
@@ -295,7 +293,7 @@ int read_sector(const char *specialDev, char *data, uint32_t sector) {
 int write_sector(const char *specialDev, char *data, uint32_t sector) {
   // LOG_DEBUG("begin write sector=%d", sector);
 #ifdef K210
-  vfs::direct_write(specialDev, data, 512, sector*512);
+  vfs::direct_write(specialDev, data, 512, sector * 512);
   // sdcard_write_sector(reinterpret_cast<uint8_t *>(data), sector);
 #else
   struct buf *b = bufferLayer.allocBuffer(0, sector);
@@ -1725,7 +1723,7 @@ uint32_t Fat32FileSystem::tf_initializeMedia(
   // ending signatures
   sectorBuf0[0x1fe] = 0x55;
   sectorBuf0[0x1ff] = 0xAA;
-  write_sector(this->specialDev,sectorBuf0, 0);
+  write_sector(this->specialDev, sectorBuf0, 0);
 
   // set up key sectors...
   // dbg_printf("\n\rFATSize=%u\n\rNumFATs=%u\n\fat=%u\n\r",bpb.FSTypeSpecificData.fat32.FATSize,bpb.NumFATs,fat);
@@ -1744,7 +1742,7 @@ uint32_t Fat32FileSystem::tf_initializeMedia(
   *((uint32_t *)(sectorBuf + 0x1f4)) = 0;           // reserved
   *((uint32_t *)(sectorBuf + 0x1f8)) = 0;           // reserved
   *((uint32_t *)(sectorBuf + 0x1fc)) = 0xaa550000;
-  write_sector(this->specialDev,sectorBuf, 1);
+  write_sector(this->specialDev, sectorBuf, 1);
   fat = (bpb.ReservedSectorCount);
 
   dbg_printf("\r\n     clear rest of Cluster");
@@ -1779,7 +1777,7 @@ uint32_t Fat32FileSystem::tf_initializeMedia(
   dbg_printf("\r\n    // write all 00's to all (%d) FAT sectors", ssa - fat);
   memset(sectorBuf, 0x00, 0x200);  // 0x00000000 is the unallocated marker
   for (scl = fat; scl < ssa / 2; scl++) {
-    write_sector(this->specialDev,sectorBuf, scl);
+    write_sector(this->specialDev, sectorBuf, scl);
     write_sector(this->specialDev, sectorBuf, scl + (ssa / 2));
   }
 
@@ -1878,17 +1876,17 @@ uint32_t Fat32FileSystem::tf_initializeMediaNoBlock(uint32_t totalSectors, int s
     *((uint32_t *)(sectorBuf + 0x1f4)) = 0;           // reserved
     *((uint32_t *)(sectorBuf + 0x1f8)) = 0;           // reserved
     *((uint32_t *)(sectorBuf + 0x1fc)) = 0xaa550000;
-    write_sector(this->specialDev,sectorBuf, 1);
+    write_sector(this->specialDev, sectorBuf, 1);
     fat = (bpb.ReservedSectorCount);
 
     dbg_printf("\r\n     clear rest of Cluster");
     memset(sectorBuf, 0x00, 0x200);
     for (scl = 2; scl < sectors_per_cluster; scl++) {
       memset(sectorBuf, 0x00, 0x200);
-      write_sector(this->specialDev,sectorBuf, scl);
+      write_sector(this->specialDev, sectorBuf, scl);
     }
     // write backup copy of metadata
-    write_sector(this->specialDev,sectorBuf0, 6);
+    write_sector(this->specialDev, sectorBuf0, 6);
 
     dbg_printf("\r\n initialize DATA section starting in Section 2:");
     // make Root Directory
@@ -1919,8 +1917,8 @@ uint32_t Fat32FileSystem::tf_initializeMediaNoBlock(uint32_t totalSectors, int s
     memset(sectorBuf, 0x00, 0x200);  // 0x00000000 is the unallocated marker
     dbg_printf("~", scl, stop);
     for (; scl < stop; scl++) {
-      write_sector(this->specialDev,sectorBuf, scl);
-      write_sector(this->specialDev,sectorBuf, scl + (ssa / 2));
+      write_sector(this->specialDev, sectorBuf, scl);
+      write_sector(this->specialDev, sectorBuf, scl + (ssa / 2));
     }
     if (scl < ssa / 2) return false;
 
@@ -1930,7 +1928,7 @@ uint32_t Fat32FileSystem::tf_initializeMediaNoBlock(uint32_t totalSectors, int s
     *((uint32_t *)(sectorBuf + 0x000)) = 0x0ffffff8;  // special - EOF marker
     *((uint32_t *)(sectorBuf + 0x004)) = 0x0fffffff;  // special and clean
     *((uint32_t *)(sectorBuf + 0x008)) = 0x0ffffff8;  // root directory (one cluster)
-    write_sector(this->specialDev,sectorBuf, sectors_per_cluster);
+    write_sector(this->specialDev, sectorBuf, sectors_per_cluster);
 
     dbg_printf(" initialization complete\r\n");
   }

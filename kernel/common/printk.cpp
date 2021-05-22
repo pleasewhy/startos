@@ -164,7 +164,7 @@ void cpudump(int cpuid) {
 extern int inkerneltrap;
 void panic(const char *s) {
   pr.locking = false;
-  backtrace();
+  // backtrace();
   printf("error cpuid=%d task=%p\n", Cpu::cpuid(), Cpu::mycpu()->task);
   // cpudump(0);
   // cpudump(1);

@@ -93,9 +93,10 @@ struct DeviceFileSystem final : public FileSystem {
    * @brief 获取给定目录下的目录项
    * @param filepath 目录的绝对路径
    * @param contents
-   * @return 返回该目录下的目录项的数量
+   * @param len contents的长度
+   * @return 读取的字节数
    */
-  int ls(const char *filepath, char *contents, bool user = false) override;
+  int ls(const char *filepath, char *contents, int len, bool user = false) override;
 
   /**
    * @brief Create the given file on the file system

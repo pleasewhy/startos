@@ -171,9 +171,9 @@ uint64_t sys_getdents64(void) {
   if (argint(0, &fd) < 0 || argaddr(1, &addr) || argint(2, &len)) {
     return -1;
   }
-  int n = vfs::ls(fd, (char *)addr, true);
+  int n = vfs::ls(fd, (char *)addr, len, true);
   LOG_DEBUG("getdents64 nread=%d", n);
-  printf("%d",n);
+  // printf("%d",n);
   return n;
 }
 
@@ -213,7 +213,6 @@ uint64_t sys_fstat() {
   kst.st_dev = 1;
   kst.st_size = fp->size;
   kst.st_nlink = 1;
-  LOG_DEBUG("fstat sz=%d", fp->size);
   return copyout(myTask()->pagetable, kstAddr, reinterpret_cast<char *>(&kst), sizeof(struct kstat));
 }
 

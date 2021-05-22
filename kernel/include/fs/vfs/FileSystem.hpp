@@ -3,10 +3,9 @@
 
 #include "StartOS.hpp"
 #include "common/printk.hpp"
+#include "fs/File.h"
 #include "param.hpp"
 #include "types.hpp"
-#include "fs/File.h"
-
 
 class FileSystem {
  public:
@@ -84,9 +83,10 @@ class FileSystem {
    * @brief 获取给定目录下的目录项
    * @param filepath 目录的绝对路径
    * @param contents
+   * @param len contens的长度
    * @return 返回该目录下的目录项的数量
    */
-  virtual int ls(const char *filepath, char *contents, bool user=false) = 0;
+  virtual int ls(const char *filepath, char *contents, int len, bool user = false) = 0;
 
   /**
    * @brief Create the given file on the file system

@@ -321,7 +321,7 @@ int openat(int dirfd, const char *filepath, int flags) {
 
 void rm(const char *file){};
 
-size_t ls(int fd, char *buffer, bool user = false) {
+size_t ls(int fd, char *buffer, int len, bool user = false) {
   struct file *fp = getFileByfd(fd);
   if (fp == NULL || !fp->directory) {
     LOG_DEBUG("not directory");
@@ -329,7 +329,7 @@ size_t ls(int fd, char *buffer, bool user = false) {
   }
   auto fs = getFs(fp->filepath);
   LOG_DEBUG("ls");
-  return fs->ls(fp->filepath, buffer, user);
+  return fs->ls(fp->filepath, buffer, len, user);
 }
 
 size_t mounts(char *buffer, size_t size) { return 0; }
