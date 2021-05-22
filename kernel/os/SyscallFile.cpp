@@ -212,6 +212,7 @@ uint64_t sys_fstat() {
   memset(&kst, 0, sizeof(struct kstat));
   kst.st_dev = 1;
   kst.st_size = fp->size;
+  kst.st_nlink = 1;
   LOG_DEBUG("fstat sz=%d", fp->size);
   return copyout(myTask()->pagetable, kstAddr, reinterpret_cast<char *>(&kst), sizeof(struct kstat));
 }
