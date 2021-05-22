@@ -162,7 +162,7 @@ uint64_t sys_gettimeofday() {
   }
   TimeVal tm;
 #ifdef K210
-  tm.sec = 1;
+  tm.sec = 49363000;
   tm.usec = 0;
 #endif
   copyout(myTask()->pagetable, addr, reinterpret_cast<char *>(&tm), sizeof(TimeVal));
