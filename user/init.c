@@ -128,6 +128,7 @@ void main() {
   test("/munmap", NULL);
   test("/fstat", NULL);
   test("/unlink", NULL);
+  test("/clone", NULL);
   while (1) {
   };
 }

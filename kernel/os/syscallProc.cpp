@@ -27,8 +27,20 @@ uint64_t sys_exit(void) {
 
 uint64_t sys_fork(void) {
   LOG_DEBUG("fork");
-  return fork();
+  int flags;
+  uint64_t stackHighAddr;
+  if (argint(0, &flags) < 0 || argaddr(1, &stackHighAddr) < 0) {
+    return -1;
+  }
+  if (stackHighAddr == 0)
+    return fork();
+  else
+    return clone(stackHighAddr, flags);
 }
+
+//   uint64_t sys_clone(void){
+
+// }
 
 uint64_t sys_exec(void) {
   char path[MAXPATH], *argv[MAXARG];

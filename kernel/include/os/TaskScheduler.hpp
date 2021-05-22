@@ -101,6 +101,18 @@ pagetable_t taskPagetable(Task *task);
 int fork();
 
 /**
+ * @brief 创建一个子线程，并执行fn函数
+ * 
+ * @param fn 
+ * @param stack 
+ * @param stackSz 
+ * @param flags 
+ * @return int 
+ */
+int clone(uint64_t stack, int flags);
+
+
+/**
  * @brief 等待子进程退出, 返回其子进程id
  * 没有子进程返回-1， 将退出状态复
  * 制到status中。
