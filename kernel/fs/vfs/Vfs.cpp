@@ -319,7 +319,29 @@ int openat(int dirfd, const char *filepath, int flags) {
   return open(filepath, flags);
 }
 
-void rm(const char *file){};
+int rm(int dirfd, char *filepath) {
+  char path[MAXPATH];
+  memset(path, 0, MAXPATH);
+  struct file *fp = NULL;
+  if (dirfd == AT_FDCWD) {
+    getAbsolutePath((char *)filepath, path);
+  } else {
+    if (filepath[0] == '/') {
+      memcpy(path, filepath, strlen(filepath));
+    } else {
+      fp = getFileByfd(dirfd);
+      memcpy(path, fp->filepath, strlen(fp->filepath));
+      memcpy(path + strlen(fp->filepath), filepath, strlen(filepath));
+    }
+  }
+  // TODO 判断是否被打开
+  // for(int i=0;i<NFILE;i++){
+  //   fileTable[i].
+  // }
+  auto fs = getFs(path);
+  LOG_DEBUG("rm path=%s, fs mount point=%s", path, fs->mountPoint);
+  return fs->rm(path);
+};
 
 size_t ls(int fd, char *buffer, int len, bool user = false) {
   struct file *fp = getFileByfd(fd);

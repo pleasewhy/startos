@@ -23,7 +23,9 @@ int Fat32FileSystem::open(const char *filePath, uint64_t flags, struct file *fp)
   if (flags & O_CREATE) {
     tf = tf_fopen(filePath, "w");
   } else {
+    LOG_DEBUG("open flag r");
     tf = tf_fopen(filePath, "r");
+    // LOG_DEBUG("tf=%s", tf->filename);
   }
   // LOG_INFO("tf=%p flags=%x", tf, flags);
   if (tf == NULL && flags == O_DIRECTORY) {
@@ -1056,6 +1058,7 @@ TFFile *Fat32FileSystem::tf_fopen(const char *filename, const char *mode) {
   fp = tf_fnopen(filename, mode, strlen(filename));
   if (fp == NULL) {
     if (strchr(mode, '+') || strchr(mode, 'w') || strchr(mode, 'a')) {
+      LOG_DEBUG("fopen create");
       tf_create(filename);
     }
     LOG_DEBUG("fopen failed");
@@ -1600,14 +1603,16 @@ int Fat32FileSystem::tf_remove(char *filename) {
   tf_fclose(fp);
 
   // TODO Don't leave an orphaned LFN
-  fp = tf_parent(filename, "r+", false);
+  fp = tf_parent(filename, "r", false);
   rc = tf_find_file(fp, (strrchr((char *)filename, '/') + 1));
+  LOG_DEBUG("rm parent=%s sz=%d", fp->filename, fp->size);
   if (!rc) {
     while (1) {
       rc = tf_fseek(fp, sizeof(FatFileEntry), fp->pos);
       if (rc) break;
       tf_fread((char *)&entry, sizeof(FatFileEntry), fp);  // Read one entry ahead
-      tf_fseek(fp, -((int32_t)2 * sizeof(FatFileEntry)), fp->pos);
+      LOG_DEBUG("attr=%x name=%s", entry.msdos.attributes, entry.msdos.filename);
+      tf_fseek(fp, -((int32_t)3 * sizeof(FatFileEntry)), fp->pos);
       tf_fwrite((char *)&entry, sizeof(FatFileEntry), fp);
       if (entry.msdos.filename[0] == 0) break;
     }

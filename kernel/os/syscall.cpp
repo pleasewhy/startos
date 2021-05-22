@@ -130,6 +130,7 @@ extern uint64_t sys_gettimeofday(void);
 extern uint64_t sys_mmap(void);
 extern uint64_t sys_munmap(void);
 extern uint64_t sys_fstat(void);
+extern uint64_t sys_unlinkat();
 
 static uint64_t (*syscalls[400])(void);
 
@@ -167,6 +168,7 @@ void syscall_init() {
   syscalls[SYS_mmap] = sys_mmap;
   syscalls[SYS_munmap] = sys_munmap;
   syscalls[SYS_fstat] = sys_fstat;
+  syscalls[SYS_unlinkat] = sys_unlinkat;
 }
 
 void syscall(void) {

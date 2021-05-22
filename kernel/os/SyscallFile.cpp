@@ -42,6 +42,18 @@ uint64_t sys_open(void) {
   return fd;
 }
 
+uint64_t sys_unlinkat() {
+  int fd;
+  char filepath[MAXPATH];
+  int flags;
+  LOG_DEBUG("sys_unlinkat");
+  if (argint(0, &fd) < 0 || argstr(1, filepath, MAXPATH) < 0 || argint(2, &flags) < 0) {
+    LOG_DEBUG("error");
+    return -1; 
+  }
+  return vfs::rm(fd, filepath);
+}
+
 uint64_t sys_openat(void) {
   char filename[MAXPATH];
   int fd, mode, flags;

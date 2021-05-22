@@ -61,7 +61,7 @@ void close(struct file *fp);
 /**
  * @brief 创建目录
  * @param dirfd 要创建的目录所在的目录的文件描述符
- * @param path 要创建的目录的名称。如果path是相对路
+ * @param path 要创建的目录的路径。如果path是相对路
  * 径，则它是相对于dirfd目录而言的。如果path是相对路
  * 径，且dirfd的值为AT_FDCWD，则它是相对于当前路径而
  * 言的。如果path是绝对路径，则dirfd被忽略。
@@ -71,10 +71,14 @@ int mkdirat(int dirfd, const char *path);
 
 /**
  * @brief 删除文件
- * @param file 需要删除文件的路径
- * @return a status code
+ * @param dirfd 要创建的目录所在的目录的文件描述符
+ * @param path 要删除文件路径。如果path是相对路
+ * 径，则它是相对于dirfd目录而言的。如果path是相对路
+ * 径，且dirfd的值为AT_FDCWD，则它是相对于当前路径而
+ * 言的。如果path是绝对路径，则dirfd被忽略。
+ * @return 成功返回0，失败返回-1
  */
-void rm(const char *file);
+int rm(int dirfd, char *path);
 
 /**
  * @brief 读取文件

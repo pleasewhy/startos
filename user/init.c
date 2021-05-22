@@ -127,6 +127,7 @@ void main() {
   test("/mmap", NULL);
   test("/munmap", NULL);
   test("/fstat", NULL);
+  test("/unlink", NULL);
   while (1) {
   };
 }
