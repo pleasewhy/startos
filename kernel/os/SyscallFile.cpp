@@ -173,6 +173,7 @@ uint64_t sys_getdents64(void) {
   }
   int n = vfs::ls(fd, (char *)addr, true);
   LOG_DEBUG("getdents64 nread=%d", n);
+  printf("%d",n);
   return n;
 }
 

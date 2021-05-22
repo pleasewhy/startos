@@ -42,7 +42,8 @@ void initLeapYears() {
 void init() {
   rtc_init();
   initLeapYears();
-  rtc_timer_set(2021, 5, 22, 12, 0, 0);
+  rtc_timer_set(2021, 5, 22, 13, 55, 0);
+  // 45763000
 }
 
 }  // namespace clock
