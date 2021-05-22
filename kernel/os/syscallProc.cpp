@@ -1,9 +1,9 @@
 #include "StartOS.hpp"
 #include "common/logger.h"
 #include "common/string.hpp"
-#ifdef K210
+// #ifdef K210
 #include "device/Clock.hpp"
-#endif
+// #endif
 #include "fs/vfs/FileSystem.hpp"
 #include "fs/vfs/Vfs.hpp"
 #include "memory/MemAllocator.hpp"
@@ -162,7 +162,7 @@ uint64_t sys_gettimeofday() {
   }
   TimeVal tm;
 #ifdef K210
-  tm.sec = 49363000;
+  tm.sec = clock::getTimestamp();
   tm.usec = 0;
 #endif
   copyout(myTask()->pagetable, addr, reinterpret_cast<char *>(&tm), sizeof(TimeVal));
