@@ -19,8 +19,8 @@ int getDateTime(int *year, int *month, int *day, int *hour, int *minute, int *se
 uint64_t getTimestamp() {
   struct tm *tm = rtc_timer_get_tm();
   int off = tm->tm_year - 1970;
-  int lys = leapYears[off - 1];
-  uint64_t days = lys * 366 + (off - 1 - lys) * 365 + tm->tm_yday;
+  int leaps = leapYears[off - 1];
+  uint64_t days = leaps * 366 + (off - 1 - leaps) * 365 + tm->tm_yday;
   long ts = days * 86400 + tm->tm_hour * 3600 + tm->tm_sec;
   return ts;
 }
