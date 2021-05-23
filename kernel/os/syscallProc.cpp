@@ -173,7 +173,7 @@ uint64_t sys_gettimeofday() {
     return -1;
   }
   TimeVal tm;
-  int i = 100000000;
+  int i = 40000000;
   while (i-- > 0)
     ;
 #ifdef K210
