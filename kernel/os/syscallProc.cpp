@@ -173,6 +173,9 @@ uint64_t sys_gettimeofday() {
     return -1;
   }
   TimeVal tm;
+  int i = 100000000;
+  while (i-- > 0)
+    ;
 #ifdef K210
   tm.sec = clock::getTimestamp();
   tm.usec = 0;
