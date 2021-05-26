@@ -2,7 +2,7 @@
 
 StartOS是一个RISC-V 64位操作系统，它主要使用C++编写并包含一些必要的汇编代码
 
-写StartOS的主要是为了学习和作为一个校招的项目
+写StartOS的主要是为了学习
 
 ### Features
 
