@@ -4,7 +4,7 @@ T = ./target
 CPUS = 2
 
 
-TOOLPREFIX = riscv64-linux-gnu-
+TOOLPREFIX = riscv64-unknown-elf-
 QEMU = qemu-system-riscv64
 
 OBJCOPY = $(TOOLPREFIX)objcopy
@@ -60,6 +60,13 @@ k210 = $T/k210.bin
 
 fs.img:
 # cd user;$(MAKE) fs.img
+	@if [ ! -f "fs.img" ]; then \
+	echo "making fs image..."; \
+	dd if=/dev/zero of=fs.img bs=512k count=512; \
+	mkfs.vfat -F 32 fs.img; fi
+	@sudo mount fs.img /mnt
+	sudo cp -r submit/riscv64/* /mnt/
+	@sudo umount /mnt
 
 oscmp:
 	@if [ ! -f "fs.img" ]; then \
