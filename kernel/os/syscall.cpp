@@ -131,6 +131,7 @@ extern uint64_t sys_mmap(void);
 extern uint64_t sys_munmap(void);
 extern uint64_t sys_fstat(void);
 extern uint64_t sys_unlinkat();
+extern uint64_t sys_nanosleep();
 
 static uint64_t (*syscalls[400])(void);
 
@@ -169,6 +170,7 @@ void syscall_init() {
   syscalls[SYS_munmap] = sys_munmap;
   syscalls[SYS_fstat] = sys_fstat;
   syscalls[SYS_unlinkat] = sys_unlinkat;
+  syscalls[SYS_nanosleep] = sys_nanosleep;
 }
 
 void syscall(void) {

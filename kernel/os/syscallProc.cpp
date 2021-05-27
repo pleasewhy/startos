@@ -1,6 +1,7 @@
 #include "StartOS.hpp"
 #include "common/logger.h"
 #include "common/string.hpp"
+#include "param.hpp"
 // #ifdef K210
 #include "device/Clock.hpp"
 // #endif
@@ -172,14 +173,27 @@ uint64_t sys_gettimeofday() {
   if (argaddr(0, &addr) < 0) {
     return -1;
   }
-  TimeVal tm;
+  TimeVal tv;
   int i = 40000000;
   while (i-- > 0)
     ;
 #ifdef K210
-  tm.sec = clock::getTimestamp();
-  tm.usec = 0;
+  tv.sec = clock::getTimestamp();
+  tv.usec = 0;
 #endif
-  copyout(myTask()->pagetable, addr, reinterpret_cast<char *>(&tm), sizeof(TimeVal));
+  copyout(myTask()->pagetable, addr, reinterpret_cast<char *>(&tv), sizeof(TimeVal));
+  return 0;
+}
+
+uint64_t sys_nanosleep(void) {
+  TimeVal tv;
+  uint64_t addr;
+  if (argaddr(0, &addr) < 0) {
+    return -1;
+  }
+  if (copyin(myTask()->pagetable, reinterpret_cast<char *>(&tv), addr, sizeof(TimeVal)) < 0) {
+    return -1;
+  }
+  sleepTime(tv.sec * 1000 / INTERVAL);
   return 0;
 }

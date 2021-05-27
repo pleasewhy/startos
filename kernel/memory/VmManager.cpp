@@ -74,9 +74,9 @@ void initKernelVm() {
 void initHartVm() {
   w_satp(MAKE_SATP(kernel_pagetable));
   sfence_vma();
-// #ifdef K210
+#ifdef K210
   sfence_vm();
-// #endif
+#endif
 }
 
 pte_t *walk(pagetable_t pagetable, uint64_t va, int alloc) {

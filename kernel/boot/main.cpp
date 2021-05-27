@@ -54,6 +54,7 @@ extern "C" void main(unsigned long hartid, unsigned long dtb_pa) {
     initHartVm();         // 启用分页
     trapinithart();       // 初始化trap
     syscall_init();       // 初始化系统调用
+    timer::init();
     plic::init();         // 初始化plic
     plic::initHart();
 
