@@ -50,8 +50,9 @@ kernelvec:
         ld ra, 0(sp)
         ld sp, 8(sp)
         ld gp, 16(sp)
-        # not this, in case we moved CPUs: 
-        ld tp, 24(sp)
+        # 不用恢复tp寄存器，不然可能会修改tp: ld tp, 24(sp)
+        # 因为现在运行这段代码的可能不是之前的那个CPU，可能
+        # 是另一个CPU，如果load tp的话就修改的当前CPU的tp寄存器
         ld t0, 32(sp)
         ld t1, 40(sp)
         ld t2, 48(sp)

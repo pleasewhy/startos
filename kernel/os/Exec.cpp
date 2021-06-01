@@ -107,6 +107,7 @@ int exec(char *path, char **argv) {
   task->sz = sz;
   task->trapframe->epc = elf.entry;
   task->trapframe->sp = sp;
+  LOG_DEBUG("sp=%p",sp);
   return argc;
 
 bad:

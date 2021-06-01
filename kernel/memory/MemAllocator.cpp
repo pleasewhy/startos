@@ -1,17 +1,15 @@
 #include "memory/MemAllocator.hpp"
+#include "StartOS.hpp"
 #include "common/printk.hpp"
 #include "common/string.hpp"
 #include "memlayout.hpp"
 #include "riscv.hpp"
 #include "types.hpp"
-#include "StartOS.hpp"
-
-
-
 
 extern "C" char end[];  // 内核使用的空间后的第一个地址, 在kernel.ld中定义
 void MemAllocator::init() {
   this->spinLock.init("memAlloc");
+  printf("\n\nend=%p\n\n", end);
   freeRange(end, (void *)PHYSTOP);
 }
 

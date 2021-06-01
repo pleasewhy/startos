@@ -447,6 +447,7 @@ void prepareSched() {
 // 睡眠一定时间
 void sleepTime(uint64_t sleep_ticks) {
   uint64_t now = timer::ticks;
+  LOG_DEBUG("ticks=%d\n",sleep_ticks);
   timer::spinLock.lock();
   for (; timer::ticks - now < sleep_ticks;) {
     sleep(&timer::ticks, &timer::spinLock);

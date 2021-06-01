@@ -44,7 +44,7 @@ const uint8_t get_source_aclk[] = {
     [1] = SYSCTL_SOURCE_PLL0,
 };
 
-volatile sysctl_t *const sysctl = (volatile sysctl_t *)SYSCTL_V;
+volatile sysctl_t *const sysctl = (volatile sysctl_t *)SYSCTL;
 
 uint32_t sysctl_get_git_id(void) { return sysctl->git_id.git_id; }
 

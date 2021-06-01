@@ -8,7 +8,7 @@
 
 #define GPIOHS_MAX_PINNO 32
 
-volatile gpiohs_t *const gpiohs = (volatile gpiohs_t *)GPIOHS_V;
+volatile gpiohs_t *const gpiohs = (volatile gpiohs_t *)GPIOHS;
 
 // typedef struct _gpiohs_pin_instance
 // {

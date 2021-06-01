@@ -8,7 +8,6 @@
 #include "riscv.hpp"
 
 extern "C" char trampoline[];  // trampoline.S
-
 extern "C" MemAllocator memAllocator;
 extern "C" char etext[];  // 链接器会设置这个为内核代码结束
 pagetable_t kernel_pagetable;
@@ -18,16 +17,16 @@ void initKernelVm() {
   memset(kernel_pagetable, 0, PGSIZE);
 
   // uart寄存器
-  kernel_vm_map(UART_V, UART, PGSIZE, PTE_R | PTE_W);
+  kernel_vm_map(UART, UART, PGSIZE, PTE_R | PTE_W);
 
 #ifdef QEMU
   // virtio mmio 磁盘接口
-  kernel_vm_map(VIRTIO0_V, VIRTIO0, PGSIZE, PTE_R | PTE_W);
+  kernel_vm_map(VIRTIO0, VIRTIO0, PGSIZE, PTE_R | PTE_W);
 #endif
 
   // PLIC
-  kernel_vm_map(PLIC_V, PLIC, 0x4000, PTE_R | PTE_W);
-  kernel_vm_map(PLIC_V + 0x200000, PLIC + 0x200000, 0x4000, PTE_R | PTE_W);
+  kernel_vm_map(PLIC, PLIC, 0x4000, PTE_R | PTE_W);
+  kernel_vm_map(PLIC + 0x200000, PLIC + 0x200000, 0x4000, PTE_R | PTE_W);
 
   // 内核
   kernel_vm_map(KERNBASE, KERNBASE, (uint64_t)etext - KERNBASE, PTE_R | PTE_X);
@@ -40,34 +39,34 @@ void initKernelVm() {
 
 #ifdef K210
   // GPIOHS
-  kernel_vm_map(GPIOHS_V, GPIOHS, 0x1000, PTE_R | PTE_W);
+  kernel_vm_map(GPIOHS, GPIOHS, 0x1000, PTE_R | PTE_W);
 
   // DMAC
-  kernel_vm_map(DMAC_V, DMAC, 0x1000, PTE_R | PTE_W);
+  kernel_vm_map(DMAC, DMAC, 0x1000, PTE_R | PTE_W);
 
   // GPIO
-  // kvmmap(GPIO_V, GPIO, 0x1000, PTE_R | PTE_W);
+  // kvmmap(GPIO, GPIO, 0x1000, PTE_R | PTE_W);
 
   // SPI_SLAVE
-  kernel_vm_map(SPI_SLAVE_V, SPI_SLAVE, 0x1000, PTE_R | PTE_W);
+  kernel_vm_map(SPI_SLAVE, SPI_SLAVE, 0x1000, PTE_R | PTE_W);
 
   // FPIOA
-  kernel_vm_map(FPIOA_V, FPIOA, 0x1000, PTE_R | PTE_W);
+  kernel_vm_map(FPIOA, FPIOA, 0x1000, PTE_R | PTE_W);
 
   // SPI0
-  kernel_vm_map(SPI0_V, SPI0, 0x1000, PTE_R | PTE_W);
+  kernel_vm_map(SPI0, SPI0, 0x1000, PTE_R | PTE_W);
 
   // SPI1
-  kernel_vm_map(SPI1_V, SPI1, 0x1000, PTE_R | PTE_W);
+  kernel_vm_map(SPI1, SPI1, 0x1000, PTE_R | PTE_W);
 
   // SPI2
-  kernel_vm_map(SPI2_V, SPI2, 0x1000, PTE_R | PTE_W);
+  kernel_vm_map(SPI2, SPI2, 0x1000, PTE_R | PTE_W);
 
   // SYSCTL
-  kernel_vm_map(SYSCTL_V, SYSCTL, 0x1000, PTE_R | PTE_W);
+  kernel_vm_map(SYSCTL, SYSCTL, 0x1000, PTE_R | PTE_W);
 
   // clock
-  kernel_vm_map(RTC_V, RTC, 0x1000, PTE_R | PTE_W);
+  kernel_vm_map(RTC, RTC, 0x1000, PTE_R | PTE_W);
 #endif
 }
 
@@ -75,7 +74,8 @@ void initHartVm() {
   w_satp(MAKE_SATP(kernel_pagetable));
   sfence_vma();
 #ifdef K210
-  sfence_vm();
+  // sfence_vm();
+  asm volatile("fence.i");
 #endif
 }
 

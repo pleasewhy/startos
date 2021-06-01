@@ -1,4 +1,4 @@
-#include "os/Plic.hpp"
+#include "driver/Plic.hpp"
 #include "StartOS.hpp"
 #include "common/printk.hpp"
 #include "memlayout.hpp"
@@ -8,8 +8,8 @@
 namespace plic {
 void init() {
   // 设置IRQ的属性为非零，即启用plic
-  *(uint32_t *)(PLIC_V + UART_IRQ * 4) = 1;
-  *(uint32_t *)(PLIC_V + DISK_IRQ * 4) = 1;
+  *(uint32_t *)(PLIC + UART_IRQ * 4) = 1;
+  *(uint32_t *)(PLIC + DISK_IRQ * 4) = 1;
 }
 
 void initHart(void) {

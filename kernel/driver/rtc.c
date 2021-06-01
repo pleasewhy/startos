@@ -14,14 +14,15 @@
  */
 #include <stdint.h>
 #include "time.h"
+#include "common/printk.hpp"
 
 #include "driver/sysctl.hpp"
-#include "os/Plic.hpp"
+#include "driver/Plic.hpp"
 #include "driver/rtc.h"
 #include "memlayout.hpp"
 
 
-volatile rtc_t *const rtc = (volatile rtc_t *)RTC_V;
+volatile rtc_t *const rtc = (volatile rtc_t *)RTC;
 
 struct tm rtc_timer_date_time;
 

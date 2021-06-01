@@ -39,13 +39,14 @@ endif
 # FLAGS += -DSUBMIT
 # endif
 
-LDFLAGS = -z max-page-size=4096
 CXXFLAGS = -std=c++11 
 # CXXFLAGS += -fno-use-cxa-atexit
 CXXFLAGS += -fno-rtti
 CXXFLAGS += -fno-exceptions
 CXXFLAGS += $(FLAGS)
 CFLAGS = $(FLAGS)
+
+LDFLAGS = -z max-page-size=4096
 
 
 # boot
@@ -64,7 +65,6 @@ OBJS += \
 	os/SpinLock.o \
 	os/Cpu.o \
 	os/trap.o \
-	os/Plic.o \
 	os/kernelvec.o \
 	os/Timer.o \
 	os/TaskScheduler.o \
@@ -96,6 +96,10 @@ OBJS += \
 	memory/VmManager.o \
 	memory/MemAllocator.o
 
+# driver:
+OBJS += \
+	driver/Plic.o
+
 ifeq ($(platform), K210)
 OBJS += \
   driver/spi.o \
@@ -126,14 +130,17 @@ k210 = $T/k210.bin
 RUSTSBI = ../rustsbi/sbi-k210
 
 kernel: $(link) $(OBJ_LINK_LIST)
-	$(LD) $(LDFLAGS) -T $(link) -o $T/kernel $(OBJ_LINK_LIST) -nostdlib
+	$(LD) $(LDFLAGS) -T $(link) -o $T/kernel $(OBJ_LINK_LIST)
 	$(OBJDUMP) -S $T/kernel > $T/kernel.asm
 	@$(OBJDUMP) -t $T/kernel | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $T/kernel.sym
 # just for oscomp competition
+
+ifeq ($(platform), K210)
 	$(OBJCOPY) $T/kernel --strip-all -O binary $(kernelImg)
 	$(OBJCOPY) $(RUSTSBI) --strip-all -O binary $(k210)
 	dd if=$(kernelImg) of=$(k210) bs=128k seek=1
 	cp $(k210) ../k210.bin
+endif
 
 
 clean: 

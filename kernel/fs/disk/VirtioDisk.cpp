@@ -10,7 +10,7 @@
 
 // using namespace virtio;
 // the address of virtio mmio register r.
-#define R(r) ((volatile uint32_t *)(VIRTIO0_V + (r)))
+#define R(r) ((volatile uint32_t *)(VIRTIO0 + (r)))
 struct alignas(4096) VirtioDisk {
  public:
   // the virtio driver and device mostly communicate through a set of

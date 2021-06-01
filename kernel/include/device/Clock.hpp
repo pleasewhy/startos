@@ -1,6 +1,7 @@
 #ifndef _CLOCK_HPP
 #define _CLOCK_HPP
-
+#include "types.hpp"
+#include "time.h"
 namespace clock {
 /**
  * @brief 初始化rtc芯片，并为其设置一个初始
@@ -36,11 +37,11 @@ int setDateTime(int year, int month, int day, int hour, int minute, int second);
 int getDateTime(int *year, int *month, int *day, int *hour, int *minute, int *second);
 
 /**
- * @brief 获取1970年1月1日到现在时间经过的秒数
+ * @brief 获取TimeVal数据
  *
- * @return uint64_t
+ * @return uint64_t 微秒
  */
-uint64_t getTimestamp();
+void getTimeVal(TimeVal &timeVal);
 
 }  // namespace clock
 #endif

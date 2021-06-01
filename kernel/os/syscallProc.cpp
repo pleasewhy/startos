@@ -174,13 +174,11 @@ uint64_t sys_gettimeofday() {
     return -1;
   }
   TimeVal tv;
-  int i = 40000000;
-  while (i-- > 0)
-    ;
+  
 #ifdef K210
-  tv.sec = clock::getTimestamp();
-  tv.usec = 0;
+  clock::getTimeVal(tv);
 #endif
+  LOG_DEBUG("sec=%d usec=%d",tv.sec, tv.usec);
   copyout(myTask()->pagetable, addr, reinterpret_cast<char *>(&tv), sizeof(TimeVal));
   return 0;
 }
@@ -194,6 +192,7 @@ uint64_t sys_nanosleep(void) {
   if (copyin(myTask()->pagetable, reinterpret_cast<char *>(&tv), addr, sizeof(TimeVal)) < 0) {
     return -1;
   }
-  sleepTime(tv.sec * 1000 / INTERVAL);
+  
+  sleepTime((tv.sec * 1000 + tv.usec / 1000) / INTERVAL);
   return 0;
 }

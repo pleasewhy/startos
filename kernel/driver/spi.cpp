@@ -16,10 +16,10 @@ extern MemAllocator memAllocator;
 
 volatile spi_t *const spi[4] =
     {
-        (volatile spi_t *)SPI0_V,
-        (volatile spi_t *)SPI1_V,
-        (volatile spi_t *)SPI_SLAVE_V,
-        (volatile spi_t *)SPI2_V};
+        (volatile spi_t *)SPI0,
+        (volatile spi_t *)SPI1,
+        (volatile spi_t *)SPI_SLAVE,
+        (volatile spi_t *)SPI2};
 
 void spi_init(spi_device_num_t spi_num, spi_work_mode_t work_mode, spi_frame_format_t frame_format,
               uint64_t data_bit_length, uint32_t endian)
