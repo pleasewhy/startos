@@ -12,7 +12,7 @@
 #include "memory/MemAllocator.hpp"
 #include "memory/VmManager.hpp"
 #include "os/Cpu.hpp"
-#include "os/Plic.hpp"
+#include "driver/Plic.hpp"
 #include "os/SpinLock.hpp"
 #include "os/Syscall.hpp"
 #include "os/TaskScheduler.hpp"
@@ -39,8 +39,6 @@ void print_logo() {
   printf("|_____/  \\__|  \\____||_|   \\___|  \\_____/ |_____/\n");
   printf("\n");
 }
-extern "C" void _init();
-extern "C" void __cxa_pure_virtual() { LOG_DEBUG("error"); }
 
 extern "C" void main(unsigned long hartid, unsigned long dtb_pa) {
   inithartid(hartid);  // 将hartid保存在tp寄存器中
@@ -52,10 +50,12 @@ extern "C" void main(unsigned long hartid, unsigned long dtb_pa) {
     memAllocator.init();  // 初始化内存
     initKernelVm();       // 初始化内核虚拟内存
     initHartVm();         // 启用分页
+    timer::init();
     trapinithart();       // 初始化trap
     syscall_init();       // 初始化系统调用
-    plic::init();         // 初始化plic
+    plic::init();  // 初始化plic
     plic::initHart();
+
 
 #ifdef K210
     clock::init();  // 初始化时钟
@@ -85,8 +85,8 @@ extern "C" void main(unsigned long hartid, unsigned long dtb_pa) {
     trapinithart();    // 初始化trap
     plic::initHart();  // ask PLIC for device interrupts
     printf("hart %d finish init\n", r_tp());
-    while (1) {
-    }
+    // while (1) {
+    // }
   }
   scheduler();
 }

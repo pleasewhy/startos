@@ -129,6 +129,7 @@ void main() {
   test("/fstat", NULL);
   test("/unlink", NULL);
   test("/clone", NULL);
+  test("/sleep", NULL);
   while (1) {
   };
 }

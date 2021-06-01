@@ -1,3 +1,4 @@
+
 #ifndef TRAP_HPP
 #define TRAP_HPP
 void trapinit(void);

@@ -20,7 +20,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-volatile fpioa_t *const fpioa = (volatile fpioa_t *)FPIOA_V;
+volatile fpioa_t *const fpioa = (volatile fpioa_t *)FPIOA;
 
 /**
  * @brief      Internal used FPIOA function initialize cell

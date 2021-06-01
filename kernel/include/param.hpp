@@ -1,6 +1,7 @@
 #ifndef __PARAM_HPP
 #define __PARAM_HPP
 
+#define CPU_FREQ     403000000 
 #define NTASK        50  // maximum number of processes
 #define NCPU          2  // maximum number of CPUs
 #define NOFILE       120 // open files per process
@@ -15,7 +16,6 @@
 #define NBUF         (MAXOPBLOCKS*3)  // size of disk block cache
 #define FSSIZE       1000  // size of file system in blocks
 #define MAXPATH      64   // maximum file path name
-// #define INTERVAL     (390000000 / 200) // timer interrupt interval
-#define INTERVAL     1000000 // timer interrupt interval
+#define INTERVAL     50 // ms.  timer interrupt interval
 
 #endif

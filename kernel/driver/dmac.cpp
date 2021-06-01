@@ -16,7 +16,7 @@
 #include "types.hpp"
 #include "driver/dmac.hpp"
 #include "driver/fpioa.hpp"
-#include "os/Plic.hpp"
+#include "driver/Plic.hpp"
 #include "driver/sysctl.hpp"
 #include "driver/utils.hpp"
 #include "common/printk.hpp"
@@ -25,7 +25,7 @@
 #include "os/SleepLock.hpp"
 #include "os/TaskScheduler.hpp"
 
-volatile dmac_t *const dmac = (dmac_t *)DMAC_V;
+volatile dmac_t *const dmac = (dmac_t *)DMAC;
 
 static int is_memory(uintptr_t address)
 {
@@ -337,7 +337,7 @@ int dmac_is_idle(dmac_channel_number_t channel_num)
         return 1;
 }
 
-static void *dmac_chan = (void *) DMAC_V;
+static void *dmac_chan = (void *) DMAC;
 
 void dmac_wait_idle(dmac_channel_number_t channel_num)
 {

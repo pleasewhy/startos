@@ -255,7 +255,7 @@ uint64_t sys_mmap(void) {
 
   vfs::dup(f);
   f->position = 0;
-  // filerewind(f);
+  vfs::rewind(f);
 
   a->f = f;
   a->length = length;

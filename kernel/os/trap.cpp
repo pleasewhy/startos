@@ -13,7 +13,7 @@
 #include "memlayout.hpp"
 #include "memory/MemAllocator.hpp"
 #include "os/Cpu.hpp"
-#include "os/Plic.hpp"
+#include "driver/Plic.hpp"
 #include "os/SpinLock.hpp"
 #include "os/Syscall.hpp"
 #include "os/TaskScheduler.hpp"
@@ -92,7 +92,6 @@ void usertrap(void) {
       if (vma->prot & PROT_WRITE) perm |= PTE_W;
       mappages(task->pagetable, eaddr, PGSIZE, (uint64_t)mem, perm);
       vfs::read(vma->f, false, mem, PGSIZE, eaddr - vma->addr);
-      // filereadoff(vma->f, (uint64_t)mem, eaddr - vma->addr, PGSIZE);
     } else {
       task->killed = 1;
     }

@@ -78,7 +78,6 @@ int argaddr(int n, uint64_t *addr) {
   return 0;
 }
 
-// 从当前进程取出以0结束的字符串
 /**
  * 从当前进程的addr位置取出0结束的字符串。
  * 返回字符串的长度, 不包括0, 失败返回-1
@@ -131,6 +130,7 @@ extern uint64_t sys_mmap(void);
 extern uint64_t sys_munmap(void);
 extern uint64_t sys_fstat(void);
 extern uint64_t sys_unlinkat();
+extern uint64_t sys_nanosleep();
 
 static uint64_t (*syscalls[400])(void);
 
@@ -169,6 +169,7 @@ void syscall_init() {
   syscalls[SYS_munmap] = sys_munmap;
   syscalls[SYS_fstat] = sys_fstat;
   syscalls[SYS_unlinkat] = sys_unlinkat;
+  syscalls[SYS_nanosleep] = sys_nanosleep;
 }
 
 void syscall(void) {

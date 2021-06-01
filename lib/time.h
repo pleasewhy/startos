@@ -1,5 +1,13 @@
 #ifndef _TIME_H
 #define _TIME_H
+#define NanoSecond  (1)
+#define MicroSecond (1000 * NanoSecond)
+#define MilliSecond (1000 * MicroSecond)
+#define Second      (1000 * MilliSecond)
+
+#define SecByMicro    Second / MicroSecond
+#define MilliByMicro  MilliSecond / MicroSecond
+
 struct tm {
   int tm_sec;   /* Seconds.	[0-60] (1 leap second) */
   int tm_min;   /* Minutes.	[0-59] */

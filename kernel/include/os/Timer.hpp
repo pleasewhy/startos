@@ -12,6 +12,7 @@
  *
  */
 namespace timer {
+constexpr uint_t mtime_freq = 6500000; // k210计数器mtime增长频率为CPU的1/62
 /**
  *  配置机器模式下的时钟中断，使其能够被kernelvec.S中的
  *  timervec函数处理，timervec会抛出一个软件中断让，trap.c
