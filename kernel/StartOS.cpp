@@ -6,30 +6,31 @@
 //=======================================================================
 
 #include "StartOS.hpp"
-#include "memory/MemAllocator.hpp"
 #include "common/logger.h"
+#include "common/printk.hpp"
+#include "memory/BuddyAllocator.hpp"
+#include "memory/MemAllocator.hpp"
+#include "riscv.hpp"
 
 extern MemAllocator memAllocator;
+extern mem::BuddyAllocator buddy_alloc_;  // 用于通用内存内配
 
-void* operator new(uint64_t size){
-    return memAllocator.alloc();
-}
-
-void operator delete(void* p){
-    return memAllocator.free(p);
-}
-
-void* operator new[](uint64_t size){
+void *operator new(uint64_t size) {
+  if (size > PGSIZE) {
     LOG_ERROR("not support new[]");
-    return NULL;
+    panic("operator new");
+  }
+  return buddy_alloc_.alloc(size);
 }
 
-void operator delete[](void* p){
-    LOG_ERROR("not support delete[]");
+void operator delete(void *p) { return buddy_alloc_.free(p); }
 
+void *operator new[](uint64_t size) {
+  LOG_ERROR("not support new[]");
+  return NULL;
 }
 
-
+void operator delete[](void *p) { LOG_ERROR("not support delete[]"); }
 
 // extern "C" {
 

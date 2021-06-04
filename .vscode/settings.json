@@ -17,6 +17,15 @@
     "plic.hpp": "c",
     "rtc.h": "c",
     "printk.hpp": "c",
-    "type_traits": "cpp"
+    "type_traits": "cpp",
+    "climits": "cpp",
+    "cmath": "cpp",
+    "cstdarg": "cpp",
+    "cstddef": "cpp",
+    "cstdint": "cpp",
+    "cstdio": "cpp",
+    "cstdlib": "cpp",
+    "*.tcc": "cpp",
+    "cstdbool": "cpp"
   }
 }

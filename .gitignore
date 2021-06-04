@@ -21,3 +21,4 @@ submit/*
 .gdb_history
 .gitignore
 .vscode
+kernel/memory/tmp.cpp

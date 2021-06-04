@@ -1,8 +1,8 @@
-	#
-        # 监督者模式的中断和异常处理程序。
-        #
-        # 保存全部寄存器，调用kerneltrap，恢复寄存器，返回。
-        #
+#
+# 监督者模式的中断和异常处理程序。
+#
+# 保存全部寄存器，调用kerneltrap，恢复寄存器，返回。
+#
 .globl kerneltrap
 .globl kernelvec
 .align 4

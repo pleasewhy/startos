@@ -2,7 +2,7 @@
 # 语言: None, Cpp, Java, JavaScript, ObjC, Proto, TableGen, TextProto
 Language:	Cpp
 
-# BasedOnStyle:	Google
+# BasedOnStyle:	LLVM
 # 访问说明符(public、private等)的偏移
 AccessModifierOffset:	-2
 
@@ -187,7 +187,7 @@ PenaltyExcessCharacter:	1000000
 PenaltyReturnTypeOnItsOwnLine:	60
  
 # 指针和引用的对齐: Left, Right, Middle
-PointerAlignment:	Right
+PointerAlignment:	Left
 
 # 允许重新排版注释
 ReflowComments:	true
@@ -231,7 +231,7 @@ SpacesInSquareBrackets:	false
 Standard:	Cpp11
 
 # tab宽度
-TabWidth:	4
+TabWidth:	2
 
 # 使用tab字符: Never, ForIndentation, ForContinuationAndIndentation, Always
 UseTab:	Never

@@ -4,7 +4,8 @@
             "name": "Win32",
             "includePath": [
                 "${workspaceFolder}/kernel/include",
-                "${workspaceFolder}/lib"
+                "${workspaceFolder}/lib",
+                "${workspaceFolder}/sstl"
             ],
             "defines": [
                 "_DEBUG",

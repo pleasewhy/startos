@@ -1,48 +1,64 @@
 
+#include "device/SdCard.hpp"
+
 #include "common/printk.hpp"
 #include "common/string.hpp"
+#include "driver/dmac.hpp"
 #include "driver/gpiohs.hpp"
+#include "driver/spi.hpp"
 #include "fs/inodefs/BufferLayer.hpp"
 #include "os/SpinLock.hpp"
 #include "riscv.hpp"
 #include "types.hpp"
 
-#include "driver/dmac.hpp"
-#include "driver/spi.hpp"
-#include "fs/disk/SdCard.hpp"
+void SD_CS_HIGH(void)
+{
+  gpiohs_set_pin(7, GPIO_PV_HIGH);
+}
 
-void SD_CS_HIGH(void) { gpiohs_set_pin(7, GPIO_PV_HIGH); }
+void SD_CS_LOW(void)
+{
+  gpiohs_set_pin(7, GPIO_PV_LOW);
+}
 
-void SD_CS_LOW(void) { gpiohs_set_pin(7, GPIO_PV_LOW); }
-
-void SD_HIGH_SPEED_ENABLE(void) {
+void SD_HIGH_SPEED_ENABLE(void)
+{
   // spi_set_clk_rate(SPI_DEVICE_0, 10000000);
 }
 
-static void sd_lowlevel_init(uint8_t spi_index) {
+static void sd_lowlevel_init(uint8_t spi_index)
+{
   gpiohs_set_drive_mode(7, GPIO_DM_OUTPUT);
   // spi_set_clk_rate(SPI_DEVICE_0, 200000);     /*set clk rate*/
 }
 
 // #define SPI_CHIP_SELECT_0
-static void sd_write_data(uint8_t const *data_buff, uint32_t length) {
+static void sd_write_data(uint8_t const *data_buff, uint32_t length)
+{
   spi_init(SPI_DEVICE_0, SPI_WORK_MODE_0, SPI_FF_STANDARD, 8, 0);
-  spi_send_data_standard(SPI_DEVICE_0, SPI_CHIP_SELECT_3, NULL, 0, data_buff, length);
+  spi_send_data_standard(SPI_DEVICE_0, SPI_CHIP_SELECT_3, NULL, 0, data_buff,
+                         length);
 }
 
-static void sd_read_data(uint8_t *data_buff, uint32_t length) {
+static void sd_read_data(uint8_t *data_buff, uint32_t length)
+{
   spi_init(SPI_DEVICE_0, SPI_WORK_MODE_0, SPI_FF_STANDARD, 8, 0);
-  spi_receive_data_standard(SPI_DEVICE_0, SPI_CHIP_SELECT_3, NULL, 0, data_buff, length);
+  spi_receive_data_standard(SPI_DEVICE_0, SPI_CHIP_SELECT_3, NULL, 0, data_buff,
+                            length);
 }
 
-static void sd_write_data_dma(uint8_t const *data_buff, uint32_t length) {
+static void sd_write_data_dma(uint8_t const *data_buff, uint32_t length)
+{
   spi_init(SPI_DEVICE_0, SPI_WORK_MODE_0, SPI_FF_STANDARD, 8, 0);
-  spi_send_data_standard_dma(DMAC_CHANNEL0, SPI_DEVICE_0, SPI_CHIP_SELECT_3, NULL, 0, data_buff, length);
+  spi_send_data_standard_dma(DMAC_CHANNEL0, SPI_DEVICE_0, SPI_CHIP_SELECT_3,
+                             NULL, 0, data_buff, length);
 }
 
-static void sd_read_data_dma(uint8_t *data_buff, uint32_t length) {
+static void sd_read_data_dma(uint8_t *data_buff, uint32_t length)
+{
   spi_init(SPI_DEVICE_0, SPI_WORK_MODE_0, SPI_FF_STANDARD, 8, 0);
-  spi_receive_data_standard_dma((dmac_channel_number_t)-1, DMAC_CHANNEL0, SPI_DEVICE_0, SPI_CHIP_SELECT_3, NULL, 0,
+  spi_receive_data_standard_dma((dmac_channel_number_t)-1, DMAC_CHANNEL0,
+                                SPI_DEVICE_0, SPI_CHIP_SELECT_3, NULL, 0,
                                 data_buff, length);
 }
 
@@ -53,7 +69,8 @@ static void sd_read_data_dma(uint8_t *data_buff, uint32_t length) {
  * @param  Crc: The CRC.
  * @retval None
  */
-static void sd_send_cmd(uint8_t cmd, uint32_t arg, uint8_t crc) {
+static void sd_send_cmd(uint8_t cmd, uint32_t arg, uint8_t crc)
+{
   uint8_t frame[6];
   frame[0] = (cmd | 0x40);
   frame[1] = (uint8_t)(arg >> 24);
@@ -65,7 +82,8 @@ static void sd_send_cmd(uint8_t cmd, uint32_t arg, uint8_t crc) {
   sd_write_data(frame, 6);
 }
 
-static void sd_end_cmd(void) {
+static void sd_end_cmd(void)
+{
   uint8_t frame[1] = {0xFF};
   /*!< SD chip select high */
   SD_CS_HIGH();
@@ -92,13 +110,15 @@ static void sd_end_cmd(void) {
 /*
  * Read sdcard response in R1 type.
  */
-static uint8_t sd_get_response_R1(void) {
-  uint8_t result;
+static uint8_t sd_get_response_R1(void)
+{
+  uint8_t  result;
   uint16_t timeout = 0xff;
 
   while (timeout--) {
     sd_read_data(&result, 1);
-    if (result != 0xff) return result;
+    if (result != 0xff)
+      return result;
   }
 
   // timeout!
@@ -109,15 +129,22 @@ static uint8_t sd_get_response_R1(void) {
  * Read the rest of R3 response
  * Be noticed: frame should be at least 4-byte long
  */
-static void sd_get_response_R3_rest(uint8_t *frame) { sd_read_data(frame, 4); }
+static void sd_get_response_R3_rest(uint8_t *frame)
+{
+  sd_read_data(frame, 4);
+}
 
 /*
  * Read the rest of R7 response
  * Be noticed: frame should be at least 4-byte long
  */
-static void sd_get_response_R7_rest(uint8_t *frame) { sd_read_data(frame, 4); }
+static void sd_get_response_R7_rest(uint8_t *frame)
+{
+  sd_read_data(frame, 4);
+}
 
-static int switch_to_SPI_mode(void) {
+static int switch_to_SPI_mode(void)
+{
   int timeout = 0xff;
 
   while (--timeout) {
@@ -125,7 +152,8 @@ static int switch_to_SPI_mode(void) {
     uint64_t result = sd_get_response_R1();
     sd_end_cmd();
 
-    if (0x01 == result) break;
+    if (0x01 == result)
+      break;
   }
   if (0 == timeout) {
     printf("SD_CMD0 failed\n");
@@ -136,7 +164,8 @@ static int switch_to_SPI_mode(void) {
 }
 
 // verify supply voltage range
-static int verify_operation_condition(void) {
+static int verify_operation_condition(void)
+{
   uint64_t result;
 
   // Stores the response reversely.
@@ -153,7 +182,8 @@ static int verify_operation_condition(void) {
   if (0x09 == result) {
     printf("invalid CRC for CMD8\n");
     return 0xff;
-  } else if (0x01 == result && 0x01 == (frame[2] & 0x0f) && 0xaa == frame[3]) {
+  }
+  else if (0x01 == result && 0x01 == (frame[2] & 0x0f) && 0xaa == frame[3]) {
     return 0x00;
   }
 
@@ -163,9 +193,10 @@ static int verify_operation_condition(void) {
 
 // read OCR register to check if the voltage range is valid
 // this step is not mandotary, but I advise to use it
-static int read_OCR(void) {
+static int read_OCR(void)
+{
   uint64_t result = 0;
-  uint8_t ocr[4];
+  uint8_t  ocr[4];
 
   int timeout;
 
@@ -190,7 +221,8 @@ static int read_OCR(void) {
 }
 
 // send ACMD41 to tell sdcard to finish initializing
-static int set_SDXC_capacity(void) {
+static int set_SDXC_capacity(void)
+{
   uint8_t result = 0xff;
 
   int timeout = 0xfff;
@@ -222,7 +254,8 @@ static int is_standard_sd = 0;
 
 // check OCR register to see the type of sdcard,
 // thus determine whether block size is suitable to buffer size
-static int check_block_size(void) {
+static int check_block_size(void)
+{
   uint8_t result = 0xff;
   uint8_t ocr[4];
 
@@ -242,7 +275,8 @@ static int check_block_size(void) {
         }
 
         is_standard_sd = 0;
-      } else {
+      }
+      else {
         printf("SDSC detected, setting block size\n");
 
         // setting SD card block size to BSIZE
@@ -253,7 +287,8 @@ static int check_block_size(void) {
           result = sd_get_response_R1();
           sd_end_cmd();
 
-          if (0 == result) break;
+          if (0 == result)
+            break;
         }
         if (0 == timeout) {
           printf("check_OCR(): fail to set block size");
@@ -280,7 +315,8 @@ static int check_block_size(void) {
  *         - 0xFF: Sequence failed
  *         - 0: Sequence succeed
  */
-static int sd_init(void) {
+static int sd_init(void)
+{
   uint8_t frame[10];
 
   sd_lowlevel_init(0);
@@ -288,38 +324,46 @@ static int sd_init(void) {
   SD_CS_LOW();
 
   // send dummy bytes for 80 clock cycles
-  for (int i = 0; i < 10; i++) frame[i] = 0xff;
+  for (int i = 0; i < 10; i++)
+    frame[i] = 0xff;
   sd_write_data(frame, 10);
 
-  if (0 != switch_to_SPI_mode()) return 0xff;
-  if (0 != verify_operation_condition()) return 0xff;
-  if (0 != read_OCR()) return 0xff;
-  if (0 != set_SDXC_capacity()) return 0xff;
-  if (0 != check_block_size()) return 0xff;
+  if (0 != switch_to_SPI_mode())
+    return 0xff;
+  if (0 != verify_operation_condition())
+    return 0xff;
+  if (0 != read_OCR())
+    return 0xff;
+  if (0 != set_SDXC_capacity())
+    return 0xff;
+  if (0 != check_block_size())
+    return 0xff;
 
   return 0;
 }
 
-// static struct sleeplock sdcard_lock;
-SleepLock sdcard_lock;
+SdCard::SdCard(const char *name)
+{
+  memset(this->name, 0, DEV_NAME_SIZE);
+  strncpy(this->name, name, strlen(name));
+}
 
-void sdcard_init(void) {
+void SdCard::sdcard_init()
+{
   int result = sd_init();
   // initsleeplock(&sdcard_lock, "sdcard");
-  sdcard_lock.init("sdcard");
+  this->sleepLock.init("sdcard");
 
   if (0 != result) {
     panic("sdcard_init failed");
   }
-#ifdef DEBUG
-  printf("sdcard_init\n");
-#endif
 }
 
-void sdcard_read_sector(uint8_t *buf, int sectorno) {
-  uint8_t result;
+void SdCard::sdcard_read_sector(char *buf, int sectorno)
+{
+  uint8_t  result;
   uint32_t address;
-  uint8_t dummy_crc[2];
+  uint8_t  dummy_crc[2];
   memset(buf, 0, 512);
 #ifdef DEBUG
   printf("sdcard_read_sector()\n");
@@ -327,73 +371,76 @@ void sdcard_read_sector(uint8_t *buf, int sectorno) {
 
   if (is_standard_sd) {
     address = sectorno << 9;
-  } else {
+  }
+  else {
     address = sectorno;
   }
 
   // enter critical section!
   // acquiresleep(&sdcard_lock);
-  sdcard_lock.lock();
+  this->sleepLock.lock();
 
   sd_send_cmd(SD_CMD17, address, 0);
   result = sd_get_response_R1();
 
   if (0 != result) {
     // releasesleep(&sdcard_lock);
-    sdcard_lock.unlock();
+    this->sleepLock.unlock();
     panic("sdcard: fail to read");
   }
 
   int timeout = 0xffffff;
   while (--timeout) {
     sd_read_data(&result, 1);
-    if (0xfe == result) break;
+    if (0xfe == result)
+      break;
   }
   if (0 == timeout) {
     panic("sdcard: timeout waiting for reading");
   }
-  sd_read_data_dma(buf, BSIZE);
+  sd_read_data_dma(reinterpret_cast<uint8_t *>(buf), BSIZE);
   sd_read_data(dummy_crc, 2);
 
   sd_end_cmd();
-  // releasesleep(&sdcard_lock);
-  sdcard_lock.unlock();
+  this->sleepLock.unlock();
   // leave critical section!
 }
 
-void sdcard_write_sector(uint8_t *buf, int sectorno) {
-  uint32_t address;
+void SdCard::sdcard_write_sector(char *buf, int sectorno)
+{
+  uint32_t             address;
   static uint8_t const START_BLOCK_TOKEN = 0xfe;
-  uint8_t dummy_crc[2] = {0xff, 0xff};
+  uint8_t              dummy_crc[2] = {0xff, 0xff};
 #ifdef DEBUG
   printf("sdcard_write_sector()\n");
 #endif
 
   if (is_standard_sd) {
     address = sectorno << 9;
-  } else {
+  }
+  else {
     address = sectorno;
   }
 
   // enter critical section!
   // acquiresleep(&sdcard_lock);
-  sdcard_lock.lock();
+  this->sleepLock.lock();
 
   sd_send_cmd(SD_CMD24, address, 0);
   if (0 != sd_get_response_R1()) {
     // releasesleep(&sdcard_lock);
-    sdcard_lock.unlock();
+    this->sleepLock.unlock();
     panic("sdcard: fail to write");
   }
 
   // sending data to be written
   sd_write_data(&START_BLOCK_TOKEN, 1);
-  sd_write_data_dma(buf, BSIZE);
+  sd_write_data_dma(reinterpret_cast<uint8_t *>(buf), BSIZE);
   sd_write_data(dummy_crc, 2);
 
   // waiting for sdcard to finish programming
   uint8_t result;
-  int timeout = 0xfff;
+  int     timeout = 0xfff;
   while (--timeout) {
     sd_read_data(&result, 1);
     if (0x05 == (result & 0x1f)) {
@@ -402,18 +449,19 @@ void sdcard_write_sector(uint8_t *buf, int sectorno) {
   }
   if (0 == timeout) {
     // releasesleep(&sdcard_lock);
-    sdcard_lock.unlock();
+    this->sleepLock.unlock();
     panic("sdcard: invalid response token");
   }
 
   timeout = 0xffffff;
   while (--timeout) {
     sd_read_data(&result, 1);
-    if (0 != result) break;
+    if (0 != result)
+      break;
   }
   if (0 == timeout) {
     // releasesleep(&sdcard_lock);
-    sdcard_lock.unlock();
+    this->sleepLock.unlock();
     panic("sdcard: timeout waiting for response");
   }
   sd_end_cmd();
@@ -426,43 +474,32 @@ void sdcard_write_sector(uint8_t *buf, int sectorno) {
   sd_end_cmd();
   if (0 != result || 0 != error_code) {
     // releasesleep(&sdcard_lock);
-    sdcard_lock.unlock();
+    this->sleepLock.unlock();
     printf("result: %x\n", result);
     printf("error_code: %x\n", error_code);
     panic("sdcard: an error occurs when writing");
   }
 
-  // releasesleep(&sdcard_lock);
-  sdcard_lock.unlock();
+  this->sleepLock.unlock();
   // leave critical section!
 }
 
-// A simple test for sdcard read/write test
-void test_sdcard(void) {
-  uint8_t buf[BSIZE];
-  for (int sec = 0; sec < 5; sec++) {
-    for (int i = 0; i < BSIZE; i++) {
-      buf[i] = 0xaa;  // data to be written
-    }
-
-    sdcard_write_sector(buf, sec);
-
-    for (int i = 0; i < BSIZE; i++) {
-      buf[i] = 0xff;  // fill in junk
-    }
-
-    sdcard_read_sector(buf, sec);
-    for (int i = 0; i < BSIZE; i++) {
-      if (0 == i % 16) {
-        printf("\n");
-      }
-
-      printf("%x ", buf[i]);
-    }
-    printf("\n");
+int SdCard::read(char *buf, int offset, int n)
+{
+  if (512 != n || 0 != offset % 512) {
+    return -1;
   }
-
-  while (1)
-    ;
+  int sector = offset / 512;
+  this->sdcard_read_sector(buf, sector);
+  return 512;
 }
 
+int SdCard::write(char *buf, int offset, int n)
+{
+  if (512 != n || 0 != offset % 512) {
+    return -1;
+  }
+  int sector = offset / 512;
+  this->sdcard_write_sector(buf, sector);
+  return 512;
+}

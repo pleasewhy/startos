@@ -4,15 +4,17 @@
 #include "common/sbi.h"
 #include "device/Clock.hpp"
 #include "device/Console.hpp"
+#include "device/DeviceManager.hpp"
+#include "driver/Plic.hpp"
 #include "driver/dmac.hpp"
 #include "driver/fpioa.hpp"
 #include "fs/disk/Disk.hpp"
 #include "fs/inodefs/BufferLayer.hpp"
 #include "memlayout.hpp"
+#include "memory/BuddyAllocator.hpp"
 #include "memory/MemAllocator.hpp"
 #include "memory/VmManager.hpp"
 #include "os/Cpu.hpp"
-#include "driver/Plic.hpp"
 #include "os/SpinLock.hpp"
 #include "os/Syscall.hpp"
 #include "os/TaskScheduler.hpp"
@@ -20,16 +22,20 @@
 #include "os/trap.hpp"
 #include "types.hpp"
 
-Console console;
-Cpu cpus[2];
-MemAllocator memAllocator;
-BufferLayer bufferLayer;
+Console             console;
+Cpu                 cpus[2];
+MemAllocator        memAllocator;  // 用于分配页
+mem::BuddyAllocator buddy_alloc_;  // 用于通用内存内配
 
-static inline void inithartid(unsigned long hartid) { asm volatile("mv tp, %0" : : "r"(hartid & 0x1)); }
+static inline void inithartid(unsigned long hartid)
+{
+  asm volatile("mv tp, %0" : : "r"(hartid & 0x1));
+}
 
 volatile static int started = 0;
 
-void print_logo() {
+void print_logo()
+{
   printf("\n");
   printf("  _____   _                 _      ____     _____\n");
   printf(" / ____| | |               | |    / __ \\   / ____|\n");
@@ -40,31 +46,25 @@ void print_logo() {
   printf("\n");
 }
 
-extern "C" void main(unsigned long hartid, unsigned long dtb_pa) {
+extern "C" void main(unsigned long hartid, unsigned long dtb_pa)
+{
   inithartid(hartid);  // 将hartid保存在tp寄存器中
   cpus[hartid].init();
   if (hartid == 0) {
     console.init();  // 初始化控制台
     printfinit();
     print_logo();
-    memAllocator.init();  // 初始化内存
+    memAllocator.init();  // 初始化page分配器
+    buddy_alloc_.init();  // 初始化通用内存分配器
     initKernelVm();       // 初始化内核虚拟内存
     initHartVm();         // 启用分页
     timer::init();
-    trapinithart();       // 初始化trap
-    syscall_init();       // 初始化系统调用
-    plic::init();  // 初始化plic
+    trapinithart();  // 初始化trap
+    syscall_init();  // 初始化系统调用
+    plic::init();    // 初始化plic
     plic::initHart();
 
-
-#ifdef K210
-    clock::init();  // 初始化时钟
-    fpioa_pin_init();
-    dmac_init();
-#endif
-    // 文件系统相关
-    disk_init();
-    bufferLayer.init();
+    dev::Init();  // 初始化已有设备
 
     initTaskTable();
     initFirstTask();
@@ -75,7 +75,8 @@ extern "C" void main(unsigned long hartid, unsigned long dtb_pa) {
     printf("hart %d finish init\n", r_tp());
     __sync_synchronize();
     started = 1;
-  } else {
+  }
+  else {
     intr_off();
     // hart 1
     while (started == 0)

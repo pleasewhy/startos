@@ -6,6 +6,7 @@
 #include "fs/fat/thinternal.h"
 #include "fs/vfs/FileSystem.hpp"
 #include "types.hpp"
+#include "device/DeviceManager.hpp"
 
 #define TF_MAX_PATH 256
 #define TF_FILE_HANDLES 5
@@ -25,81 +26,84 @@
 #define TF_MARK_EOC16 0xfff8
 
 #define LFN_ENTRY_CAPACITY 13  // uint16 per LFN entry
-#define LFN_NAME_CAPACITY 26  // byte per LFN entry
+#define LFN_NAME_CAPACITY 26   // byte per LFN entry
 
 #define TF_ATTR_DIRECTORY 0x10
 //  #define TF_DEBUG 1
 
 #ifdef DEBUG
 
-#define dbg_printf(...) printf(__VA_ARGS__)
-#define dbg_printHex(x, y) printHex(x, y)
+#  define dbg_printf(...) printf(__VA_ARGS__)
+#  define dbg_printHex(x, y) printHex(x, y)
 
-#ifdef TF_DEBUG
-typedef struct struct_TFStats {
+#  ifdef TF_DEBUG
+typedef struct struct_TFStats
+{
   unsigned long sector_reads;
   unsigned long sector_writes;
 } TFStats;
 
-#define tf_printf(...) printf(__VA_ARGS__)
-#define tf_printHex(x, y) printHex(x, y)
-#else
-#define tf_printf(...)
-#define tf_printHex(x, y)
-#endif  // TF_DEBUG
+#    define tf_printf(...) printf(__VA_ARGS__)
+#    define tf_printHex(x, y) printHex(x, y)
+#  else
+#    define tf_printf(...)
+#    define tf_printHex(x, y)
+#  endif  // TF_DEBUG
 
 #else  // DEBUG
-#define dbg_printf(...)
-#define dbg_printHex(x, y)
-#define tf_printf(...)
-#define tf_printHex(x, y)
+#  define dbg_printf(...)
+#  define dbg_printHex(x, y)
+#  define tf_printf(...)
+#  define tf_printHex(x, y)
 #endif  // DEBUG
 
 #define LSN(CN, bpb) SSA + ((CN - 2) * bpb->SectorsPerCluster)
 
 #ifndef min
-#define min(x, y) (x < y) ? x : y
-#define max(x, y) (x > y) ? x : y
+#  define min(x, y) (x < y) ? x : y
+#  define max(x, y) (x > y) ? x : y
 #endif
 
-// Ultimately, once the filesystem is checked for consistency, you only need a few
-// things to keep it up and running.  These are:
-// 1) The type (fat16 or fat32, no fat12 support)
-// 2) The number of sectors per cluster
-// 3) Everything needed to compute indices into the FATs, which includes:
+// Ultimately, once the filesystem is checked for consistency, you only need a
+// few things to keep it up and running.  These are: 1) The type (fat16 or
+// fat32, no fat12 support) 2) The number of sectors per cluster 3) Everything
+// needed to compute indices into the FATs, which includes:
 //    * Bytes per sector, which is fixed at 512
 //    * The number of reserved sectors (pulled directly from the BPB)
-// 4) The current sector in memory.  No sense reading it if it's already in memory!
+// 4) The current sector in memory.  No sense reading it if it's already in
+// memory!
 
-typedef struct struct_tfinfo {
+typedef struct struct_tfinfo
+{
   // FILESYSTEM INFO PROPER
-  char type;  // 0 for FAT16, 1 for FAT32.  FAT12 NOT SUPPORTED
-  char sectorsPerCluster;
+  char     type;  // 0 for FAT16, 1 for FAT32.  FAT12 NOT SUPPORTED
+  char     sectorsPerCluster;
   uint32_t firstDataSector;
   uint32_t totalSectors;
   uint16_t reservedSectors;
   // "LIVE" DATA
   uint32_t currentSector;
-  char sectorFlags;
+  char     sectorFlags;
   uint32_t rootDirectorySize;
-  char buffer[512];
+  char     buffer[512];
 } TFInfo;
 
 /////////////////////////////////////////////////////////////////////////////////
 
-typedef struct struct_TFFILE {
+typedef struct struct_TFFILE
+{
   uint32_t parentStartCluster;
   uint32_t startCluster;
   uint32_t currentClusterIdx;
   uint32_t currentCluster;
-  short currentSector;
-  short currentByte;
+  short    currentSector;
+  short    currentByte;
   uint32_t pos;
-  char flags;
-  char attributes;
-  char mode;
+  char     flags;
+  char     attributes;
+  char     mode;
   uint32_t size;
-  char filename[TF_MAX_PATH];
+  char     filename[TF_MAX_PATH];
 } TFFile;
 
 #define TF_MODE_READ 0x01
@@ -132,8 +136,9 @@ typedef struct struct_TFFILE {
 extern TFInfo tf_info;
 extern TFFile tf_file;
 
-struct Fat32FileSystem final : public FileSystem {
- public:
+struct Fat32FileSystem final : public FileSystem
+{
+public:
   ~Fat32FileSystem() override{};
   /**
    * @brief 默认构造函数
@@ -145,9 +150,12 @@ struct Fat32FileSystem final : public FileSystem {
    * @brief 带参构造函数
    *
    */
-  Fat32FileSystem(const char *mountPoint, const char *specialDev) {
+  Fat32FileSystem(const char *mountPoint, const char *specialDev)
+  {
     safestrcpy(this->mountPoint, mountPoint, strlen(mountPoint) + 1);
     safestrcpy(this->specialDev, specialDev, strlen(specialDev) + 1);
+    printf("\n\nname=%s\n\n", strrchr(specialDev, '/'));
+    this->dev = dev::FindDevByName(strrchr(specialDev, '/') + 1);
   };
 
   /**
@@ -175,7 +183,8 @@ struct Fat32FileSystem final : public FileSystem {
    * @param n 期望读取的字节数
    * @return size_t 读取字节数，失败返回-1
    */
-  size_t read(const char *path, bool user, char *buf, int offset, int n) override;
+  size_t
+  read(const char *path, bool user, char *buf, int offset, int n) override;
 
   /**
    * @brief 将buf写入到指定文件的指定位置
@@ -186,7 +195,8 @@ struct Fat32FileSystem final : public FileSystem {
    * @param n 写入字节数
    * @return size_t 写入字节数，失败返回-1
    */
-  size_t write(const char *path, bool user, const char *buf, int offset, int n) override;
+  size_t write(
+      const char *path, bool user, const char *buf, int offset, int n) override;
 
   /**
    * @brief Clear a portion of a file (write zeroes)
@@ -196,7 +206,10 @@ struct Fat32FileSystem final : public FileSystem {
    * @param written output reference to indicate the number of bytes written
    * @return 0 on success, an error code otherwise
    */
-  size_t clear(const char *filepath, size_t count, size_t offset, size_t &written) override;
+  size_t clear(const char *filepath,
+               size_t      count,
+               size_t      offset,
+               size_t &    written) override;
 
   /**
    * @brief Change the size of a file
@@ -221,7 +234,10 @@ struct Fat32FileSystem final : public FileSystem {
    * @param len contens的长度
    * @return 返回该目录下的目录项的数量
    */
-  int ls(const char *filepath, char *contents, int len, bool user = false) override;
+  int ls(const char *filepath,
+         char *      contents,
+         int         len,
+         bool        user = false) override;
 
   /**
    * @brief Create the given file on the file system
@@ -245,47 +261,44 @@ struct Fat32FileSystem final : public FileSystem {
   size_t rm(const char *filepath) override;
 
   // New backend functions
-  int tf_fetch(uint32_t sector);
-  int tf_store(void);
+  int      tf_fetch(uint32_t sector);
+  int      tf_store(void);
   uint32_t tf_get_fat_entry(uint32_t cluster);
-  int tf_set_fat_entry(uint32_t cluster, uint32_t value);
-  int tf_unsafe_fseek(TFFile *fp, int32_t base, long offset);
-  TFFile *tf_fnopen(const char *filename, const char *mode, int n);
-  int tf_free_clusterchain(uint32_t cluster);
-  int tf_create(const char *filename);
-  void tf_release_handle(TFFile *fp);
-  TFFile *tf_parent(const char *filename, const char *mode, int mkParents);
-  int tf_shorten_filename(char *dest, char *src, char num);
+  int      tf_set_fat_entry(uint32_t cluster, uint32_t value);
+  int      tf_unsafe_fseek(TFFile *fp, int32_t base, long offset);
+  TFFile * tf_fnopen(const char *filename, const char *mode, int n);
+  int      tf_free_clusterchain(uint32_t cluster);
+  int      tf_create(const char *filename);
+  void     tf_release_handle(TFFile *fp);
+  TFFile * tf_parent(const char *filename, const char *mode, int mkParents);
+  int      tf_shorten_filename(char *dest, char *src, char num);
 
   // New frontend functions
-  int tf_init();
-  int tf_fflush(TFFile *fp);
-  int tf_fseek(TFFile *fp, size_t base, long offset);
-  int tf_fclose(TFFile *fp);
-  int tf_fread(char *dest, int size, TFFile *fp, bool user = false);
-  int tf_find_file(TFFile *current_directory, char *name);
-  int tf_compare_filename(TFFile *fp, char *name);
+  int      tf_init();
+  int      tf_fflush(TFFile *fp);
+  int      tf_fseek(TFFile *fp, size_t base, long offset);
+  int      tf_fclose(TFFile *fp);
+  int      tf_fread(char *dest, int size, TFFile *fp, bool user = false);
+  int      tf_find_file(TFFile *current_directory, char *name);
+  int      tf_compare_filename(TFFile *fp, char *name);
   uint32_t tf_first_sector(uint32_t cluster);
-  char *tf_walk(char *filename, TFFile *fp);
-  TFFile *tf_fopen(const char *filename, const char *mode);
-  int tf_fwrite(const char *src, int sz, TFFile *fp, bool user = false);
-  int tf_fputs(char *src, TFFile *fp);
-  int tf_mkdir(const char *filename, int mkParents);
-  int tf_remove(char *filename);
-  void tf_print_open_handles(void);
+  char *   tf_walk(char *filename, TFFile *fp);
+  TFFile * tf_fopen(const char *filename, const char *mode);
+  int      tf_fwrite(const char *src, int sz, TFFile *fp, bool user = false);
+  int      tf_fputs(char *src, TFFile *fp);
+  int      tf_mkdir(const char *filename, int mkParents);
+  int      tf_remove(char *filename);
+  void     tf_print_open_handles(void);
 
   uint32_t tf_find_free_cluster();
   uint32_t tf_find_free_cluster_from(uint32_t c);
 
-  uint32_t tf_initializeMedia(uint32_t totalSectors);
-  uint32_t tf_initializeMediaNoBlock(uint32_t totalSectors, int start);
-
   // hidden functions... IAR requires that all functions be declared
-  TFFile *tf_get_free_handle();
+  TFFile * tf_get_free_handle();
   uint64_t tf_get_open_handles();
 
-  int tf_place_lfn_chain(TFFile *fp, char *filename, char *sfn);
-  void tf_choose_sfn(char *dest, char *src, TFFile *fp);
+  int   tf_place_lfn_chain(TFFile *fp, char *filename, char *sfn);
+  void  tf_choose_sfn(char *dest, char *src, TFFile *fp);
   char *tf_create_lfn_entry(char *filename, FatFileEntry *entry);
   // New Datas
   TFInfo tf_info;

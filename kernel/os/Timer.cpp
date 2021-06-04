@@ -17,7 +17,8 @@ void init() {
   spinLock.init("timer");
 #ifdef K210
   // 不知道具体数值，选一个比较接近的
-  // k210中mtime的增长频率应该是CPU频率的1/n，测试了一下好像24比较合适
+  // k210中mtime的增长频率应该是CPU频率的1/n，不清楚sipeed dock
+  // 这块板子的具体数值。测试了一下好像24比较合适
   uint32_t freq = sysctl_clock_get_freq(SYSCTL_CLOCK_CPU) / 24; // 24比较接近，误差在10ms以内
   size_t value = INTERVAL * freq / 1000;
   LOG_INFO("timer freq=%d value=%d\n",freq ,value);

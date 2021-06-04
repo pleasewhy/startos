@@ -6,7 +6,6 @@
 #include "fcntl.h"
 #include "file.h"
 #include "fs/disk/Disk.hpp"
-#include "fs/disk/SdCard.hpp"
 #include "fs/fat/Fat32.hpp"
 #include "fs/inodefs/BufferLayer.hpp"
 #include "fs/vfs/Vfs.hpp"

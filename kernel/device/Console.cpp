@@ -17,6 +17,7 @@ void Console::init() {
 }
 
 Console::Console() {}
+
 void Console::putc(int c) {
   if (c == BACKSPACE) {
     // 处理退格

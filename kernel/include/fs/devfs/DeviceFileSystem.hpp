@@ -4,13 +4,15 @@
 #include "common/logger.h"
 #include "common/string.hpp"
 #include "fs/vfs/FileSystem.hpp"
+#include "device/DeviceManager.hpp"
 #include "types.hpp"
 
-struct DeviceFileSystem final : public FileSystem {
- public:
- /**
-  * @brief 析构函数
-  */
+struct DeviceFileSystem final : public FileSystem
+{
+public:
+  /**
+   * @brief 析构函数
+   */
   ~DeviceFileSystem() override{};
   /**
    * @brief 默认构造函数
@@ -20,9 +22,11 @@ struct DeviceFileSystem final : public FileSystem {
   /**
    * @brief
    */
-  DeviceFileSystem(const char *mountPoint, const char *specialDev) {
+  DeviceFileSystem(const char *mountPoint, const char *specialDev)
+  {
     safestrcpy(this->mountPoint, mountPoint, strlen(mountPoint) + 1);
     safestrcpy(this->specialDev, specialDev, strlen(specialDev) + 1);
+    this->dev = dev::FindDevByName(specialDev);
   };
 
   /**
@@ -50,7 +54,8 @@ struct DeviceFileSystem final : public FileSystem {
    * @param n 期望读取的字节数
    * @return size_t 读取字节数，失败返回-1
    */
-  size_t read(const char *path, bool user, char *buf, int offset, int n) override;
+  size_t
+  read(const char *path, bool user, char *buf, int offset, int n) override;
 
   /**
    * @brief 将buf写入到指定文件的指定位置
@@ -61,7 +66,8 @@ struct DeviceFileSystem final : public FileSystem {
    * @param n 写入字节数
    * @return size_t 写入字节数，失败返回-1
    */
-  size_t write(const char *path, bool user, const char *buf, int offset, int n) override;
+  size_t write(
+      const char *path, bool user, const char *buf, int offset, int n) override;
 
   /**
    * @brief Clear a portion of a file (write zeroes)
@@ -71,7 +77,10 @@ struct DeviceFileSystem final : public FileSystem {
    * @param written output reference to indicate the number of bytes written
    * @return 0 on success, an error code otherwise
    */
-  size_t clear(const char *filepath, size_t count, size_t offset, size_t &written) override;
+  size_t clear(const char *filepath,
+               size_t      count,
+               size_t      offset,
+               size_t &    written) override;
 
   /**
    * @brief 截断文件
@@ -96,7 +105,10 @@ struct DeviceFileSystem final : public FileSystem {
    * @param len contents的长度
    * @return 读取的字节数
    */
-  int ls(const char *filepath, char *contents, int len, bool user = false) override;
+  int ls(const char *filepath,
+         char *      contents,
+         int         len,
+         bool        user = false) override;
 
   /**
    * @brief Create the given file on the file system

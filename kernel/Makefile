@@ -23,7 +23,7 @@ FLAGS = -Wall -Werror -O -fno-omit-frame-pointer -ggdb -g
 FLAGS += -MD
 FLAGS += -mcmodel=medany
 FLAGS += -ffreestanding -fno-common -nostdlib -mno-relax -fcheck-new
-FLAGS += -I./include -I../lib
+FLAGS += -I./include -I../lib -I../sstl
 FLAGS += -fno-stack-protector
 FLAGS += -Wno-sign-compare
 
@@ -40,7 +40,7 @@ endif
 # endif
 
 CXXFLAGS = -std=c++11 
-# CXXFLAGS += -fno-use-cxa-atexit
+CXXFLAGS += -fno-use-cxa-atexit
 CXXFLAGS += -fno-rtti
 CXXFLAGS += -fno-exceptions
 CXXFLAGS += $(FLAGS)
@@ -89,12 +89,14 @@ OBJS += \
 
 # device:
 OBJS += \
-	device/Console.o
+	device/Console.o \
+	device/DeviceManager.o
 
 # memory:
 OBJS += \
 	memory/VmManager.o \
-	memory/MemAllocator.o
+	memory/MemAllocator.o \
+	memory/BuddyAllocator.o
 
 # driver:
 OBJS += \
@@ -106,10 +108,10 @@ OBJS += \
   driver/gpiohs.o \
   driver/fpioa.o \
   driver/utils.o \
-  fs/disk/Sdcard.o \
   driver/dmac.o \
   driver/sysctl.o \
 	driver/rtc.o \
+  device/Sdcard.o \
 	device/Clock.o
 else
 OBJS += \

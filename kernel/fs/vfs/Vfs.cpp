@@ -1,4 +1,5 @@
 #include "fs/vfs/Vfs.hpp"
+
 #include "common/logger.h"
 #include "common/printk.hpp"
 #include "common/string.hpp"
@@ -7,7 +8,6 @@
 #include "fs/fat/Fat32.hpp"
 #include "os/SpinLock.hpp"
 #include "os/TaskScheduler.hpp"
-
 #include "param.hpp"
 
 // Fat32FileSystem *fat32;
@@ -16,24 +16,26 @@
 namespace vfs {
 
 struct file fileTable[NFILE];
-SpinLock fileTableLock;
+SpinLock    fileTableLock;
 FileSystem *mountedFS[NFILESYSTEM];
-SpinLock mountedFsLock;
+SpinLock    mountedFsLock;
 
-FileSystem *createFileSystem(FileSystemType type, const char *mountPoint, const char *specialDev, int dev) {
+FileSystem *createFileSystem(FileSystemType type,
+                             const char *   mountPoint,
+                             const char *   specialDev)
+{
   switch (type) {
     case FileSystemType::DEVFS:
       return new DeviceFileSystem(mountPoint, specialDev);
     case FileSystemType::FAT32:
       return new Fat32FileSystem(mountPoint, specialDev);
-    default:
-      panic("create file system");
-      break;
+    default: panic("create file system"); break;
   }
   return nullptr;
 }
 
-struct file *allocFileHandle() {
+struct file *allocFileHandle()
+{
   fileTableLock.lock();
   struct file *fp;
   for (fp = fileTable; fp < fileTable + NFILE; fp++) {
@@ -47,7 +49,8 @@ struct file *allocFileHandle() {
   return NULL;
 }
 
-void freeFileHandle(struct file *f) {
+void freeFileHandle(struct file *f)
+{
   memset(f, 0, sizeof(struct file));
   f->type = f->FD_NONE;
 }
@@ -58,12 +61,14 @@ void freeFileHandle(struct file *f) {
  * @param filepath
  * @return FileSystem*
  */
-FileSystem *getFs(const char *filepath) {
+FileSystem *getFs(const char *filepath)
+{
   int bestMatch = 0;
   int bestLength = 0;
   // 找出最适配的文件系统
   for (size_t i = 0; i < NFILESYSTEM; ++i) {
-    if (mountedFS[i] == NULL) continue;
+    if (mountedFS[i] == NULL)
+      continue;
 
     auto &mp = mountedFS[i];
 
@@ -86,7 +91,8 @@ FileSystem *getFs(const char *filepath) {
 /**
  * @brief 计算oldpath的绝对路径，newpath用于新的路径
  */
-void getAbsolutePath(const char *path, char *newPath) {
+void getAbsolutePath(const char *path, char *newPath)
+{
   const char *curdir = myTask()->currentDir;
   const char *oldpath = path;
   memset(newPath, 0, MAXPATH);
@@ -97,7 +103,8 @@ void getAbsolutePath(const char *path, char *newPath) {
 
   if (oldpath[0] == '/') {
     memcpy(newPath, oldpath, strlen(oldpath));
-  } else {
+  }
+  else {
     myTask()->lock.lock();
     memcpy(newPath, curdir, strlen(curdir));
     memcpy(newPath + strlen(curdir), oldpath, strlen(oldpath));
@@ -110,8 +117,9 @@ void getAbsolutePath(const char *path, char *newPath) {
  *
  * @param path
  */
-void calAbsolute(char *path) {
-  char newPath[MAXPATH];
+void calAbsolute(char *path)
+{
+  char  newPath[MAXPATH];
   char *oldpath = path;
   memset(newPath, 0, MAXPATH);
   const char *curdir = myTask()->currentDir;
@@ -122,7 +130,8 @@ void calAbsolute(char *path) {
 
   if (oldpath[0] == '/') {
     memcpy(newPath, oldpath, strlen(oldpath));
-  } else {
+  }
+  else {
     myTask()->lock.lock();
     memcpy(newPath, curdir, strlen(curdir));
     memcpy(newPath + strlen(curdir), oldpath, strlen(oldpath));
@@ -135,7 +144,8 @@ void calAbsolute(char *path) {
  * @brief 初始化虚拟文件系统，其将会初始化fileSystems和fileTable,
  *
  */
-void init() {
+void init()
+{
   LOG_TRACE("enter func: vfs init");
   struct file *fp;
 
@@ -156,7 +166,8 @@ void init() {
   mount(FileSystemType::FAT32, "/", "/dev/hda1");
 }
 
-int open(const char *filename, size_t flags) {
+int open(const char *filename, size_t flags)
+{
   char path[MAXPATH];
   memset(path, 0, MAXPATH);
   getAbsolutePath((char *)filename, path);
@@ -177,7 +188,8 @@ int open(const char *filename, size_t flags) {
   return fd;
 }
 
-size_t read(int fd, bool user, char *dst, size_t n, size_t offset) {
+size_t read(int fd, bool user, char *dst, size_t n, size_t offset)
+{
   struct file *f = getFileByfd(fd);
   if (f == NULL || !f->readable) {
     return -1;
@@ -185,7 +197,8 @@ size_t read(int fd, bool user, char *dst, size_t n, size_t offset) {
   return read(f, user, dst, n, offset);
 }
 
-size_t read(struct file *fp, bool user, char *dst, size_t n, size_t offset) {
+size_t read(struct file *fp, bool user, char *dst, size_t n, size_t offset)
+{
   int r = 0;
   if (fp == NULL || !fp->readable) {
     return -1;
@@ -201,20 +214,18 @@ size_t read(struct file *fp, bool user, char *dst, size_t n, size_t offset) {
     case fp->FD_PIPE:
       r = fp->pipe->read(reinterpret_cast<uint64_t>(dst), n);
       break;
-    case fp->FD_DEVICE:
-      r = fs->read(fp->filepath, user, dst, 0, n);
-      break;
+    case fp->FD_DEVICE: r = fs->read(fp->filepath, user, dst, 0, n); break;
     case fp->FD_ENTRY:
       r = fs->read(fp->filepath, user, dst, fp->position, n);
       fp->position += r;
       break;
-    default:
-      panic("vfs::read");
+    default: panic("vfs::read");
   }
   return r;
 }
 
-size_t write(int fd, bool user, const char *src, size_t n, size_t offset) {
+size_t write(int fd, bool user, const char *src, size_t n, size_t offset)
+{
   struct file *f = getFileByfd(fd);
 
   if (f == NULL || !f->writable) {
@@ -223,7 +234,9 @@ size_t write(int fd, bool user, const char *src, size_t n, size_t offset) {
   return write(f, user, src, n, offset);
 }
 
-size_t write(struct file *fp, bool user, const char *src, size_t n, size_t offset) {
+size_t
+write(struct file *fp, bool user, const char *src, size_t n, size_t offset)
+{
   int r = 0;
 
   if (fp == NULL || !fp->writable) {
@@ -238,25 +251,23 @@ size_t write(struct file *fp, bool user, const char *src, size_t n, size_t offse
     case fp->FD_PIPE:
       fp->pipe->write(reinterpret_cast<uint64_t>(src), n);
       break;
-    case fp->FD_DEVICE:
-      r = fs->write(fp->filepath, user, src, 0, n);
-      break;
+    case fp->FD_DEVICE: r = fs->write(fp->filepath, user, src, 0, n); break;
     case fp->FD_ENTRY:
       // fat32->read(fp->filepath, user, dst, fp->position, 0);
       r = fs->write(fp->filepath, user, src, 0, n);
-      LOG_DEBUG("write file sz=%d pos=%d r=%d n=%d", fp->size, fp->position, r, n);
+      LOG_DEBUG("write file sz=%d pos=%d r=%d n=%d", fp->size, fp->position, r,
+                n);
       fp->size = fp->position + r < fp->size ? fp->size : fp->position + r;
       fp->position += r;
       break;
-    default:
-      panic("vfs::write");
-      return 0;
+    default: panic("vfs::write"); return 0;
   }
   return r;
 }
 
 // 递减ref，当ref = 0时关闭
-void close(struct file *fp) {
+void close(struct file *fp)
+{
   struct file ff;
   fileTableLock.lock();
   if (fp->ref < 1) {
@@ -272,23 +283,30 @@ void close(struct file *fp) {
   fileTableLock.unlock();
 
   if (ff.type == ff.FD_PIPE) {
-    if (ff.writable) ff.pipe->close(ff.pipe->WRITE_END);
-    if (ff.readable) ff.pipe->close(ff.pipe->READ_END);
-  } else if (ff.type == ff.FD_ENTRY) {
-  } else if (ff.type == ff.FD_DEVICE) {
+    if (ff.writable)
+      ff.pipe->close(ff.pipe->WRITE_END);
+    if (ff.readable)
+      ff.pipe->close(ff.pipe->READ_END);
+  }
+  else if (ff.type == ff.FD_ENTRY) {
+  }
+  else if (ff.type == ff.FD_DEVICE) {
   }
 };
 
-int mkdirat(int dirfd, const char *filepath) {
+int mkdirat(int dirfd, const char *filepath)
+{
   char path[MAXPATH];
   memset(path, 0, MAXPATH);
   struct file *fp;
   if (dirfd == AT_FDCWD) {
     getAbsolutePath((char *)filepath, path);
-  } else {
+  }
+  else {
     if (filepath[0] == '/') {
       memcpy(path, filepath, strlen(filepath));
-    } else {
+    }
+    else {
       fp = getFileByfd(dirfd);
       memcpy(path, fp->filepath, strlen(fp->filepath));
       memcpy(path + strlen(fp->filepath), filepath, strlen(filepath));
@@ -300,16 +318,19 @@ int mkdirat(int dirfd, const char *filepath) {
   // return 0;
 };
 
-int openat(int dirfd, const char *filepath, int flags) {
+int openat(int dirfd, const char *filepath, int flags)
+{
   char path[MAXPATH];
   memset(path, 0, MAXPATH);
   struct file *fp = NULL;
   if (dirfd == AT_FDCWD) {
     getAbsolutePath((char *)filepath, path);
-  } else {
+  }
+  else {
     if (filepath[0] == '/') {
       memcpy(path, filepath, strlen(filepath));
-    } else {
+    }
+    else {
       fp = getFileByfd(dirfd);
       memcpy(path, fp->filepath, strlen(fp->filepath));
       memcpy(path + strlen(fp->filepath), filepath, strlen(filepath));
@@ -319,16 +340,19 @@ int openat(int dirfd, const char *filepath, int flags) {
   return open(filepath, flags);
 }
 
-int rm(int dirfd, char *filepath) {
+int rm(int dirfd, char *filepath)
+{
   char path[MAXPATH];
   memset(path, 0, MAXPATH);
   struct file *fp = NULL;
   if (dirfd == AT_FDCWD) {
     getAbsolutePath((char *)filepath, path);
-  } else {
+  }
+  else {
     if (filepath[0] == '/') {
       memcpy(path, filepath, strlen(filepath));
-    } else {
+    }
+    else {
       fp = getFileByfd(dirfd);
       memcpy(path, fp->filepath, strlen(fp->filepath));
       memcpy(path + strlen(fp->filepath), filepath, strlen(filepath));
@@ -343,7 +367,8 @@ int rm(int dirfd, char *filepath) {
   return fs->rm(path);
 };
 
-size_t ls(int fd, char *buffer, int len, bool user = false) {
+size_t ls(int fd, char *buffer, int len, bool user = false)
+{
   struct file *fp = getFileByfd(fd);
   if (fp == NULL || !fp->directory) {
     LOG_DEBUG("not directory");
@@ -354,18 +379,23 @@ size_t ls(int fd, char *buffer, int len, bool user = false) {
   return fs->ls(fp->filepath, buffer, len, user);
 }
 
-size_t mounts(char *buffer, size_t size) { return 0; }
+size_t mounts(char *buffer, size_t size)
+{
+  return 0;
+}
 
-int mount(FileSystemType type, const char *mountPoint, const char *specialDev) {
+int mount(FileSystemType type, const char *mountPoint, const char *specialDev)
+{
   char absolutMp[MAXPATH];
   getAbsolutePath(mountPoint, absolutMp);
-  auto fs = createFileSystem(type, absolutMp, specialDev, 0);
+  auto fs = createFileSystem(type, absolutMp, specialDev);
   fs->init();
   mountedFsLock.lock();
   for (int i = 0; i < NFILESYSTEM; i++) {
     if (mountedFS[i] == NULL) {
       mountedFsLock.unlock();
-      LOG_DEBUG("mount fs: specialDev = %s mount point=%s", specialDev, fs->mountPoint);
+      LOG_DEBUG("mount fs: specialDev = %s mount point=%s", specialDev,
+                fs->mountPoint);
       mountedFS[i] = fs;
       return 0;
     }
@@ -375,10 +405,13 @@ int mount(FileSystemType type, const char *mountPoint, const char *specialDev) {
   return -1;
 }
 
-int umount(const char *mpdir) {
-  char absolutMp[MAXPATH];
-  getAbsolutePath(mpdir, absolutMp);
+int umount(const char *mpdir)
+{
+  char        absolutMp[MAXPATH];
   FileSystem *fs;
+
+  getAbsolutePath(mpdir, absolutMp);
+
   int absolutMpLen = strlen(absolutMp);
   int n = 0;
   mountedFsLock.lock();
@@ -391,7 +424,8 @@ int umount(const char *mpdir) {
     if (strncmp(fs->mountPoint, absolutMp, max(n, absolutMpLen)) == 0) {
       mountedFS[i] = NULL;
       mountedFsLock.unlock();
-      LOG_DEBUG("umount fs: specialDev = %s mount point=%s", fs->specialDev, fs->mountPoint);
+      LOG_DEBUG("umount fs: specialDev = %s mount point=%s", fs->specialDev,
+                fs->mountPoint);
       delete fs;
       return 0;
     }
@@ -400,7 +434,8 @@ int umount(const char *mpdir) {
   return -1;
 }
 
-size_t direct_read(const char *file, char *buffer, size_t count, size_t offset) {
+size_t direct_read(const char *file, char *buffer, size_t count, size_t offset)
+{
   auto fs = getFs(file);
   LOG_TRACE("fs mount point=%s", fs->mountPoint);
   int r = fs->read(file, false, buffer, offset, count);
@@ -408,7 +443,9 @@ size_t direct_read(const char *file, char *buffer, size_t count, size_t offset) 
   return r;
 }
 
-size_t direct_write(const char *file, const char *buffer, size_t count, size_t offset) {
+size_t
+direct_write(const char *file, const char *buffer, size_t count, size_t offset)
+{
   auto fs = getFs(file);
   LOG_TRACE("fs mount point=%s", fs->mountPoint);
   int r = fs->write(file, false, buffer, offset, count);
@@ -416,7 +453,8 @@ size_t direct_write(const char *file, const char *buffer, size_t count, size_t o
   return r;
 }
 
-struct file *dup(struct file *fp) {
+struct file *dup(struct file *fp)
+{
   fileTableLock.lock();
   if (fp->ref < 1) {
     panic("vfs::dup");
@@ -426,8 +464,9 @@ struct file *dup(struct file *fp) {
   return fp;
 }
 
-int chdir(char *filepath) {
-  char path[MAXPATH];
+int chdir(char *filepath)
+{
+  char  path[MAXPATH];
   Task *task = myTask();
 
   memset(path, 0, MAXPATH);
@@ -457,10 +496,11 @@ int chdir(char *filepath) {
   return 0;
 }
 
-int createPipe(int fds[]) {
+int createPipe(int fds[])
+{
   struct file *f0 = allocFileHandle();
   struct file *f1 = allocFileHandle();
-  Pipe *pipe = new Pipe(f0, f1);
+  Pipe *       pipe = new Pipe(f0, f1);
   if (pipe == NULL) {
     freeFileHandle(f0);
     freeFileHandle(f1);
@@ -473,9 +513,11 @@ int createPipe(int fds[]) {
   return 0;
 }
 
-struct file *rewind(struct file *fp) {
+struct file *rewind(struct file *fp)
+{
   fileTableLock.lock();
-  if (fp->ref < 1) panic("filerewind");
+  if (fp->ref < 1)
+    panic("filerewind");
   fp->position = 0;
   fileTableLock.unlock();
   return fp;

@@ -9,7 +9,7 @@ typedef uint64_t *pagetable_t;  // 512 PTEs
 /**
  * @brief 将内核运行时的会使用的内存映射到kernel_pagetable中
  *
- * @note 现在的实现是direct map，即vm = pm
+ * @note 现在的实现是direct map，即vitrual memory address = physical memory address
  *
  */
  void initKernelVm();
