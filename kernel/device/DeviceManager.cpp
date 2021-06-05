@@ -2,18 +2,16 @@
 #include "device/Clock.hpp"
 #include "device/Console.hpp"
 #include "device/SdCard.hpp"
+#include "device/virtio_disk.hpp"
 #include "driver/dmac.hpp"
 #include "driver/fpioa.hpp"
-#include "fs/disk/Disk.hpp"
 #include "common/printk.hpp"
 // #include "memory/MemoryPool.hpp"
-#include "fs/inodefs/BufferLayer.hpp"
 #include "common/string.hpp"
 
 namespace dev {
 
-BufferLayer bufferLayer;
-RwDevice *  rw_devs[10];
+RwDevice *rw_devs[10];
 
 void Init()
 {
@@ -26,13 +24,15 @@ void Init()
   dmac_init();
 #endif
   printf("dev init");
-  // 文件系统相关
-  disk_init();
+#ifdef K210
   SdCard *sd = new SdCard("hda1");
-  sd->sdcard_init();
+  sd->init();
   rw_devs[0] = sd;
-
-  bufferLayer.init();
+#else
+  VirtioDisk *virtio_disk = new VirtioDisk("hda1");
+  virtio_disk->init();
+  rw_devs[0] = virtio_disk;
+#endif
 };
 
 int FindDevByName(const char *dev_name)

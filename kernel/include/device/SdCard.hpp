@@ -6,10 +6,10 @@
 #include "types.hpp"
 
 class SdCard : public RwDevice {
- private:
+private:
   SleepLock sleepLock;
 
- public:
+public:
   SdCard(const char *name);
   ~SdCard(){};
 
@@ -17,7 +17,7 @@ class SdCard : public RwDevice {
    * @brief 初始化sd卡
    *
    */
-  void sdcard_init(void);
+  void init(void);
 
   /**
    * @brief 读取sd卡的指定扇区

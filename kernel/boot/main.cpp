@@ -8,8 +8,6 @@
 #include "driver/Plic.hpp"
 #include "driver/dmac.hpp"
 #include "driver/fpioa.hpp"
-#include "fs/disk/Disk.hpp"
-#include "fs/inodefs/BufferLayer.hpp"
 #include "memlayout.hpp"
 #include "memory/BuddyAllocator.hpp"
 #include "memory/MemAllocator.hpp"

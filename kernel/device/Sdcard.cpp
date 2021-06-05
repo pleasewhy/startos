@@ -348,7 +348,7 @@ SdCard::SdCard(const char *name)
   strncpy(this->name, name, strlen(name));
 }
 
-void SdCard::sdcard_init()
+void SdCard::init()
 {
   int result = sd_init();
   // initsleeplock(&sdcard_lock, "sdcard");

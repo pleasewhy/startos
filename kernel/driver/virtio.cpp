@@ -1,70 +1,15 @@
-#include "fs/disk/VirtioDisk.hpp"
+#include "driver/virtio.hpp"
 #include "common/printk.hpp"
 #include "common/string.hpp"
-#include "fs/inodefs/BufferLayer.hpp"
 #include "memlayout.hpp"
 #include "os/Process.hpp"
 #include "os/TaskScheduler.hpp"
 #include "types.hpp"
 #include "StartOS.hpp"
 
-// using namespace virtio;
-// the address of virtio mmio register r.
-#define R(r) ((volatile uint32_t *)(VIRTIO0 + (r)))
-struct alignas(4096) VirtioDisk
-{
-public:
-  // the virtio driver and device mostly communicate through a set of
-  // structures in RAM. pages[] allocates that memory. pages[] is a
-  // global (instead of calls to kalloc()) because it must consist of
-  // two contiguous pages of page-aligned physical memory.
-  char pages[2 * PGSIZE];
+alignas(4096) struct VirtioDisk virtioDisk;
 
-  // pages[] is divided into three regions (descriptors, avail, and
-  // used), as explained in Section 2.6 of the virtio specification
-  // for the legacy interface.
-  // https://docs.oasis-open.org/virtio/virtio/v1.1/virtio-v1.1.pdf
-
-  // the first region of pages[] is a set (not a ring) of DMA
-  // descriptors, with which the driver tells the device where to read
-  // and write individual disk operations. there are NUM descriptors.
-  // most commands consist of a "chain" (a linked list) of a couple of
-  // these descriptors.
-  // points into pages[].
-  struct virtq_desc *desc;
-
-  // next is a ring in which the driver writes descriptor numbers
-  // that the driver would like the device to process.  it only
-  // includes the head descriptor of each chain. the ring has
-  // NUM elements.
-  // points into pages[].
-  struct virtq_avail *avail;
-
-  // finally a ring in which the device writes descriptor numbers that
-  // the device has finished processing (just the head of each chain).
-  // there are NUM used ring entries.
-  // points into pages[].
-  struct virtq_used *used;
-
-  // our own book-keeping.
-  char     free[NUM];  // is a descriptor free?
-  uint16_t used_idx;   // we've looked this far in used[2..NUM].
-
-  // track info about in-flight operations,
-  // for use when completion interrupt arrives.
-  // indexed by first descriptor index of chain.
-  struct
-  {
-    struct buf *b;
-    char        status;
-  } info[NUM];
-
-  // disk command headers.
-  // one-for-one with descriptors, for convenience.
-  struct virtio_blk_req ops[NUM];
-
-  SpinLock vdiskLock;
-} virtioDisk;
+#define BSIZE 512
 
 /**
  * @brief 在读写磁盘需要用到的工具函数，主要是用来管理
@@ -77,7 +22,7 @@ static void free_desc(int i);
 static void free_chain(int i);
 static int  alloc3_desc(int *idx);
 
-void virtio_init()
+void VirtioInit()
 {
   uint32_t status = 0;
 
@@ -199,10 +144,9 @@ int alloc3_desc(int *idx)
   return 0;
 }
 
-struct virtio_blk_req *buf0;
-void                   virtio_disk_rw(struct buf *b, int write)
+void VirtioRw(char *buf, uint64_t sector, int write)
 {
-  uint64_t sector = b->blockno;
+  // uint64_t sector = b->blockno;
   virtioDisk.vdiskLock.lock();
 
   // the spec's Section 5.2 says that legacy block operations use
@@ -218,23 +162,25 @@ void                   virtio_disk_rw(struct buf *b, int write)
     sleep(&virtioDisk.free[0], &virtioDisk.vdiskLock);
   }
 
+  struct virtio_blk_req *req;
+
   // format the three descriptors.
   // qemu's virtio-blk.c reads them.
-  buf0 = &virtioDisk.ops[idx[0]];
+  req = &virtioDisk.ops[idx[0]];
 
   if (write)
-    buf0->type = VIRTIO_BLK_T_OUT;  // write the disk
+    req->type = VIRTIO_BLK_T_OUT;  // write the disk
   else
-    buf0->type = VIRTIO_BLK_T_IN;  // read the disk
-  buf0->reserved = 0;
-  buf0->sector = sector;
+    req->type = VIRTIO_BLK_T_IN;  // read the disk
+  req->reserved = 0;
+  req->sector = sector;
 
-  virtioDisk.desc[idx[0]].addr = (uint64_t)buf0;
+  virtioDisk.desc[idx[0]].addr = (uint64_t)req;
   virtioDisk.desc[idx[0]].len = sizeof(struct virtio_blk_req);
   virtioDisk.desc[idx[0]].flags = VRING_DESC_F_NEXT;
   virtioDisk.desc[idx[0]].next = idx[1];
 
-  virtioDisk.desc[idx[1]].addr = (uint64_t)b->data;
+  virtioDisk.desc[idx[1]].addr = (uint64_t)buf;
   virtioDisk.desc[idx[1]].len = BSIZE;
   if (write)
     virtioDisk.desc[idx[1]].flags = 0;  // device reads b->data
@@ -247,13 +193,15 @@ void                   virtio_disk_rw(struct buf *b, int write)
   virtioDisk.info[idx[0]].status = 0xff;  // device writes 0 on success
   virtioDisk.desc[idx[2]].addr = (uint64_t)&virtioDisk.info[idx[0]].status;
   virtioDisk.desc[idx[2]].len = 1;
-  virtioDisk.desc[idx[2]].flags =
-      VRING_DESC_F_WRITE;  // device writes the status
+
+  // device writes the status
+  virtioDisk.desc[idx[2]].flags = VRING_DESC_F_WRITE;
+
   virtioDisk.desc[idx[2]].next = 0;
 
   // record struct buf for virtio_disk_intr().
-  b->disk = 1;
-  virtioDisk.info[idx[0]].b = b;
+  virtioDisk.info[idx[0]].finish = false;
+  virtioDisk.info[idx[0]].data = buf;
 
   // tell the device the first index in our chain of descriptors.
   virtioDisk.avail->ring[virtioDisk.avail->idx % NUM] = idx[0];
@@ -268,16 +216,16 @@ void                   virtio_disk_rw(struct buf *b, int write)
   *R(VIRTIO_MMIO_QUEUE_NOTIFY) = 0;  // value is queue number
 
   // Wait for virtio_disk_intr() to say request has finished.
-  while (b->disk == 1) {
-    sleep(b, &virtioDisk.vdiskLock);
+  while (virtioDisk.info[idx[0]].finish == false) {
+    sleep(buf, &virtioDisk.vdiskLock);
   }
 
-  virtioDisk.info[idx[0]].b = 0;
+  virtioDisk.info[idx[0]].data = 0;
   free_chain(idx[0]);
   virtioDisk.vdiskLock.unlock();
 }
 
-void virtio_disk_intr()
+void VirtioIntr()
 {
   virtioDisk.vdiskLock.lock();
 
@@ -298,25 +246,23 @@ void virtio_disk_intr()
     int id = virtioDisk.used->ring[virtioDisk.used_idx % NUM].id;
 
     if (virtioDisk.info[id].status != 0) {
-      // printf("%d",di)
-      printf("intr:%d %d\n", buf0->sector, buf0->type);
       panic("virtio_disk_intr status");
     }
 
-    struct buf *b = virtioDisk.info[id].b;
-    b->disk = 0;  // disk is done with buf
-    wakeup(b);
+    virtioDisk.info[id].finish = true;  // disk is done with buf
+    wakeup(virtioDisk.info[id].data);
 
     virtioDisk.used_idx += 1;
   }
   virtioDisk.vdiskLock.unlock();
 }
 
-void virtio_read(struct buf *b)
+void VirtioRead(char *buf, int sectorno)
 {
-  virtio_disk_rw(b, 0);
+  VirtioRw(buf, sectorno, 0);
 }
-void virtio_write(struct buf *b)
+
+void VirtioWrite(char *buf, int sectorno)
 {
-  virtio_disk_rw(b, 1);
+  VirtioRw(buf, sectorno, 1);
 }

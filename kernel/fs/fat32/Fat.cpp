@@ -5,10 +5,11 @@
 #include "file.h"
 #include "fs/fat/Fat32.hpp"
 #include "fs/fat/thinternal.h"
-#include "fs/inodefs/BufferLayer.hpp"
 #include "fs/vfs/Vfs.hpp"
 #include "os/TaskScheduler.hpp"
 #include "types.hpp"
+
+#define SECTOR_SIZE 512
 
 void Fat32FileSystem::init()
 {
@@ -314,46 +315,18 @@ int Fat32FileSystem::ls(const char *filepath,
   return readn;
 }
 
-extern BufferLayer bufferLayer;
 // USERLAND
 int read_sector(int dev, char *data, uint32_t sector)
 {
   dev::RwDevRead(dev, data, sector * 512, 512);
-  //   // LOG_TRACE("begin read sector=%d", sector);
-  //   // LOG_DEBUG("begin read sector=%d", sector);
-  // #ifdef K210
-  //   vfs::direct_read(specialDev, data, 512, sector * 512);
-  //   // sdcard_read_sector(reinterpret_cast<uint8_t *>(data), sector);
-  // #else
-  //   struct buf *b = bufferLayer.read(0, sector);
-  //   memmove(data, b->data, BSIZE);
-  //   bufferLayer.freeBuffer(b);
-  // #endif
-  //   // LOG_TRACE("end read sector=%d", sector);
   return 0;
 }
 
 int write_sector(int dev, char *data, uint32_t sector)
 {
   dev::RwDevWrite(dev, data, sector * 512, 512);
-  // LOG_DEBUG("begin write sector=%d", sector);
-  // #ifdef K210
-  //   vfs::direct_write(specialDev, data, 512, sector * 512);
-  //   // sdcard_write_sector(reinterpret_cast<uint8_t *>(data), sector);
-  // #else
-  //   struct buf *b = bufferLayer.allocBuffer(0, sector);
-  //   memmove(b->data, data, BSIZE);
-  //   bufferLayer.write(b);
-  //   bufferLayer.freeBuffer(b);
-  // #endif
-  //   // LOG_TRACE("end write sector=%d", sector);
   return 0;
 }
-
-//#define TF_DEBUG
-
-// TFInfo tf_info;
-// alignas(4096) TFFile tf_file_handles[TF_FILE_HANDLES];
 
 /*
  * Fetch a single sector from disk.
@@ -1599,7 +1572,7 @@ int Fat32FileSystem::tf_fread(char *dest, int size, TFFile *fp, bool user)
   while (size > 0) {
     sector = tf_first_sector(fp->currentCluster) + (fp->currentByte / 512);
     tf_fetch(sector);  // wtfo?  i know this is cached, but why!?
-    size_t x = BSIZE - (fp->currentByte % 512);
+    size_t x = SECTOR_SIZE - (fp->currentByte % 512);
     if (x > fp->size - fp->pos) {
       x = fp->size - fp->pos;
     }
@@ -1644,7 +1617,7 @@ int Fat32FileSystem::tf_fwrite(const char *src, int sz, TFFile *fp, bool user)
     tf_fetch(sector);
 
     tracking = fp->currentByte % 512;
-    size_t x = BSIZE - (fp->currentByte % 512);
+    size_t x = SECTOR_SIZE - (fp->currentByte % 512);
     if (x > fp->size - fp->pos) {
       x = fp->size - fp->pos;
     }

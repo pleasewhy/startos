@@ -3,7 +3,6 @@
 
 #include "device/Console.hpp"
 #include "device/DeviceManager.hpp"
-#include "fs/disk/Disk.hpp"
 
 extern Console console;
 

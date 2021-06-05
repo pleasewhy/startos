@@ -19,7 +19,7 @@ public:
    * @param n 期望读取字节数
    * @return int 实际读取的字节数
    */
-  virtual int read(char* buf, int offset, int n);
+  virtual int read(char *buf, int offset, int n);
 
   /**
    * @brief 向设备写入数据
@@ -29,7 +29,7 @@ public:
    * @param n 期望写入数据字节数
    * @return int 实际写入的字节数
    */
-  virtual int write(char* buf, int offset, int n);
+  virtual int write(char *buf, int offset, int n);
 };
 
 #endif

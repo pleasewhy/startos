@@ -7,12 +7,13 @@
 #include "param.hpp"
 #include "riscv.hpp"
 
-extern "C" char trampoline[];  // trampoline.S
+extern "C" char         trampoline[];  // trampoline.S
 extern "C" MemAllocator memAllocator;
 extern "C" char etext[];  // 链接器会设置这个为内核代码结束
-pagetable_t kernel_pagetable;
+pagetable_t     kernel_pagetable;
 
-void initKernelVm() {
+void initKernelVm()
+{
   kernel_pagetable = (pagetable_t)memAllocator.alloc();
   memset(kernel_pagetable, 0, PGSIZE);
 
@@ -32,7 +33,8 @@ void initKernelVm() {
   kernel_vm_map(KERNBASE, KERNBASE, (uint64_t)etext - KERNBASE, PTE_R | PTE_X);
 
   // 映射剩下的内存
-  kernel_vm_map((uint64_t)etext, (uint64_t)etext, PHYSTOP - (uint64_t)etext, PTE_R | PTE_W);
+  kernel_vm_map((uint64_t)etext, (uint64_t)etext, PHYSTOP - (uint64_t)etext,
+                PTE_R | PTE_W);
 
   // trampoline作为trap的entry/exit，会被映射到虚拟地址的顶端
   kernel_vm_map(TRAMPOLINE, (uint64_t)trampoline, PGSIZE, PTE_R | PTE_X);
@@ -70,7 +72,8 @@ void initKernelVm() {
 #endif
 }
 
-void initHartVm() {
+void initHartVm()
+{
   w_satp(MAKE_SATP(kernel_pagetable));
   sfence_vma();
 #ifdef K210
@@ -79,15 +82,19 @@ void initHartVm() {
 #endif
 }
 
-pte_t *walk(pagetable_t pagetable, uint64_t va, int alloc) {
-  if (va >= MAXVA) panic("walk");
+pte_t *walk(pagetable_t pagetable, uint64_t va, int alloc)
+{
+  if (va >= MAXVA)
+    panic("walk");
 
   for (int level = 2; level > 0; level--) {
     pte_t *pte = &pagetable[PX(level, va)];
     if (*pte & PTE_V) {
       pagetable = (pagetable_t)PTE2PA(*pte);
-    } else {
-      if (!alloc || (pagetable = (pte_t *)memAllocator.alloc()) == NULL) return NULL;
+    }
+    else {
+      if (!alloc || (pagetable = (pte_t *)memAllocator.alloc()) == NULL)
+        return NULL;
       memset(pagetable, 0, PGSIZE);
       *pte = PA2PTE(pagetable) | PTE_V;
     }
@@ -95,15 +102,19 @@ pte_t *walk(pagetable_t pagetable, uint64_t va, int alloc) {
   return &pagetable[PX(0, va)];
 }
 
-int mappages(pagetable_t pagetable, uint64_t va, uint64_t size, uint64_t pa, int perm) {
+int mappages(
+    pagetable_t pagetable, uint64_t va, uint64_t size, uint64_t pa, int perm)
+{
   uint64_t a, last;
-  pte_t *pte;
+  pte_t *  pte;
 
   a = PGROUNDDOWN(va);
   last = PGROUNDDOWN(va + size - 1);
   for (;;) {
-    if ((pte = walk(pagetable, a, 1)) == 0) return -1;
-    if (*pte & PTE_V) panic("remap");
+    if ((pte = walk(pagetable, a, 1)) == 0)
+      return -1;
+    if (*pte & PTE_V)
+      panic("remap");
     *pte = PA2PTE(pa) | perm | PTE_V;
     if (a == last) {
       break;
@@ -114,23 +125,30 @@ int mappages(pagetable_t pagetable, uint64_t va, uint64_t size, uint64_t pa, int
   return 0;
 }
 
-uint64_t walkAddr(pagetable_t pagetable, uint64_t va) {
-  pte_t *pte;
+uint64_t walkAddr(pagetable_t pagetable, uint64_t va)
+{
+  pte_t *  pte;
   uint64_t pa;
 
-  if (va >= MAXVA) return 0;
+  if (va >= MAXVA)
+    return 0;
 
   pte = walk(pagetable, va, 0);
-  if (pte == 0) return 0;
-  if ((*pte & PTE_V) == 0) return 0;
+  if (pte == 0)
+    return 0;
+  if ((*pte & PTE_V) == 0)
+    return 0;
   // TODO 用户空间时修改
-  if ((*pte & PTE_U) == 0) return 0;
+  if ((*pte & PTE_U) == 0)
+    return 0;
   pa = PTE2PA(*pte);
   return pa;
 }
 
-void kernel_vm_map(uint64_t va, uint64_t pa, uint64_t sz, int perm) {
-  if (mappages(kernel_pagetable, va, sz, pa, perm) != 0) panic("kvmmap");
+void kernel_vm_map(uint64_t va, uint64_t pa, uint64_t sz, int perm)
+{
+  if (mappages(kernel_pagetable, va, sz, pa, perm) != 0)
+    panic("kvmmap");
 }
 
 /**
@@ -139,7 +157,8 @@ void kernel_vm_map(uint64_t va, uint64_t pa, uint64_t sz, int perm) {
  *
  * @param pagetable 需要释放的页表
  */
-void freewalk(pagetable_t pagetable) {
+void freewalk(pagetable_t pagetable)
+{
   // there are 2^9 = 512 PTEs in a page table.
   for (int i = 0; i < 512; i++) {
     pte_t pte = pagetable[i];
@@ -148,7 +167,8 @@ void freewalk(pagetable_t pagetable) {
       uint64_t child = PTE2PA(pte);
       freewalk((pagetable_t)child);
       pagetable[i] = 0;
-    } else if (pte & PTE_V) {
+    }
+    else if (pte & PTE_V) {
       panic("freewalk: leaf");
     }
   }
@@ -163,15 +183,19 @@ void freewalk(pagetable_t pagetable) {
  * @param pagetable 需要释放的页表
  * @param sz 页表的大小
  */
-void userFreePagetable(pagetable_t pagetable, uint64_t sz) {
-  if (sz > 0) userUnmap(pagetable, 0, PGROUNDUP(sz) / PGSIZE, 1);
+void userFreePagetable(pagetable_t pagetable, uint64_t sz)
+{
+  if (sz > 0)
+    userUnmap(pagetable, 0, PGROUNDUP(sz) / PGSIZE, 1);
   freewalk(pagetable);
 }
 
-uint64_t userAlloc(pagetable_t pagetable, uint64_t oldsz, uint64_t newsz) {
-  char *mem;
+uint64_t userAlloc(pagetable_t pagetable, uint64_t oldsz, uint64_t newsz)
+{
+  char *   mem;
   uint64_t a;
-  if (newsz < oldsz) return oldsz;
+  if (newsz < oldsz)
+    return oldsz;
 
   oldsz = PGROUNDUP(oldsz);
   for (a = oldsz; a < newsz; a += PGSIZE) {
@@ -182,7 +206,8 @@ uint64_t userAlloc(pagetable_t pagetable, uint64_t oldsz, uint64_t newsz) {
       return 0;
     }
     memset(mem, 0, PGSIZE);
-    if (mappages(pagetable, a, PGSIZE, (uint64_t)mem, PTE_W | PTE_X | PTE_R | PTE_U) != 0) {
+    if (mappages(pagetable, a, PGSIZE, (uint64_t)mem,
+                 PTE_W | PTE_X | PTE_R | PTE_U) != 0) {
       LOG_WARN("user map page failed");
       memAllocator.free(mem);
       userDealloc(pagetable, a, oldsz);
@@ -192,18 +217,25 @@ uint64_t userAlloc(pagetable_t pagetable, uint64_t oldsz, uint64_t newsz) {
   return newsz;
 }
 
-void userUnmap(pagetable_t pagetable, uint64_t va, uint64_t npages, bool do_free) {
+void userUnmap(pagetable_t pagetable,
+               uint64_t    va,
+               uint64_t    npages,
+               bool        do_free)
+{
   uint64_t a;
-  pte_t *pte;
+  pte_t *  pte;
 
-  if ((va % PGSIZE) != 0) panic("uvmunmap: not aligned");
+  if ((va % PGSIZE) != 0)
+    panic("uvmunmap: not aligned");
 
   for (a = va; a < va + npages * PGSIZE; a += PGSIZE) {
-    if ((pte = walk(pagetable, a, 0)) == 0) panic("uvmunmap: walk");
+    if ((pte = walk(pagetable, a, 0)) == 0)
+      panic("uvmunmap: walk");
     if ((*pte & PTE_V) == 0) {
       LOG_WARN("uvmunmap: not mapped");
     }
-    if (PTE_FLAGS(*pte) == PTE_V) panic("uvmunmap: not a leaf");
+    if (PTE_FLAGS(*pte) == PTE_V)
+      panic("uvmunmap: not a leaf");
     if (do_free) {
       uint64_t pa = PTE2PA(*pte);
       memAllocator.free(reinterpret_cast<void *>(pa));
@@ -212,8 +244,10 @@ void userUnmap(pagetable_t pagetable, uint64_t va, uint64_t npages, bool do_free
   }
 }
 
-uint64_t userDealloc(pagetable_t pagetable, uint64_t oldsz, uint64_t newsz) {
-  if (newsz >= oldsz) return oldsz;
+uint64_t userDealloc(pagetable_t pagetable, uint64_t oldsz, uint64_t newsz)
+{
+  if (newsz >= oldsz)
+    return oldsz;
 
   if (PGROUNDUP(newsz) < PGROUNDUP(oldsz)) {
     int npages = (PGROUNDUP(oldsz) - PGROUNDUP(newsz)) / PGSIZE;
@@ -223,25 +257,30 @@ uint64_t userDealloc(pagetable_t pagetable, uint64_t oldsz, uint64_t newsz) {
   return newsz;
 }
 
-pagetable_t userCreate() {
+pagetable_t userCreate()
+{
   pagetable_t pagetable;
   pagetable = (pagetable_t)memAllocator.alloc();
-  if (pagetable == 0) return 0;
+  if (pagetable == 0)
+    return 0;
   memset(pagetable, 0, PGSIZE);
   return pagetable;
 }
 
-void UserVmInit(pagetable_t pagetable, uchar_t *src, uint_t sz) {
+void UserVmInit(pagetable_t pagetable, uchar_t *src, uint_t sz)
+{
   char *mem;
 
-  if (sz >= PGSIZE) panic("inituvm: more than a page");
+  if (sz >= PGSIZE)
+    panic("inituvm: more than a page");
   mem = static_cast<char *>(memAllocator.alloc());
   memset(mem, 0, PGSIZE);
   mappages(pagetable, 0, PGSIZE, (uint64_t)mem, PTE_W | PTE_R | PTE_X | PTE_U);
   memmove(mem, src, sz);
 }
 
-int copyin(pagetable_t pagetable, char *dst, uint64_t vsrc, uint64_t len) {
+int copyin(pagetable_t pagetable, char *dst, uint64_t vsrc, uint64_t len)
+{
   uint64_t n, va0, pa0;
   while (len > 0) {
     va0 = PGROUNDDOWN(vsrc);
@@ -261,9 +300,10 @@ int copyin(pagetable_t pagetable, char *dst, uint64_t vsrc, uint64_t len) {
   return 0;
 }
 
-int copyinstr(pagetable_t pagetable, char *dst, uint64_t vsrc, int maxsz) {
+int copyinstr(pagetable_t pagetable, char *dst, uint64_t vsrc, int maxsz)
+{
   uint64_t va0, pa0 = 0;
-  int got_null = 0, n;
+  int      got_null = 0, n;
 
   while (got_null == 0 && maxsz > 0) {
     va0 = PGROUNDDOWN(vsrc);
@@ -282,7 +322,8 @@ int copyinstr(pagetable_t pagetable, char *dst, uint64_t vsrc, int maxsz) {
         *dst = 0;
         got_null = 1;
         break;
-      } else {
+      }
+      else {
         *dst = *p;
       }
       n--;
@@ -298,9 +339,10 @@ int copyinstr(pagetable_t pagetable, char *dst, uint64_t vsrc, int maxsz) {
   return -1;
 }
 
-int copyout(pagetable_t pagetable, uint64_t vdst, char *src, int len) {
+int copyout(pagetable_t pagetable, uint64_t vdst, char *src, int len)
+{
   uint64_t va0, pa0;
-  int n;
+  int      n;
   while (len > 0) {
     va0 = PGROUNDDOWN(vdst);
     pa0 = walkAddr(pagetable, va0);
@@ -319,11 +361,12 @@ int copyout(pagetable_t pagetable, uint64_t vdst, char *src, int len) {
   return 0;
 }
 
-int userVmCopy(pagetable_t oldPg, pagetable_t newPg, int sz) {
-  pte_t *pte;
+int userVmCopy(pagetable_t oldPg, pagetable_t newPg, int sz)
+{
+  pte_t *  pte;
   uint64_t pa;
-  uint_t flags;
-  char *mem;
+  uint_t   flags;
+  char *   mem;
   for (int i = 0; i < sz; i += PGSIZE) {
     if ((pte = walk(oldPg, i, 0)) == 0) {
       panic("userVmCopy: pte not present");
@@ -346,7 +389,8 @@ int userVmCopy(pagetable_t oldPg, pagetable_t newPg, int sz) {
   return 0;
 }
 
-void vmprint(pagetable_t pagetable, int n) {
+void vmprint(pagetable_t pagetable, int n)
+{
   if (n == 1) {
     printf("page table %p\n", pagetable);
   }

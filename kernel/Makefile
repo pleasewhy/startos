@@ -80,12 +80,11 @@ OBJS += \
 
 #fs:
 OBJS += \
-	fs/inodefs/BufferLayer.o \
 	fs/fat32/Fat.o \
-	fs/disk/Disk.o \
 	fs/vfs/Vfs.o \
 	fs/devfs/DeviceFileSystem.o \
 	fs/Pipe.o
+
 
 # device:
 OBJS += \
@@ -115,7 +114,8 @@ OBJS += \
 	device/Clock.o
 else
 OBJS += \
-	fs/disk/VirtioDisk.o
+	driver/virtio.o \
+	device/virtio_disk.o
 endif
 
 -include */*.d
