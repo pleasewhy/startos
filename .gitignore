@@ -22,3 +22,9 @@ submit/*
 .gitignore
 .vscode
 kernel/memory/tmp.cpp
+.vscode/c_cpp_properties.json
+.vscode/settings.json
+.vscode/c_cpp_properties.json
+.vscode2/c_cpp_properties.json
+.vscode2/settings.json
+.vscode/settings.json
