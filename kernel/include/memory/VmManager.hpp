@@ -84,7 +84,7 @@ typedef uint64_t *pagetable_t;  // 512 PTEs
  */
 void userUnmap(pagetable_t pagetable, uint64_t va, uint64_t npages, bool do_free);
 
-void userFreePagetable(pagetable_t pagetable, uint64_t sz);
+void FreeUserPageTable(pagetable_t pagetable, uint64_t sz);
 /**
  * 增长进程的sz从oldsz到newsz, 并分配相应PTE和物理内存
  * ，newsz不需要对齐页，返回新的sz，错误返回0

@@ -8,12 +8,17 @@
 #include "fs/vfs/Vfs.hpp"
 #include "os/TaskScheduler.hpp"
 #include "types.hpp"
+#include "fcntl.h"
+#include "os/SleepLock.hpp"
 
 #define SECTOR_SIZE 512
+
+SleepLock sleep_lock;  // 用于控制并发访问
 
 void Fat32FileSystem::init()
 {
   LOG_DEBUG("fat32 init");
+  sleep_lock.init("fat32");
   if (tf_init() != 0) {
     panic("fat32 init");
   }
@@ -21,6 +26,7 @@ void Fat32FileSystem::init()
 
 int Fat32FileSystem::open(const char *filePath, uint64_t flags, struct file *fp)
 {
+  sleep_lock.lock();
   TFFile *tf = NULL;
   if (flags & O_CREATE) {
     tf = tf_fopen(filePath, "w");
@@ -31,15 +37,18 @@ int Fat32FileSystem::open(const char *filePath, uint64_t flags, struct file *fp)
     // LOG_DEBUG("tf=%s", tf->filename);
   }
   // LOG_INFO("tf=%p flags=%x", tf, flags);
-  if (tf == NULL && flags == O_DIRECTORY) {
-    mkdir(filePath);
+  if (tf == nullptr && flags == O_DIRECTORY) {
+    tf_mkdir(filePath, 0);
     tf = tf_fopen(filePath, "r");
   }
-  if (tf == NULL) {
+  if (tf == nullptr) {
+    sleep_lock.unlock();
     return -1;
   }
   // 若flags包含O_DIRECTORY,且path为文件类型，应该打开失败
   if (flags == O_DIRECTORY && !(tf->attributes & TF_ATTR_DIRECTORY)) {
+    tf_fclose(tf);
+    sleep_lock.unlock();
     return -1;
   }
   fp->size = tf->size;
@@ -51,35 +60,48 @@ int Fat32FileSystem::open(const char *filePath, uint64_t flags, struct file *fp)
     fp->directory = false;
   }
   tf_fclose(tf);
+  sleep_lock.unlock();
   return 0;
 }
 
 int Fat32FileSystem::mkdir(const char *filepath)
 {
-  return tf_mkdir(filepath, 0);
+  sleep_lock.lock();
+  int code = tf_mkdir(filepath, 0);
+  sleep_lock.unlock();
+  return code;
 }
 
 size_t
 Fat32FileSystem::read(const char *path, bool user, char *buf, int offset, int n)
 {
+  sleep_lock.lock();
   LOG_DEBUG("read filepath=%s", path);
   TFFile *fp = tf_fopen(path, "r");
-  if (fp == NULL)
+
+  if (fp == NULL) {
+    sleep_lock.unlock();
     return -1;
+  }
+  if (offset >= fp->size) {
+    return 0;
+  }
   tf_fseek(fp, 0, offset);
   int x = tf_fread(buf, n, fp, user);
   tf_fclose(fp);
-  LOG_DEBUG("read filepath=%s r=%d", path, x);
+  sleep_lock.unlock();
   return x;
 }
 
 size_t Fat32FileSystem::write(
     const char *path, bool user, const char *buf, int offset, int n)
 {
+  sleep_lock.lock();
   TFFile *fp = tf_fopen(path, "+");
   tf_fseek(fp, 0, offset);
   int x = tf_fwrite(buf, n, fp, user);
   tf_fclose(fp);
+  sleep_lock.unlock();
   return x;
 }
 
@@ -199,12 +221,14 @@ int Fat32FileSystem::ls(const char *filepath,
                         bool        user)
 {
   LOG_DEBUG("fat32 ls");
-  struct dirent *dirent;
-  struct dirent  dt;
+  sleep_lock.lock();
+  struct kernel_dirent *dirent;
+  struct kernel_dirent  dt;
   FatFileEntry   entry;
   int            readn = 0, lfn_entries = 0;
   TFFile *       fp = tf_fopen(filepath, "r");
   if (fp == NULL || (fp->attributes & TF_ATTR_DIRECTORY) == 0) {
+    sleep_lock.unlock();
     return -1;
   }
   while (tf_fread((char *)&entry, sizeof(FatFileEntry), fp) ==
@@ -212,6 +236,7 @@ int Fat32FileSystem::ls(const char *filepath,
     if (entry.msdos.filename[0] == 0x00 ||
         readn + NELEM(entry.msdos.filename) >= len) {  // 结束
       LOG_DEBUG("over");
+      sleep_lock.unlock();
       return readn;
     }
     // 短文件目录项
@@ -227,7 +252,7 @@ int Fat32FileSystem::ls(const char *filepath,
         dt.d_type = DT_FIFO;
       }
       // 将contents转换为struct dirent *类型，方便得到d_name的偏移量
-      dirent = reinterpret_cast<struct dirent *>(contents);
+      dirent = reinterpret_cast<struct kernel_dirent *>(contents);
       // 将sfn的文件名复制到目录项对应位置中
       int n = copysfn(entry.msdos.filename, dirent->d_name, user);
 
@@ -239,18 +264,20 @@ int Fat32FileSystem::ls(const char *filepath,
 
       // 将dt的数据copy到对应的位置
       either_copyout(user, (uint64_t)contents, (void *)&dt, DIENT_BASE_LEN);
-      LOG_DEBUG("sfn=%s", dirent->d_name);
+      // LOG_DEBUG("sfn=%s", dirent->d_name);
 
       // 更新content
       contents += dt.d_reclen;
       readn += dt.d_reclen;
     }
     else if ((entry.lfn.sequence_number & 0xc0) == 0x40) {  // 长文件名目录项
-      dirent = reinterpret_cast<struct dirent *>(contents);
+      dirent = reinterpret_cast<struct kernel_dirent *>(contents);
       // 计算lfn的数量
       lfn_entries = entry.lfn.sequence_number & ~0x40;
       if (lfn_entries * LFN_NAME_CAPACITY + readn >= len) {
         LOG_DEBUG("over");
+        tf_fclose(fp);
+        sleep_lock.unlock();
         return readn;
       }
       LOG_DEBUG("lfn sno=%p  lfns=%d readn=%d len=%d",
@@ -266,10 +293,14 @@ int Fat32FileSystem::ls(const char *filepath,
         if (tf_fread((char *)&entry, sizeof(FatFileEntry), fp) !=
             sizeof(FatFileEntry)) {
           LOG_DEBUG("expect lfn entry, but not found");
+          tf_fclose(fp);
+          sleep_lock.unlock();
           return -1;
         }
         if (entry.lfn.attributes != TF_ATTR_LONG_NAME) {
           LOG_DEBUG("expect lfn entry, but not sfn entry");
+          tf_fclose(fp);
+          sleep_lock.unlock();
           return -1;
         }
         n += copylfn(entry, (uint64_t)dirent->d_name,
@@ -280,6 +311,8 @@ int Fat32FileSystem::ls(const char *filepath,
       if (tf_fread((char *)&entry, sizeof(FatFileEntry), fp) !=
           sizeof(FatFileEntry)) {
         LOG_DEBUG("expect sfn entry, but not found");
+        tf_fclose(fp);
+        sleep_lock.unlock();
         return -1;
       }
 
@@ -295,7 +328,9 @@ int Fat32FileSystem::ls(const char *filepath,
       }
 
       // 计算该目录项的总长度
-      dt.d_reclen = DIENT_BASE_LEN + n;  // n为长文件目录项的文件名长度
+      dt.d_reclen = (DIENT_BASE_LEN + n);  // n为长文件目录项的文件名长度
+
+      dt.d_reclen = ALIGN(dt.d_reclen, 8); // 8字节对齐
 
       // 计算下一个目录项的偏移量
       dt.d_off = reinterpret_cast<uint64_t>(contents) + dt.d_reclen;
@@ -312,6 +347,8 @@ int Fat32FileSystem::ls(const char *filepath,
       LOG_ERROR("fat file system format error");
     }
   }
+  tf_fclose(fp);
+  sleep_lock.unlock();
   return readn;
 }
 
@@ -639,7 +676,7 @@ char *Fat32FileSystem::tf_walk(char *filename, TFFile *fp)
  *   NULL if no system file handles are free, or the free handle if one is
  * available.
  */
-TFFile *Fat32FileSystem::Fat32FileSystem::tf_get_free_handle()
+TFFile *Fat32FileSystem::tf_get_free_handle()
 {
   int     i;
   TFFile *fp;
@@ -1170,7 +1207,7 @@ Fat32FileSystem::tf_fnopen(const char *filename, const char *mode, int n)
   uint32_t cluster;
 
   if (fp == NULL)
-    return (TFFile *)-1;
+    return nullptr;
 
   strncpy(myfile, filename, n);
   myfile[n] = 0;
@@ -1262,7 +1299,7 @@ int Fat32FileSystem::tf_free_clusterchain(uint32_t cluster)
 int Fat32FileSystem::tf_fseek(TFFile *fp, size_t base, long offset)
 {
   long pos = base + offset;
-  if (pos >= fp->size) {
+  if (pos > fp->size) {
     return TF_ERR_INVALID_SEEK;
   }
   return tf_unsafe_fseek(fp, base, offset);
@@ -1569,7 +1606,8 @@ int Fat32FileSystem::tf_fread(char *dest, int size, TFFile *fp, bool user)
 {
   uint32_t sector;
   int      n = 0;  // count that have been read
-  while (size > 0) {
+  size = size > fp->size ? fp->size : size;
+  while (n <= fp->size && size > 0) {
     sector = tf_first_sector(fp->currentCluster) + (fp->currentByte / 512);
     tf_fetch(sector);  // wtfo?  i know this is cached, but why!?
     size_t x = SECTOR_SIZE - (fp->currentByte % 512);
@@ -1595,7 +1633,7 @@ int Fat32FileSystem::tf_fread(char *dest, int size, TFFile *fp, bool user)
       }
     }
     else {
-      if (tf_fseek(fp, 0, fp->pos + x)) {
+      if (tf_fseek(fp, 0, fp->pos + x) != 0) {
         return n;
       }
     }

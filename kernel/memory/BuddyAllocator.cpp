@@ -57,7 +57,6 @@ void* BuddyAllocator::alloc(size_t sz)
 {
   sz += 8;                   // 多8个字节，用于存放level和对齐
   int lv = _calc_level(sz);  // 得到该块的级别
-  printf("sz=%d lv=%d\n", sz, lv);
   // 向后查找可用的内存块，越往后内存块越大
   int i = lv;
   buddy_block_t* block = NULL;
@@ -82,11 +81,9 @@ void* BuddyAllocator::alloc(size_t sz)
   for (; i > lv; i--) {
     buddy = _get_buddy(block, i - 1);  // 分割成两块
     buddy->next = NULL;
-    printf("lv=%d,%p\n", i - 1, buddy);
     this->freelist[i - 1] = buddy;
   }
 
-  printf("alloc addr=%p\n", block);
   // 记录该内存块的level，在free的时候会用到
   // 这个level是放在block的前一个字节的
   uint8_t* b = (uint8_t*)(block);
@@ -102,14 +99,12 @@ void BuddyAllocator::free(void* pa)
 
   buddy_block_t* buddy;
   buddy_block_t** list;
-  this->mem_info();
   for (;; ++i) {
     // 如果该内存块大小为PGSIZE，则将该块归还到page分配器
     if (i == this->maxlv) {
       memAllocator.free(block);
       break;
     }
-    printf("free lv=%d\n", i);
     // 取当前块的buddy块
     buddy = _get_buddy(block, i);
 

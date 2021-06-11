@@ -15,6 +15,11 @@ open:
  li a7, SYS_open
  ecall
  ret
+.global sbrk
+sbrk:
+ li a7, SYS_sbrk
+ ecall
+ ret
 .global getcwd
 getcwd:
  li a7, SYS_getcwd
@@ -58,6 +63,11 @@ mount:
 .global chdir
 chdir:
  li a7, SYS_chdir
+ ecall
+ ret
+.global openat
+openat:
+ li a7, SYS_openat
  ecall
  ret
 .global close

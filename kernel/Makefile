@@ -81,6 +81,7 @@ OBJS += \
 #fs:
 OBJS += \
 	fs/fat32/Fat.o \
+	fs/fat32/fat32_file_system.o \
 	fs/vfs/Vfs.o \
 	fs/devfs/DeviceFileSystem.o \
 	fs/Pipe.o
@@ -102,6 +103,7 @@ OBJS += \
 	driver/Plic.o
 
 ifeq ($(platform), K210)
+
 OBJS += \
   driver/spi.o \
   driver/gpiohs.o \
@@ -119,6 +121,9 @@ OBJS += \
 endif
 
 -include */*.d
+-include */*/*.d
+-include */*/*/*.d
+
 
 CRTI_OBJ=boot/crti.o
 CRTBEGIN_OBJ:=$(shell $(CXX) $(CFLAGS) -print-file-name=crtbegin.o)

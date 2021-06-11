@@ -102,15 +102,14 @@ int fork();
 
 /**
  * @brief 创建一个子线程，并执行fn函数
- * 
- * @param fn 
- * @param stack 
- * @param stackSz 
- * @param flags 
- * @return int 
+ *
+ * @param fn
+ * @param stack
+ * @param stackSz
+ * @param flags
+ * @return int
  */
 int clone(uint64_t stack, int flags);
-
 
 /**
  * @brief 等待子进程退出, 返回其子进程id
@@ -206,9 +205,17 @@ struct vma *allocVma();
 
 /**
  * @brief 释放vma结构体
- * 
- * @param a 
+ *
+ * @param a
  */
 void freeVma(struct vma *a);
+
+/**
+ * @brief 释放进程的页表
+ * @note ummap进程的trapframe和trampoline，并释放
+ * 递归的释放该页表所拥有的全部物理内存
+ *
+ */
+void FreeTaskPagetable(pagetable_t pagetable, uint64_t sz);
 
 #endif  // TASK_SCHEDULER_HPP

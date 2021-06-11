@@ -81,7 +81,7 @@ uservec:
         ld t1, 0(a0)
         csrw satp, t1
         sfence.vma zero, zero
-
+        fence.i
         # a0不再有效, 因为内核页表没有专门映射p->trapframe
 
         # 跳转到usertrap(), 不会返回
@@ -95,7 +95,7 @@ userret:
 
     csrw satp, a1
     sfence.vma zero, zero
-
+    fence.i
     # 先将a0保存在sscratch中，在加载完寄存器后悔交换回来
     ld t0, 112(a0)
     csrw sscratch, t0

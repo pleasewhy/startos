@@ -6,20 +6,24 @@ CC = $(TOOLPREFIX)gcc
 OBJCOPY = $(TOOLPREFIX)objcopy
 OBJDUMP = $(TOOLPREFIX)objdump
 
-CFLAGS = -Wall -Werror -O -fno-omit-frame-pointer -ggdb
 CFLAGS += -MD
 CFLAGS += -mcmodel=medany
 CFLAGS += -ffreestanding -fno-common -nostdlib -mno-relax
-CFLAGS += -I.
-CFLAGS += -fno-stack-protector
+CFLAGS += -I. -I../lib
+CFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
 
 LDFLAGS = -z max-page-size=4096
 
 
 UPROGS =\
-	./_init\
+	_init \
+	_shell \
+	_echo \
+	_ls \
+	_wc \
+	_cat \
 
-ULIB = usys.o ulib.o printf.o
+ULIB = usys.o ulib.o printf.o malloc.o
 .PRECIOUS: %.o
 
 _%: %.o $(ULIB)
@@ -39,12 +43,13 @@ initcode: initcode.S
 	$(LD) $(LDFLAGS) -N -e start -Ttext 0 -o initcode.out initcode.o
 	$(OBJCOPY) -S -O binary initcode.out initcode
 	$(OBJDUMP) -S initcode.o > initcode.asm
-	od -t xC initcode
+	od -t xC initcode > initcode.txt
+	python3 gen_submit_init.py ./initcode.txt >> initcode.txt
 
-submit: _init
-	$(OBJCOPY) -S -O binary _init init
-	od -t xC init > submit.txt
-	python3 gen_submit_init.py >> submit.txt
+submit: _oscmp_init
+	$(OBJCOPY) -S -O binary _oscmp_init oscmp_init.bin
+	od -t xC oscmp_init.bin > submit.txt
+	python3 gen_submit_init.py ./submit.txt >> submit.txt
 
 
 dst=/mnt
@@ -54,16 +59,16 @@ fs.img: $(UPROGS)
 		dd if=/dev/zero of=fs.img bs=512k count=512; \
 		mkfs.vfat -F 32 fs.img; fi
 	@sudo mount fs.img $(dst)
-	@sudo cp README.txt $(dst)/README.txt
 	@if [ ! -d "$(dst)/bin" ]; then sudo mkdir $(dst)/bin; fi
 	@for file in $$( ls _* ); do \
 		sudo cp $$file $(dst)/$${file#_};\
-		sudo cp $$file $(dst)/bin/$${file#_}; done
+		sudo cp $$file $(dst)/bin/$${file#_}; \
+		echo cp $$file; done
 	@sudo umount $(dst)
-	@mv fs.img ../fs.img
+	@cp fs.img ../fs.img
 
 clean: 
 	rm -f *.tex *.dvi *.idx *.aux *.log *.ind *.ilg *.d *.o *.out _* fs.img \
-			*.asm *.sym init
+			*.asm *.sym init *.txt *.bin
 
-.PHONY: clean
+.PHONY: clean initcode

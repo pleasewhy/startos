@@ -4,6 +4,7 @@
 #define SYS_fork          1
 #define SYS_open          2
 #define SYS_wait          3
+#define SYS_sbrk          4
 #define SYS_getcwd        17
 #define SYS_dup           23
 #define SYS_dup3          24

@@ -1,5 +1,7 @@
-
-f = open("./submit.txt", "r")
+import sys
+filepath = sys.argv[1]
+print("gen:",filepath)
+f = open(filepath, "r")
 lines = f.readlines()
 for line in lines:
   its = line[:-1].split(" ")

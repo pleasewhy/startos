@@ -12,25 +12,34 @@
 #include "memory/MemAllocator.hpp"
 #include "riscv.hpp"
 
-extern MemAllocator memAllocator;
+extern MemAllocator        memAllocator;
 extern mem::BuddyAllocator buddy_alloc_;  // 用于通用内存内配
 
-void *operator new(uint64_t size) {
+void *operator new(uint64_t size)
+{
   if (size > PGSIZE) {
-    LOG_ERROR("not support new[]");
     panic("operator new");
   }
   return buddy_alloc_.alloc(size);
 }
 
-void operator delete(void *p) { return buddy_alloc_.free(p); }
-
-void *operator new[](uint64_t size) {
-  LOG_ERROR("not support new[]");
-  return NULL;
+void operator delete(void *p)
+{
+  return buddy_alloc_.free(p);
 }
 
-void operator delete[](void *p) { LOG_ERROR("not support delete[]"); }
+void *operator new[](uint64_t size)
+{
+  if (size > PGSIZE) {
+    panic("operator new[]");
+  }
+  return buddy_alloc_.alloc(size);
+}
+
+void operator delete[](void *p)
+{
+  return buddy_alloc_.free(p);
+}
 
 // extern "C" {
 
@@ -47,7 +56,8 @@ void operator delete[](void *p) { LOG_ERROR("not support delete[]"); }
 //     __atexit_funcs[__atexit_func_count].dso_handle = dso;
 //     __atexit_func_count++;
 
-//     return 0; /*I would prefer if functions returned 1 on success, but the ABI says...*/
+//     return 0; /*I would prefer if functions returned 1 on success, but the
+//     ABI says...*/
 // }
 
 // void __cxa_finalize(void *f){

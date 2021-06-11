@@ -188,6 +188,37 @@ int open(const char *filename, size_t flags)
   return fd;
 }
 
+// 打开指定目录下的文件
+int openat(int dirfd, const char *filename, size_t flags, mode_t mode)
+{
+  struct file *dir_fp = getFileByfd(dirfd);
+  if (dir_fp == nullptr) {
+    return -1;
+  }
+
+  // 打开文件的绝对路径
+  char path[MAXPATH];
+  memset(path, 0, MAXPATH);
+  strncpy(path, dir_fp->filepath, strlen(dir_fp->filepath));
+  path[strlen(dir_fp->filepath)] = '/';
+  memcpy(path + strlen(dir_fp->filepath) + 1, filename, strlen(filename));
+
+  auto fs = getFs(path);
+  LOG_DEBUG("openat dir path=%s, fs mount point=%s", path, fs->mountPoint);
+  struct file *fp = allocFileHandle();
+  if (fs->open(path, flags, fp) == -1) {
+    freeFileHandle(fp);
+    return -1;
+  }
+
+  safestrcpy(fp->filepath, path, strlen(path) + 1);
+  fp->readable = !(flags & O_WRONLY);
+  fp->writable = (flags & O_WRONLY) || (flags & O_RDWR);
+  int fd = registerFileHandle(fp);
+  LOG_DEBUG("fd=%d fp=%p fp->ref=%d sz=%d", fd, fp, fp->ref, fp->size);
+  return fd;
+}
+
 size_t read(int fd, bool user, char *dst, size_t n, size_t offset)
 {
   struct file *f = getFileByfd(fd);
@@ -216,8 +247,8 @@ size_t read(struct file *fp, bool user, char *dst, size_t n, size_t offset)
       break;
     case fp->FD_DEVICE: r = fs->read(fp->filepath, user, dst, 0, n); break;
     case fp->FD_ENTRY:
-      r = fs->read(fp->filepath, user, dst, fp->position, n);
-      fp->position += r;
+      r = fs->read(fp->filepath, user, dst, fp->offset, n);
+      fp->offset += r;
       break;
     default: panic("vfs::read");
   }
@@ -249,16 +280,16 @@ write(struct file *fp, bool user, const char *src, size_t n, size_t offset)
 
   switch (fp->type) {
     case fp->FD_PIPE:
-      fp->pipe->write(reinterpret_cast<uint64_t>(src), n);
+      r = fp->pipe->write(reinterpret_cast<uint64_t>(src), n);
       break;
     case fp->FD_DEVICE: r = fs->write(fp->filepath, user, src, 0, n); break;
     case fp->FD_ENTRY:
-      // fat32->read(fp->filepath, user, dst, fp->position, 0);
-      r = fs->write(fp->filepath, user, src, 0, n);
-      LOG_DEBUG("write file sz=%d pos=%d r=%d n=%d", fp->size, fp->position, r,
+      // fat32->read(fp->filepath, user, dst, fp->offset, 0);
+      r = fs->write(fp->filepath, user, src, fp->offset, n);
+      LOG_DEBUG("write file sz=%d pos=%d r=%d n=%d", fp->size, fp->offset, r,
                 n);
-      fp->size = fp->position + r < fp->size ? fp->size : fp->position + r;
-      fp->position += r;
+      fp->size = fp->offset + r < fp->size ? fp->size : fp->offset + r;
+      fp->offset += r;
       break;
     default: panic("vfs::write"); return 0;
   }
@@ -518,7 +549,7 @@ struct file *rewind(struct file *fp)
   fileTableLock.lock();
   if (fp->ref < 1)
     panic("filerewind");
-  fp->position = 0;
+  fp->offset = 0;
   fileTableLock.unlock();
   return fp;
 }

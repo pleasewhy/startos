@@ -3,7 +3,7 @@
 
 #include "StartOS.hpp"
 #include "common/printk.hpp"
-#include "fs/File.h"
+#include "fs/vfs_file.h"
 #include "param.hpp"
 #include "types.hpp"
 

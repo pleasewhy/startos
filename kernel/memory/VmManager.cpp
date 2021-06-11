@@ -79,6 +79,7 @@ void initHartVm()
 #ifdef K210
   // sfence_vm();
   asm volatile("fence.i");
+  asm volatile("fence");
 #endif
 }
 
@@ -183,7 +184,7 @@ void freewalk(pagetable_t pagetable)
  * @param pagetable 需要释放的页表
  * @param sz 页表的大小
  */
-void userFreePagetable(pagetable_t pagetable, uint64_t sz)
+void FreeUserPageTable(pagetable_t pagetable, uint64_t sz)
 {
   if (sz > 0)
     userUnmap(pagetable, 0, PGROUNDUP(sz) / PGSIZE, 1);

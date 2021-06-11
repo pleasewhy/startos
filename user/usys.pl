@@ -16,6 +16,7 @@ sub entry {
 entry("fork");
 entry("wait");
 entry("open");
+entry("sbrk");
 entry("getcwd");
 entry("dup");
 entry("dup3");
@@ -25,6 +26,7 @@ entry("linkat");
 entry("umount2");
 entry("mount");
 entry("chdir");
+entry("openat");
 entry("close");
 entry("pipe2");
 entry("getdents64");

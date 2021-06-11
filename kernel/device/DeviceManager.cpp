@@ -23,15 +23,17 @@ void Init()
   fpioa_pin_init();
   dmac_init();
 #endif
-  printf("dev init");
+  printf("dev init\n");
 #ifdef K210
   SdCard *sd = new SdCard("hda1");
   sd->init();
   rw_devs[0] = sd;
+  printf("sd init\n");
 #else
   VirtioDisk *virtio_disk = new VirtioDisk("hda1");
   virtio_disk->init();
   rw_devs[0] = virtio_disk;
+  printf("virtio init\n");
 #endif
 };
 

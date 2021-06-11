@@ -9,17 +9,23 @@
 #include "common/logger.h"
 #include "types.hpp"
 
-static int loadseg(pte_t *pagetable, uint64_t addr, const char *path, uint_t offset, uint_t sz);
+static int loadseg(pte_t *     pagetable,
+                   uint64_t    addr,
+                   const char *path,
+                   uint_t      offset,
+                   uint_t      sz);
 
-int exec(char *path, char **argv) {
-  int i, off, argc;
-  uint64_t sz = 0, stackbase, sp;
-  uint64_t ustack[MAXARG + 1];  // 最后一项为0，用于标记结束
+int exec(char *path, char **argv)
+{
+  int           i, off, argc, oldsz;
+  uint64_t      sz = 0, stackbase, sp;
+  uint64_t      ustack[MAXARG + 1];  // 最后一项为0，用于标记结束
+  pagetable_t   old_pagetable;
   struct elfhdr elf;
   // struct inode *ip;
   struct proghdr ph;
-  pagetable_t pagetable = 0;
-  Task *task = myTask();
+  pagetable_t    pagetable = 0;
+  Task *         task = myTask();
 
   if ((pagetable = taskPagetable(task)) == 0) {
     return 0;
@@ -33,30 +39,42 @@ int exec(char *path, char **argv) {
 
   // 检查ELF头
   // LOG_DEBUG("exec0");
-  if (vfs::direct_read(path, reinterpret_cast<char *>(&elf), sizeof(elf), 0) != sizeof(elf)) {
+  if (vfs::direct_read(path, reinterpret_cast<char *>(&elf), sizeof(elf), 0) !=
+      sizeof(elf)) {
     LOG_DEBUG("exec read error");
     goto bad;
   }
   // LOG_DEBUG("exec1");
   // if (read_inode(ip, 0, (uint64_t) &elf, 0, sizeof(elf)) != sizeof(elf))
   //     goto bad;
-  if (elf.magic != ELF_MAGIC) goto bad;
+  if (elf.magic != ELF_MAGIC) {
+    LOG_DEBUG("not a elf file");
+    goto bad;
+  }
 
+  oldsz = task->sz;
   // 加载程序到内存中
   for (i = 0, off = elf.phoff; i < elf.phnum; i++, off += sizeof(ph)) {
-    if (vfs::direct_read(path, reinterpret_cast<char *>(&ph), sizeof(ph), off) != sizeof(ph)) {
+    if (vfs::direct_read(path, reinterpret_cast<char *>(&ph), sizeof(ph),
+                         off) != sizeof(ph)) {
       goto bad;
     }
     // if (read_inode(ip, 0, (uint64_t) &ph, off, sizeof(ph)) != sizeof(ph))
     //     goto bad;
-    if (ph.type != ELF_PROG_LOAD) continue;
-    if (ph.memsz < ph.filesz) goto bad;
-    if (ph.vaddr + ph.memsz < ph.vaddr) goto bad;
+    if (ph.type != ELF_PROG_LOAD)
+      continue;
+    if (ph.memsz < ph.filesz)
+      goto bad;
+    if (ph.vaddr + ph.memsz < ph.vaddr)
+      goto bad;
     uint64_t sz1;
-    if ((sz1 = userAlloc(pagetable, sz, ph.vaddr + ph.memsz)) == 0) goto bad;
+    if ((sz1 = userAlloc(pagetable, sz, ph.vaddr + ph.memsz)) == 0)
+      goto bad;
     sz = sz1;
-    if (ph.vaddr % PGSIZE != 0) goto bad;
-    if (loadseg(pagetable, ph.vaddr, path, ph.off, ph.filesz) < 0) goto bad;
+    if (ph.vaddr % PGSIZE != 0)
+      goto bad;
+    if (loadseg(pagetable, ph.vaddr, path, ph.off, ph.filesz) < 0)
+      goto bad;
   }
   // unlock_and_putback(ip);
   // ip = 0;
@@ -64,10 +82,11 @@ int exec(char *path, char **argv) {
   // 设置用户空间栈
   // 用户空间栈大小为一页(4096字节), 其被放置在程序空间最后一页
   // 的下一页, 注意，栈是从上向下增长的。
-  LOG_DEBUG("exec task sz=%x",sz);
+  LOG_DEBUG("exec task sz=%x", sz);
   sz = PGROUNDUP(sz);
   uint64_t sz1;
-  if ((sz1 = userAlloc(pagetable, sz, sz + PGSIZE)) == 0) goto bad;
+  if ((sz1 = userAlloc(pagetable, sz, sz + PGSIZE)) == 0)
+    goto bad;
   sz = sz1;
   sp = sz;
   stackbase = sz - PGSIZE;
@@ -75,13 +94,15 @@ int exec(char *path, char **argv) {
   // 先将参数push到用户栈中，并准备ustack数组，它的每一个
   // 元素都按顺序指向参数。
   for (argc = 0; argv[argc]; argc++) {
-    if (argc > MAXARG) goto bad;
+    if (argc > MAXARG)
+      goto bad;
     sp -= strlen(argv[argc]) + 1;
     sp -= sp % 16;
     if (sp < stackbase) {
       goto bad;
     }
-    if (copyout(pagetable, sp, argv[argc], strlen(argv[argc]) + 1) < 0) goto bad;
+    if (copyout(pagetable, sp, argv[argc], strlen(argv[argc]) + 1) < 0)
+      goto bad;
     ustack[argc] = sp;
   }
   ustack[argc] = 0;
@@ -92,7 +113,9 @@ int exec(char *path, char **argv) {
   if (sp < stackbase) {
     goto bad;
   }
-  if (copyout(pagetable, sp, (char *)ustack, (argc + 2) * sizeof(uint64_t)) < 0) goto bad;
+
+  if (copyout(pagetable, sp, (char *)ustack, (argc + 2) * sizeof(uint64_t)) < 0)
+    goto bad;
 
   // 用户代码main(argc, argv)的参数
   // argc通过系统调用返回，也就是a0
@@ -100,20 +123,24 @@ int exec(char *path, char **argv) {
   // 保存程序名
   char *last, *s;
   for (last = s = path; *s; s++)
-    if (*s == '/') last = s + 1;
-  safestrcpy(task->name, last, sizeof(task->name)+1);
+    if (*s == '/')
+      last = s + 1;
+  safestrcpy(task->name, last, sizeof(task->name) + 1);
 
+  old_pagetable = task->pagetable;
   task->pagetable = pagetable;
   task->sz = sz;
   task->trapframe->epc = elf.entry;
   task->trapframe->sp = sp;
-  LOG_DEBUG("sp=%p",sp);
+  LOG_DEBUG("sp=%p oldsz=%d", sp, oldsz);
+  FreeTaskPagetable(old_pagetable, oldsz);
   return argc;
 
 bad:
-  panic("exec");
-  // TODO 处理失败情况
-  return 0;
+  LOG_DEBUG("exec bad, path=%s", path);
+  if (pagetable)
+    FreeTaskPagetable(pagetable, sz);
+  return -1;
 }
 
 /**
@@ -128,20 +155,28 @@ bad:
  * @param sz 段在文件中的偏移量
  * @return 是否成功
  */
-static int loadseg(pagetable_t pagetable, uint64_t va, const char *path, uint_t offset, uint_t sz) {
-  uint_t i, n;
+static int loadseg(pagetable_t pagetable,
+                   uint64_t    va,
+                   const char *path,
+                   uint_t      offset,
+                   uint_t      sz)
+{
+  uint_t   i, n;
   uint64_t pa;
 
-  if ((va % PGSIZE) != 0) panic("loadseg: va must be page aligned");
+  if ((va % PGSIZE) != 0)
+    panic("loadseg: va must be page aligned");
 
   for (i = 0; i < sz; i += PGSIZE) {
     pa = walkAddr(pagetable, va + i);
-    if (pa == 0) panic("loadseg: address should exist");
+    if (pa == 0)
+      panic("loadseg: address should exist");
     if (sz - i < PGSIZE)
       n = sz - i;
     else
       n = PGSIZE;
-    if(vfs::direct_read(path, reinterpret_cast<char *>(pa), n, offset + i) != n)
+    if (vfs::direct_read(path, reinterpret_cast<char *>(pa), n, offset + i) !=
+        n)
       return -1;
     // if (read_inode(ip, 0, (uint64_t)pa, offset + i, n) != n) return -1;
   }

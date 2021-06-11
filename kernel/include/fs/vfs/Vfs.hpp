@@ -3,6 +3,7 @@
 
 #include "FileSystem.hpp"
 #include "StartOS.hpp"
+#include "file.h"
 #include "types.hpp"
 
 #define NFILESYSTEM 5
@@ -37,6 +38,16 @@ void init();
  * @return 成功返回fd，失败返回-1
  */
 int open(const char *filePath, size_t flags);
+
+/**
+ * @brief 打开指定目录下的文件
+ * @param dirfd 目录文件描述符
+ * @param filename 该目录下的文件名
+ * @param flags 文件标志位，如RDONLY
+ * @param mode 只在创建的时候有用，用于给文件设置权限，或创建文件的类型
+ * @return 成功返回fd，失败返回-1
+ */
+int openat(int dirfd, const char *filename, size_t flags, mode_t mode);
 
 /**
  * @brief 关闭给定的文件描述符
@@ -100,7 +111,8 @@ size_t read(int fd, bool user, char *dst, size_t count, size_t offset = 0);
  * @param offset The index where to start reading the file
  * @return a status code
  */
-size_t read(struct file *fp, bool user, char *dst, size_t count, size_t offset = 0);
+size_t
+read(struct file *fp, bool user, char *dst, size_t count, size_t offset = 0);
 
 /**
  * @brief 写文件，这个文件可以是设备，磁盘文件，管道等。
@@ -110,7 +122,8 @@ size_t read(struct file *fp, bool user, char *dst, size_t count, size_t offset =
  * @param offset 写入的开始位置
  * @return 成功返回写入字节数，失败返回-1
  */
-size_t write(struct file *fp, bool user, const char *src, size_t n, size_t offset = 0);
+size_t
+write(struct file *fp, bool user, const char *src, size_t n, size_t offset = 0);
 
 /**
  * @brief 写文件，这个文件可以是设备，磁盘文件，管道等。
@@ -170,7 +183,8 @@ int umount(const char *mpdir);
  *
  * @return 失败返回-1，成功返回0
  */
-size_t direct_read(const char *file, char *buffer, size_t count, size_t offset = 0);
+size_t
+direct_read(const char *file, char *buffer, size_t count, size_t offset = 0);
 
 /**
  * @brief 直接通过path向一个设备或者文件写入数据
@@ -183,7 +197,10 @@ size_t direct_read(const char *file, char *buffer, size_t count, size_t offset =
  *
  * @return 失败返回-1，成功返回0
  */
-size_t direct_write(const char *file, const char *buffer, size_t count, size_t offset = 0);
+size_t direct_write(const char *file,
+                    const char *buffer,
+                    size_t      count,
+                    size_t      offset = 0);
 
 /**
  * @brief 增长文件的ref计数

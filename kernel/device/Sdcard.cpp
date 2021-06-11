@@ -6,10 +6,11 @@
 #include "driver/dmac.hpp"
 #include "driver/gpiohs.hpp"
 #include "driver/spi.hpp"
-#include "fs/inodefs/BufferLayer.hpp"
 #include "os/SpinLock.hpp"
 #include "riscv.hpp"
 #include "types.hpp"
+
+#define BSIZE 512
 
 void SD_CS_HIGH(void)
 {
