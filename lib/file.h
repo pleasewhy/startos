@@ -1,14 +1,28 @@
 #ifndef FILE_H
 #define FILE_H
 
-#define DT_FIFO 1
-#define DT_DIR 4
+/*
+ * File types
+ *
+ * NOTE! These match bits 12..15 of stat.st_mode
+ * (ie "(i_mode >> 12) & 15").
+ */
+#define DT_UNKNOWN	0
+#define DT_FIFO		1
+#define DT_CHR		2
+#define DT_DIR		4
+#define DT_BLK		6
+#define DT_REG		8
+#define DT_LNK		10
+#define DT_SOCK		12
+#define DT_WHT		14
+
 typedef unsigned int mode_t;
 typedef long int off_t;
 
 #define DIENT_BASE_LEN sizeof(long) * 2 + sizeof(short) + sizeof(char)
 
-struct kernel_dirent {
+struct linux_dirent {
     unsigned long d_ino;	// 索引结点号
     long d_off;	// 到下一个dirent的偏移
     unsigned short d_reclen;	// 当前dirent的长度

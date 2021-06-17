@@ -10,7 +10,8 @@
 
 extern Console console;
 
-void Console::init() {
+void Console::init()
+{
   this->spinLock.init("console");
   this->read_index = 0;
   this->write_index = 0;
@@ -18,27 +19,31 @@ void Console::init() {
 
 Console::Console() {}
 
-void Console::putc(int c) {
+void Console::putc(int c)
+{
   if (c == BACKSPACE) {
     // 处理退格
     sbi_console_putchar('\b');
     sbi_console_putchar(' ');
     sbi_console_putchar('\b');
-  } else {
+  }
+  else {
     sbi_console_putchar(c);
   }
 }
 
-int Console::read(uint64_t dst, bool user, int n) {
+int Console::read(uint64_t dst, bool user, int n)
+{
   char c;
-  int expect = n;
+  int  expect = n;
   this->spinLock.lock();
   while (n > 0) {
     while (this->read_index == this->write_index) {
       sleep(&this->read_index, &this->spinLock);
     }
     c = this->buf[this->read_index++ % INPUT_BUF];
-    if (either_copyout(user, dst, &c, 1) < 0) break;
+    if (either_copyout(user, dst, &c, 1) < 0)
+      break;
     dst++;
     n--;
     // 当输入一整行时，需要返回
@@ -51,13 +56,15 @@ int Console::read(uint64_t dst, bool user, int n) {
   return expect - n;
 }
 
-int Console::write(uint64_t src, bool user, int n) {
+int Console::write(uint64_t src, bool user, int n)
+{
   int i;
 
   this->spinLock.lock();
   for (i = 0; i < n; i++) {
     char c;
-    if (either_copyin(user, &c, src + i, 1) == -1) break;
+    if (either_copyin(user, &c, src + i, 1) == -1)
+      break;
     sbi_console_putchar(c);
   }
   this->spinLock.unlock();
@@ -65,7 +72,8 @@ int Console::write(uint64_t src, bool user, int n) {
   return i;
 }
 
-void Console::console_intr(char c) {
+void Console::console_intr(char c)
+{
   switch (c) {
     case '\x08':  // backspace
     case '\x7f':  // del
@@ -85,7 +93,8 @@ void Console::console_intr(char c) {
 //    linux:    '\n'
 //    windows:  '\r\n'
 #ifdef K210
-      if (c == '\r') break;
+      if (c == '\r')
+        break;
 #else
       c = (c == '\r') ? '\n' : c;
 #endif

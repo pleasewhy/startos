@@ -32,7 +32,7 @@ void ls(const char *filepath)
   int          fd;
   char *       type;
 
-  struct kernel_dirent *dirents_ptr = buf;
+  struct linux_dirent *dirents_ptr = buf;
   fd = open(filepath, O_RDONLY);
   fstat(fd, &kst);
   if (!S_ISDIR(kst.st_mode)) {

@@ -48,6 +48,17 @@ SECTIONS
         ebss_clear = .;
     }
 
+    .init_array : ALIGN(8) {
+        PROVIDE_HIDDEN (__init_array_start = .);
+        KEEP (*(SORT_BY_INIT_PRIORITY(.init_array.*) SORT_BY_INIT_PRIORITY(.ctors.*)))
+        KEEP (*(.init_array EXCLUDE_FILE (*crtbegin.o *crtbegin?.o *crtend.o *crtend?.o ) .ctors))
+        PROVIDE_HIDDEN (__init_array_end = .);
+        PROVIDE_HIDDEN ( metal_constructors_start = .);
+        KEEP (*(SORT_BY_INIT_PRIORITY(.metal.init_array.*)));
+        KEEP (*(.metal.init_array));
+        PROVIDE_HIDDEN ( metal_constructors_end = .);
+    }
+    
     . = ALIGN(4K);
     PROVIDE(end = .);
 }

@@ -1,6 +1,6 @@
 #ifndef __BUDDY_ALLOCATOR_HPP
 #define __BUDDY_ALLOCATOR_HPP
-#include "Bitmap.hpp"
+// #include "Bitmap.hpp"
 #include "types.hpp"
 
 namespace mem {

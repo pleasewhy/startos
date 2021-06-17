@@ -142,7 +142,7 @@ size_t Fat32FileSystem::rm(const char *filepath)
   return 0;
 }
 
-int copysfn(char *sfn, char *dst, bool user)
+static int copysfn(char *sfn, char *dst, bool user)
 {
   int n = 0, i = 0;
   // 计算文件名的长度
@@ -165,7 +165,7 @@ int copysfn(char *sfn, char *dst, bool user)
 // fat32长文件目录项的文件名的储存格式为unicode
 // 其宽度为2, 为了方便处理将所有的Unicode都装换为
 // 单字节格式
-int copylfn(FatFileEntry &entry, uint64_t dst, bool user)
+static int copylfn(FatFileEntry &entry, uint64_t dst, bool user)
 {
   int sno = entry.lfn.sequence_number & ~0x40;
 
@@ -222,8 +222,8 @@ int Fat32FileSystem::ls(const char *filepath,
 {
   LOG_DEBUG("fat32 ls");
   sleep_lock.lock();
-  struct kernel_dirent *dirent;
-  struct kernel_dirent  dt;
+  struct linux_dirent *dirent;
+  struct linux_dirent  dt;
   FatFileEntry   entry;
   int            readn = 0, lfn_entries = 0;
   TFFile *       fp = tf_fopen(filepath, "r");
@@ -252,7 +252,7 @@ int Fat32FileSystem::ls(const char *filepath,
         dt.d_type = DT_FIFO;
       }
       // 将contents转换为struct dirent *类型，方便得到d_name的偏移量
-      dirent = reinterpret_cast<struct kernel_dirent *>(contents);
+      dirent = reinterpret_cast<struct linux_dirent *>(contents);
       // 将sfn的文件名复制到目录项对应位置中
       int n = copysfn(entry.msdos.filename, dirent->d_name, user);
 
@@ -271,7 +271,7 @@ int Fat32FileSystem::ls(const char *filepath,
       readn += dt.d_reclen;
     }
     else if ((entry.lfn.sequence_number & 0xc0) == 0x40) {  // 长文件名目录项
-      dirent = reinterpret_cast<struct kernel_dirent *>(contents);
+      dirent = reinterpret_cast<struct linux_dirent *>(contents);
       // 计算lfn的数量
       lfn_entries = entry.lfn.sequence_number & ~0x40;
       if (lfn_entries * LFN_NAME_CAPACITY + readn >= len) {

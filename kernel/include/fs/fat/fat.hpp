@@ -2,6 +2,8 @@
 #define __FAT_HPP
 
 #include "types.hpp"
+#include "StartOS.hpp"
+#include "fs/vfs_file.h"
 
 namespace fat32 {
 
@@ -21,6 +23,9 @@ const uint8_t kFatAttrLongEntry = 0xF;  // 为此值时表示该目录项为长�
 const uint32_t kBadCluster32 = 0x0ffffff7;
 const uint32_t kEndOfCluster32 = 0x0fffffff;  // 文件结束标志
 const uint8_t  kFatEntryBytes = 4;            // fat表项为4个字节
+
+const uint32_t kLongNameLength = 13;
+const uint32_t kShortNameLength = 12;  // 包括.
 
 // Bios Parameter Block
 struct FatBpb
@@ -92,28 +97,28 @@ typedef struct ShortEntryStruct
 typedef struct LongEntryStruct
 {
   uint8_t  sequence_number;
-  uint16_t name_first[5];
+  uint16_t name0_4[5];
   uint8_t  attrib;
   uint8_t  reserved;
   uint8_t  alias_checksum;
-  uint16_t name_second[6];
+  uint16_t name5_10[6];
   uint16_t starting_cluster;
-  uint16_t name_third[2];
+  uint16_t name11_12[2];
 } LongEntry;
 
-union ClusterEntry
+union MsdosEntry
 {
-  LongEntry  long_entry;
-  ShortEntry short_entry;
+  LongEntry  lfn;
+  ShortEntry sfn;
 };
 
 static_assert(sizeof(ShortEntry) == 32, "A cluster entry is 32 bytes");
 static_assert(sizeof(LongEntry) == 32, "A cluster entry is 32 bytes");
 #pragma pack(pop)
 
-inline bool IsLongEntry(ClusterEntry entry)
+inline bool IsLongEntry(MsdosEntry entry)
 {
-  return entry.long_entry.attrib == kFatAttrLongEntry;
+  return entry.lfn.attrib == kFatAttrLongEntry;
 }
 
 /**
@@ -122,10 +127,47 @@ inline bool IsLongEntry(ClusterEntry entry)
  * 曾经使用过，但被删除了为0x00,表明该entry没有
  * 被使用过
  */
-inline bool IsAllocated(ClusterEntry entry)
+inline bool IsAllocated(MsdosEntry entry)
 {
-  return entry.short_entry.name[0] != 0x00 && entry.short_entry.name[0] != 0xe5;
+  return entry.sfn.name[0] != 0x00 && entry.sfn.name[0] != 0xe5;
 }
+
+const uint_t kSectorSize = 512;
+
+/*
+ * 用于在内存中存放，Fat32文件系统inode数据
+ */
+struct MsdosInodeInfo
+{
+  int          i_start;     // 第一个簇号或0
+  int          i_logstart;  // 逻辑簇
+  int          i_attrs;     // 属性
+  uint64_t     i_pos;       // 目录项在磁盘上的位置或0
+  struct inode vfs_inode;
+};
+
+static inline struct MsdosInodeInfo *MSDOS_I(struct inode *inode)
+{
+  return container_of(inode, struct MsdosInodeInfo, vfs_inode);
+}
+
+static inline uint64_t GetFirstCluster(const MsdosEntry &entry)
+{
+  uint64_t ino = entry.sfn.cluster_high;
+  ino = ino << 16;
+  return ino + entry.sfn.cluster_low;
+}
+/**
+ * @brief 将FAT时间格式转换为UNIX时间(1970年1月1日之后的经过的秒)
+ *
+ * @param ts 用于存放计算结果
+ * @param __date  FAT时间格式(年月日)
+ * @param __time  FAT时间格式(时分秒)
+ */
+void FatTime2Unix(struct time::timespec *ts, uint16_t __date, uint16_t __time);
+
+// 将unix时间格式换为Fat时间格式
+void UnixTime2Fat(struct time::timespec *ts, uint16_t *date, uint16_t *time);
 
 }  // namespace fat32
 

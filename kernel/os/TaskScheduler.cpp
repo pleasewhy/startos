@@ -5,6 +5,7 @@
 #include "device/Console.hpp"
 #include "fcntl.h"
 #include "file.h"
+#include "map.hpp"
 #include "fs/fat/Fat32.hpp"
 #include "fs/vfs/Vfs.hpp"
 #include "memlayout.hpp"
@@ -316,6 +317,7 @@ void initFirstTask()
   initTask = task;
 }
 
+void TestSTL();
 // fork的子进程的会从此处开始执行
 void forkret(void)
 {
@@ -330,7 +332,9 @@ void forkret(void)
     // be run from main().
     //
     first = 0;
-
+#ifdef TEST_STL
+    TestSTL();
+#endif
     fat32::Fat32FileSystem *fs = new fat32::Fat32FileSystem(0);
     printf("fs=%p", fs);
     while (1)
@@ -381,7 +385,7 @@ found:
   memset(&task->context, 0, sizeof(task->context));
   memset(task->trapframe, 0, sizeof(*task->trapframe));
 
-  task->context.sp = task->kstack + PGSIZE;
+  task->context.sp = task->kstack + KSTACK_SIZE;
   task->context.ra = (uint64_t)forkret;
   task->lock.unlock();
   return task;
@@ -984,4 +988,26 @@ struct vma *allocVma()
 void freeVma(struct vma *a)
 {
   memset(a, 0, sizeof(struct vma));
+}
+
+void TestHashMap()
+{
+  auto map = new std::map<int, Task *>(5);
+  map->put(1, new Task);
+  // map->put(1, new Task);
+  map->put(50, new Task);
+  // map->poll(1);
+  auto iter = map->begin();
+  while (iter != nullptr) {
+    printf("key=%d,val=%p\n", iter->key, iter->val);
+    iter++;
+  }
+
+  LOG_DEBUG("get=%p", map->get(1));
+  delete map;
+}
+
+void TestSTL()
+{
+  TestHashMap();
 }

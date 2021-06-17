@@ -44,6 +44,19 @@ void print_logo()
   printf("\n");
 }
 
+typedef void (*function_t)();
+// 由链接脚本提供
+extern "C" function_t __init_array_start[];
+extern "C" function_t __init_array_end[];
+
+void _call_global_constructor()
+{
+  // 调用全局对象构造函数
+  for (function_t *fn = __init_array_start; fn < __init_array_end; fn++) {
+    (*fn)();
+  }
+}
+
 extern "C" void main(unsigned long hartid, unsigned long dtb_pa)
 {
   inithartid(hartid);  // 将hartid保存在tp寄存器中
@@ -52,10 +65,11 @@ extern "C" void main(unsigned long hartid, unsigned long dtb_pa)
     console.init();  // 初始化控制台
     printfinit();
     print_logo();
-    memAllocator.init();  // 初始化page分配器
-    buddy_alloc_.init();  // 初始化通用内存分配器
-    initKernelVm();       // 初始化内核虚拟内存
-    initHartVm();         // 启用分页
+    _call_global_constructor();  // 初始化全局对象
+    memAllocator.init();         // 初始化page分配器
+    buddy_alloc_.init();         // 初始化通用内存分配器
+    initKernelVm();              // 初始化内核虚拟内存
+    initHartVm();                // 启用分页
     timer::init();
     trapinithart();  // 初始化trap
     syscall_init();  // 初始化系统调用
