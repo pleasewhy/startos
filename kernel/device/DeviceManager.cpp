@@ -63,7 +63,7 @@ int RwDevRead(int dev, char *buf, int offset, int n)
  *
  * @param dev 设备号
  */
-int RwDevWrite(int dev, const char *buf, int offset, int n)
+int RwDevWrite(int dev, char *buf, int offset, int n)
 {
   return rw_devs[dev]->write((char *)buf, offset, n);
 }

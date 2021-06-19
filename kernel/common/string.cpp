@@ -147,24 +147,29 @@ char *strrchr(const char *s, char c)
 }
 
 // 将char字符串转换为wchar字符串
-void CopyCharToWchar(wchar_t *dst, char const *src, int len)
+void CopyCharToWchar(uint16_t *dst, char const *src, int len)
 {
-  while (len-- && *src) {
-    *(uchar_t *)dst = *src++;
+  int i;
+  for (i = 0; i < len; i++) {
+    *dst = *src++;
     dst++;
   }
-  *dst = 0;
+  for (; i < len; i++) {
+    *dst++ = 0;
+  }
 }
 
 // 将wchar字符串装换为char字符串
 void CopyWcharToChar(char *dst, uint16_t const *src, int len)
 {
-  while (len-- && *src) {
+  int i;
+  for (i = 0; i < len; i++) {
     *dst++ = (uchar_t)(*src & 0xff);
     src++;
   }
-  while (len-- > 0)
+  for (; i < len; i++) {
     *dst++ = 0;
+  }
 }
 
 int wcsncmp(wchar_t const *s1, wchar_t const *s2, int len)

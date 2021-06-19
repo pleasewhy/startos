@@ -78,6 +78,7 @@ public:
    * @brief 向inode写入数据
    * @note 调用者需要持有inode->lock,如果user为true
    * 则buf为用户虚拟地址，否则dst为内核地址
+   * @return 成功返回0，失败返回-1
    */
   int WriteInode(
       struct inode *ip, bool user, uint64_t buf, uint64_t off, uint_t n);
@@ -108,6 +109,38 @@ public:
    */
   int ReadDir(
       struct file *fp, struct inode *ip, char *buf, int max_len, bool user);
+
+  /**
+   * @brief 在dir目录下创建一个新的目录，该方法为系统调用
+   * mkdir的底层实现
+   *
+   * @param dir 给定的目录
+   * @param name 创建目录的名称
+   * @param mode 该目录的文件类型和访问权限
+   * @return int 成功返回0.失败返回-1
+   *
+   */
+  int Mkdir(struct inode *dir, const char *name, int mode);
+
+  /**
+   * @brief 删除dir目录下name对应的目录项, 并递减对应
+   * 索引节点的nlink。
+   *
+   * @note Fat文件系统中不存在inode这一结构，该调用对于
+   * 普通文件直接删除，对于目录，若为空则删除，不为空则
+   * 失败
+   *
+   * @exception 文件不存在，name对应的文件为非空目录
+   * @return 失败返回-1，成功返回0
+   */
+  int Unlink(struct inode *dir, const char *name);
+
+  // /**
+  //  * @brief 删除一个空目录，该方法被系统调用rmdir调用
+  //  *
+  //  * @return int 成功返回0, 失败返回-1
+  //  */
+  // int Rmdir();
 
 private:
   /**
@@ -142,6 +175,14 @@ private:
    * @return struct inode* pos对应的inode
    */
   struct inode *GetInode(uint64_t pos);
+
+  /**
+   * @brief 找到给定目录下可容纳n个连续的
+   * 目录项的空闲空间
+   *
+   * @return 这块空间的起始地址
+   */
+  uint64_t FindFreeEntry(struct inode *dir, int n);
 
   /**
    * @brief 获取一个entry相关的inode，并初始化
@@ -211,6 +252,22 @@ private:
   inline uint32_t GetFatEntry(uint32_t cluster);
 
   /**
+   * @brief 释放cluster链
+   * 
+   * @param cluster cluster链的起点
+   */
+  inline void FreeClusterChain(uint32_t cluster);
+  /**
+   * @brief 将off之前或之后的连续|n|个目录项
+   * 在磁盘中标记为已删除，往前或往后取决于n为
+   * 正数还是负数。
+   *
+   * @param off 标记删除的基准偏移量
+   * @param n 正数向前删除，负数向后删除
+   */
+  void MarkEntryDeleted(struct inode *ip, uint32_t off, int n) noexcept;
+
+  /**
    * @brief 写指定簇
    */
   inline int WriteCluster(uint32_t cluster, char *data);
@@ -232,11 +289,13 @@ private:
    */
   int WriteSector(int sector, char *data);
 
+public:
+  Fat32Info info_;  // fat32文件系统需要维护的数据
+
 private:
   FatBpb    fat_bpb_;        // fat32启动扇区
   FatFsInfo fat_fs_info_;    // fat32信息扇区
   int       dev_;            // 挂载设备号
-  Fat32Info info_;           // fat32文件系统需要维护的数据
   int       max_inode_num_;  // inode缓存最大数量
   std::map<uint64_t, struct inode *> *inode_cache_map_;
 };

@@ -60,6 +60,7 @@ fs.img: $(UPROGS)
 		mkfs.vfat -F 32 fs.img; fi
 	@sudo mount fs.img $(dst)
 	@if [ ! -d "$(dst)/bin" ]; then sudo mkdir $(dst)/bin; fi
+	sudo cp  this_is_long_name_file.txt $(dst)/this_is_long_name_file.txt
 	@for file in $$( ls _* ); do \
 		sudo cp $$file $(dst)/$${file#_};\
 		sudo cp $$file $(dst)/bin/$${file#_}; \
@@ -69,6 +70,6 @@ fs.img: $(UPROGS)
 
 clean: 
 	rm -f *.tex *.dvi *.idx *.aux *.log *.ind *.ilg *.d *.o *.out _* fs.img \
-			*.asm *.sym init *.txt *.bin
+			*.asm *.sym init *.bin
 
 .PHONY: clean initcode

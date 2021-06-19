@@ -67,6 +67,7 @@ OBJS += \
 	os/trap.o \
 	os/kernelvec.o \
 	os/Timer.o \
+	os/time.o \
 	os/TaskScheduler.o \
 	os/SleepLock.o \
 	os/switch.o \
@@ -85,7 +86,7 @@ OBJS += \
 	fs/devfs/DeviceFileSystem.o \
 	fs/vfs_file.o \
 	fs/fat32/fat32_file_system.o \
-	fs/fat32/fat_time.o \
+	fs/fat32/fat_utils.o \
 	fs/Pipe.o
 
 

@@ -3,6 +3,8 @@
 
 #include "types.hpp"
 #include "StartOS.hpp"
+#include "fcntl.h"
+#include "common/logger.h"
 #include "fs/vfs_file.h"
 
 namespace fat32 {
@@ -25,7 +27,12 @@ const uint32_t kEndOfCluster32 = 0x0fffffff;  // 文件结束标志
 const uint8_t  kFatEntryBytes = 4;            // fat表项为4个字节
 
 const uint32_t kLongNameLength = 13;
-const uint32_t kShortNameLength = 12;  // 包括.
+const uint32_t kShortNameLength = 12;  // 包括dot
+
+const char    kShortNameFillStuff = 0x20;
+const uint8_t kMsdosEntrySize = 32;
+const char    kDeletedMark = 0xe5;
+const char    kFreeMark = 0x0;
 
 // Bios Parameter Block
 struct FatBpb
@@ -99,10 +106,10 @@ typedef struct LongEntryStruct
   uint8_t  sequence_number;
   uint16_t name0_4[5];
   uint8_t  attrib;
-  uint8_t  reserved;
-  uint8_t  alias_checksum;
+  uint8_t  reserved0;
+  uint8_t  checksum;
   uint16_t name5_10[6];
-  uint16_t starting_cluster;
+  uint16_t reserved1;
   uint16_t name11_12[2];
 } LongEntry;
 
@@ -132,6 +139,23 @@ inline bool IsAllocated(MsdosEntry entry)
   return entry.sfn.name[0] != 0x00 && entry.sfn.name[0] != 0xe5;
 }
 
+/**
+ * @brief 判断目录项是否被使用
+ *
+ */
+inline bool IsFree(MsdosEntry entry)
+{
+  return entry.sfn.name[0] == kFreeMark;
+}
+
+/**
+ * @brief 判断目录项是否deleted
+ */
+inline bool IsDeleted(MsdosEntry entry)
+{
+  return entry.sfn.name[0] == kDeletedMark;
+}
+
 const uint_t kSectorSize = 512;
 
 /*
@@ -151,12 +175,13 @@ static inline struct MsdosInodeInfo *MSDOS_I(struct inode *inode)
   return container_of(inode, struct MsdosInodeInfo, vfs_inode);
 }
 
-static inline uint64_t GetFirstCluster(const MsdosEntry &entry)
+static inline uint64_t GetStartCluster(const MsdosEntry &entry)
 {
   uint64_t ino = entry.sfn.cluster_high;
   ino = ino << 16;
   return ino + entry.sfn.cluster_low;
 }
+
 /**
  * @brief 将FAT时间格式转换为UNIX时间(1970年1月1日之后的经过的秒)
  *
@@ -169,6 +194,32 @@ void FatTime2Unix(struct time::timespec *ts, uint16_t __date, uint16_t __time);
 // 将unix时间格式换为Fat时间格式
 void UnixTime2Fat(struct time::timespec *ts, uint16_t *date, uint16_t *time);
 
+// 计算长文件名目录项的校验码
+inline unsigned char FatChecksum(const char *name)
+{
+  unsigned char s = name[0];
+  s = (s << 7) + (s >> 1) + name[1];
+  s = (s << 7) + (s >> 1) + name[2];
+  s = (s << 7) + (s >> 1) + name[3];
+  s = (s << 7) + (s >> 1) + name[4];
+  s = (s << 7) + (s >> 1) + name[5];
+  s = (s << 7) + (s >> 1) + name[6];
+  s = (s << 7) + (s >> 1) + name[7];
+  s = (s << 7) + (s >> 1) + name[8];
+  s = (s << 7) + (s >> 1) + name[9];
+  s = (s << 7) + (s >> 1) + name[10];
+  return s;
+}
+
+// 将inode的mode转换为fat32的attribute
+inline static char mkattr(int mode)
+{
+  char attribute = 0;
+  if (S_ISDIR(mode)) {
+    attribute |= kFatAttrDirentory;
+  }
+  return attribute;
+}
 }  // namespace fat32
 
 #endif

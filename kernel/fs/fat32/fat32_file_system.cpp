@@ -11,6 +11,9 @@
 
 namespace fat32 {
 
+// 测试的入口函数
+static void Test(Fat32FileSystem *fs);
+
 __attribute__((used)) static void PrintBootSectorInfo(FatBpb *bpb)
 {
   printf("================= BIOS PARAMETER BLOCK =================\n");
@@ -103,37 +106,9 @@ int Fat32FileSystem::Init()
   info_.root_.vfs_inode.sleeplock.init("fat32 root");
 
   LOG_DEBUG("first data sector=%d", info_.first_data_sector_);
-  char        buf[512];
-  int         i = 0;
-  MsdosEntry *entry = (MsdosEntry *)buf;
-  while (true) {
-    memset(buf, 0, 512);
-    ReadInode(&info_.root_.vfs_inode, false, (uint64_t)buf,
-              i * sizeof(MsdosEntry), sizeof(MsdosEntry));
-    if (entry->sfn.name[0] == 0) {
-      printf("null\n");
-      break;
-    }
-    if (entry->sfn.attrib != kFatAttrLongEntry) {
-      printf("attr=%p short name=%s\n", entry->sfn.attrib, entry->sfn.name);
-    }
-    ++i;
-  }
-  struct file f;
-  f.inode = &info_.root_.vfs_inode;
-  f.offset = 0;
-  linux_dirent *de = (linux_dirent *)buf;
-  memset(buf, 0, 512);
-  ReadDir(&f, f.inode, buf, 512, false);
-  while (de->d_reclen != 0) {
-    LOG_DEBUG("dirent=%s", de->d_name);
-    de = (linux_dirent *)(de->d_off);
-  }
-  struct inode *ip = Lookup(&info_.root_.vfs_inode, "cat");
-  printf("seconds=%d\n", ip->mtime);
-  ip = Lookup(&info_.root_.vfs_inode, "bin");
-  printf("seconds=%d\n", ip->ctime);
-  LOG_DEBUG("lookup sz=%d", ip->sz);
+  // struct inode *ip = Lookup(&info_.root_.vfs_inode, "cat");
+
+  Test(this);
   return 0;
 }
 
@@ -151,43 +126,124 @@ struct inode *Fat32FileSystem::AllocInode()
   return &ms_inode->vfs_inode;
 }
 
-static void FillShortFile(ShortEntry *entry, const char *name, int mode) {
-  return;
+static char toUpCase(char c)
+{
+  if (c >= 'a' && c <= 'z') {
+    return c - 32;
+  }
+  return c;
 }
 
-/**
- * @brief 找到给定目录下可容纳n个连续的
- * 目录项的空闲空间
- * 
- * @return 这块空间的起始地址
- */
-static uint64_t FindFreeEntry(int n){
-  
+// 暂时不处理文件名重复的情况
+static void
+FillShortFile(ShortEntry *entry, const char *name, uint32_t cluster, int mode)
+{
+  // fill name
+  char *dot = strrchr(name, '.');
+  int   len;
+
+  memset(entry->name, kShortNameFillStuff, 11);
+  if (dot != 0) {
+    len = strlen(dot + 1);
+    len = len > 3 ? 3 : len;
+    strncpy(entry->name + 8, dot + 1, len);
+    len = dot - name;  // dot前的长度
+  }
+  else
+    len = strlen(name);
+  if (len > 8) {
+    strncpy(entry->name, name, 6);
+    entry->name[6] = '~';
+    entry->name[7] = '1';
+  }
+  else {
+    strncpy(entry->name, name, len);
+  }
+  for (int i = 0; i < len; i++) {
+    entry->name[i] = toUpCase(entry->name[i]);
+  }
+
+  // fill attribute
+  entry->attrib = mkattr(mode);
+
+  // fill time
+  time::timespec now_ts;
+  time::CurrentTimeSpec(&now_ts);
+  UnixTime2Fat(&now_ts, &entry->creation_date, &entry->creation_time);
+  // 短文件目录项没有访问时间，故这里使用creation_time
+  UnixTime2Fat(&now_ts, &entry->accessed_date, &entry->creation_time);
+  UnixTime2Fat(&now_ts, &entry->modification_date, &entry->modification_time);
+
+  // fill first cluster
+  entry->cluster_low = (uint16_t)(cluster & 0xffff);
+  entry->cluster_high = (uint16_t)(cluster >> 16);
+
+  entry->file_size = 0;
+}
+
+uint64_t Fat32FileSystem::FindFreeEntry(struct inode *dir, int n)
+{
+  MsdosEntry entry;
+  uint64_t   off = 0;
+  int        nfree = 0;  // 空闲目录项数量
+  while (ReadInode(dir, false, reinterpret_cast<uint64_t>(&entry), off,
+                   sizeof(entry)) == sizeof(entry)) {
+    off += sizeof(entry);
+    if (IsDeleted(entry) || IsFree(entry)) {
+      nfree++;
+    }
+    else {
+      nfree = 0;
+    }
+    if (nfree == n) {
+      return off - nfree * sizeof(entry);
+    }
+  }
+  panic("fat32:can't find free entry");
+  return 0;
 }
 
 int Fat32FileSystem::Create(struct inode *dir, const char *name, int mode)
 {
-  char *     data = new char[info_.bytes_per_cluster_];
   LongEntry  long_entry;
   ShortEntry short_entry;
   memset(&long_entry, 0, sizeof(long_entry));
   memset(&short_entry, 0, sizeof(short_entry));
-  time::timespec now_ts;
-  time::CurrentTimeSpec(&now_ts);
+
   int name_len = strlen(name);
   // (a+b-1)/b: a/b向上取整
   int lfn_num = (name_len + kLongNameLength - 1) / kLongNameLength;
-  if (S_ISDIR(mode)) {
-    short_entry.attrib |= __S_IFDIR;
+  LOG_DEBUG("lfn num=%d", lfn_num);
+  // 获取短文件目录项的写入位置
+  uint32_t off = FindFreeEntry(dir, lfn_num + 1) + lfn_num * kMsdosEntrySize;
+  LOG_DEBUG("off=%d", off);
+  // 填充短文件目录项
+  FillShortFile(&short_entry, name, AllocCluster(), mode);
+
+  // 写入短文件目录项
+  WriteInode(dir, false, reinterpret_cast<uint64_t>(&short_entry), off,
+             sizeof(short_entry));
+  off -= sizeof(short_entry);
+
+  // 写入长文件目录名
+  uchar_t checksum = FatChecksum(short_entry.name);
+  LOG_DEBUG("%s len=%d", name, lfn_num);
+  for (uint8_t seq = 1; seq <= lfn_num; seq++) {
+    memset(&long_entry, 0xff, kMsdosEntrySize);
+    long_entry.sequence_number = seq;
+    if (seq == lfn_num) {  // 最后一个lfn的序列号与0x40进行或运算
+      long_entry.sequence_number |= 0x40;
+    }
+    CopyCharToWchar(long_entry.name0_4, name, 5);
+    CopyCharToWchar(long_entry.name5_10, name + 5, 6);
+    CopyCharToWchar(long_entry.name11_12, name + 11, 2);
+    name += kLongNameLength;
+    long_entry.checksum = checksum;
+    long_entry.attrib = kFatAttrLongEntry;
+    WriteInode(dir, false, reinterpret_cast<uint64_t>(&long_entry), off,
+               kMsdosEntrySize);
+    off -= kMsdosEntrySize;
   }
-  else {
-    short_entry.attrib |= __S_IFREG;
-  }
-  UnixTime2Fat(&now_ts, &short_entry.creation_date, &short_entry.creation_time);
-  // 短文件目录项没有访问时间，故这里使用creation_time
-  UnixTime2Fat(&now_ts, &short_entry.accessed_date, &short_entry.creation_time);
-  UnixTime2Fat(&now_ts, &short_entry.modification_date,
-               &short_entry.modification_time);
   return 0;
 }
 
@@ -232,10 +288,10 @@ struct inode *Fat32FileSystem::BuildInode(MsdosEntry &  entry,
 
   // 填充对应MsdosInodeInfo数据
   inode_info->i_pos = pos;
-  inode_info->i_start = GetFirstCluster(entry);
+  inode_info->i_start = GetStartCluster(entry);
   // 填充inode数据
   ip->dev = this->dev_;
-  ip->inum = GetFirstCluster(entry);
+  ip->inum = GetStartCluster(entry);
   ip->parent = parent->dup();
   ip->sz = entry.sfn.file_size;
   ip->sleeplock.init("inode");
@@ -262,20 +318,21 @@ void Fat32FileSystem::DeleteInode(struct inode *inode)
 
 uint32_t Fat32FileSystem::AllocCluster()
 {
-  char *data = new char[kSectorSize];
+  char *fat_sector = new char[kSectorSize];
   // 遍历全部fat表，获取一个空闲的cluster
   // TODO 是否可以将fat表全部缓存到内存中？
-  LOG_DEBUG("%d", info_.fat_num_ * info_.sectors_per_fat_);
   uint_t enteies_of_sector = kSectorSize / kFatEntryBytes;
   for (size_t sector = info_.reserve_sectors_;
        sector < info_.fat_num_ * info_.sectors_per_fat_; sector++) {
-    ReadSector(sector, data);
+    ReadSector(sector, fat_sector);
     for (size_t i = 0; i < enteies_of_sector; i++) {
-      if (reinterpret_cast<uint32_t *>(data)[i] == 0x00) {
-        reinterpret_cast<uint32_t *>(data)[i] = kEndOfCluster32;
-        WriteSector(sector, data);
-        uint32_t cluster = enteies_of_sector * sector + i;
+      if (reinterpret_cast<uint32_t *>(fat_sector)[i] == 0x00) {
+        reinterpret_cast<uint32_t *>(fat_sector)[i] = kEndOfCluster32;
+        WriteSector(sector, fat_sector);
+        uint32_t cluster =
+            enteies_of_sector * (sector - info_.reserve_sectors_) + i;
         ZeroCluster(cluster);
+        LOG_DEBUG("alloc cluster=%d", cluster);
         return cluster;
       }
     }
@@ -332,14 +389,17 @@ int Fat32FileSystem::WriteInode(
   char *data = new char[info_.bytes_per_cluster_];
   for (total = 0, nwrite = 0; total < n;
        total += nwrite, off += nwrite, buf += nwrite) {
-    ReadCluster(bmap(ip, (off / info_.bytes_per_cluster_)), data);
+    uint32_t cluster = bmap(ip, (off / info_.bytes_per_cluster_));
+    ReadCluster(cluster, data);
     mod = off % info_.bytes_per_cluster_;
-    nwrite = min(nwrite - total, info_.bytes_per_cluster_ - mod);
-    if (either_copyin(user, (void *)buf, (uint64_t)(data + mod), nwrite) < 0) {
+    nwrite = min(n - total, info_.bytes_per_cluster_ - mod);
+    if (either_copyin(user, (data + mod), buf, nwrite) < 0) {
       total = -1;
       break;
     }
+    WriteCluster(cluster, data);
   }
+
   if (off > ip->sz) {
     ip->sz = off;
   }
@@ -373,6 +433,8 @@ __attribute__((used)) static int copysfn(const char *sfn, char *dst)
 // fat32长文件目录项的文件名的储存格式为unicode
 // 其宽度为2, 为了方便处理将所有的Unicode都装换为
 // 单字节格式
+// 这会根据entry->sequence_number计算entry的名称应该
+// 写入到dst的位置
 __attribute__((used)) static inline int copylfn(const MsdosEntry &entry,
                                                 char *            dst)
 {
@@ -380,19 +442,16 @@ __attribute__((used)) static inline int copylfn(const MsdosEntry &entry,
 
   // 通过长文件名目录项的序列号，计算当前lfn的name偏移量
   int offset = kLongNameLength * (sno - 1);
-
   // 这样复制可能会浪费空间
   CopyWcharToChar(dst + offset, (uint16_t *)entry.lfn.name0_4, 5);
   CopyWcharToChar(dst + offset + 5, (uint16_t *)entry.lfn.name5_10, 6);
   CopyWcharToChar(dst + offset + 11, (uint16_t *)entry.lfn.name11_12, 2);
-
-  dst[kLongNameLength] = 0;
+  // dst[kLongNameLength] = 0;
   return kLongNameLength;
 }
 
 struct inode *Fat32FileSystem::Lookup(struct inode *dir, const char *name)
 {
-  LOG_DEBUG("lookup");
   if (strncmp(".", name, strlen(name)) == 0) {
     dir->dup();
     return dir;
@@ -406,19 +465,21 @@ struct inode *Fat32FileSystem::Lookup(struct inode *dir, const char *name)
   MsdosEntry entry;
   char       tmp_name[64];
   uint64_t   off = 0;
+  int        name_len = 0;
   while (ReadInode(dir, false, reinterpret_cast<uint64_t>(&entry), off,
                    sizeof(entry)) == sizeof(entry)) {
     off += sizeof(entry);
     if (entry.sfn.name[0] == 0x00) {
       goto bad;
     }
+
     if (entry.sfn.attrib != kFatAttrLongEntry) {  // 短文件目录项
-      // 设置目录项类型
+      // 不应该进入该分支
       copysfn(entry.sfn.name, tmp_name);
     }
     else if ((entry.lfn.sequence_number & 0xc0) == 0x40) {
       int nlfn = entry.lfn.sequence_number & ~0x40;  // 长文件目录项的数量
-      int name_len = 0;
+      name_len = 0;
       name_len += copylfn(entry, tmp_name);
       for (int i = 1; i < nlfn; i++) {  // 读取剩下的lfn
         if (ReadInode(dir, false, reinterpret_cast<uint64_t>(&entry), off,
@@ -426,7 +487,7 @@ struct inode *Fat32FileSystem::Lookup(struct inode *dir, const char *name)
           goto bad;
         }
         off += sizeof(entry);
-        name_len += copylfn(entry, tmp_name + name_len);
+        name_len += copylfn(entry, tmp_name);
       }
       // 获取长文件目录项序列后面的短文件目录项
       if (ReadInode(dir, false, reinterpret_cast<uint64_t>(&entry), off,
@@ -435,11 +496,15 @@ struct inode *Fat32FileSystem::Lookup(struct inode *dir, const char *name)
       }
       off += sizeof(entry);
     }
-    if (strncmp(name, tmp_name, kShortNameLength) != 0) {
+    if (strncmp(name, tmp_name, name_len) != 0) {
       continue;
     }
     LOG_DEBUG("found");
-    return BuildInode(entry, off - sizeof(entry), dir);
+    uint64_t cluster =
+        (off - sizeof(entry)) / info_.bytes_per_cluster_;  // 获取当前逻辑簇
+    uint64_t pos = FirstSectorOfCluster(bmap(dir, cluster)) * kSectorSize;
+    pos += (off - sizeof(entry)) % info_.bytes_per_cluster_;
+    return BuildInode(entry, pos, dir);
   }
 
 bad:
@@ -452,10 +517,11 @@ bad:
 // 的大小
 struct ReadDirHeader
 {
-  char *direntData;
-  int   free;  // direntData剩余空间大小(byte)
-  int   used;  // 已使用空间
-  bool  user;  // direntData是否为user空间地址
+  char *               direntData;
+  int                  free;         // direntData剩余空间大小(byte)
+  int                  used;         // 已使用空间
+  struct linux_dirent *last_dirent;  // 上一个目录项
+  bool                 user;         // direntData是否为user空间地址
 };
 
 // 成功返回0，失败返回-1
@@ -471,6 +537,8 @@ static int filldir(struct ReadDirHeader *direntHeader,
 
   reclen = ALIGN(sizeof(struct linux_dirent) + name_len, sizeof(uint64_t));
   if (reclen > direntHeader->free) {
+    direntHeader->last_dirent->d_off = 0;
+    LOG_DEBUG("readdir::filedir: reach max size");
     return -1;
   }
   direntHeader->free -= reclen;
@@ -480,6 +548,7 @@ static int filldir(struct ReadDirHeader *direntHeader,
   de->d_type = type;
   memcpy(de->d_name, name, name_len);
   de->d_reclen = reclen;
+  direntHeader->last_dirent = de;
   return 0;
 }
 
@@ -494,7 +563,9 @@ int Fat32FileSystem::ReadDir(
   read_dir_header.free = max_len;
   read_dir_header.used = 0;
   read_dir_header.user = user;
-  int off = fp->offset;
+  read_dir_header.last_dirent = 0;
+
+  int off = fp->offset - 2;  // 前两字节是虚拟的，磁盘上不存在
   int d_type;
   // 根目录，需要添加虚假的.和..节点
   // 用off=1代表"."
@@ -502,23 +573,24 @@ int Fat32FileSystem::ReadDir(
   // 但实际目录内容中，不包含这两个目录项，
   // 故需要从0开始读
   if (ip->inum == kMsdosRootIno) {
-    while (off < 2) {
-      printf("off=%d\n", off);
-      if (filldir(&read_dir_header, "..", off + 1, kMsdosRootIno, DT_DIR) < 0) {
+    while (off < 0) {
+      if (filldir(&read_dir_header, "..", off + 3, kMsdosRootIno, DT_DIR) < 0) {
         return read_dir_header.used;
       }
       off++;
       fp->offset++;
     }
-    off = 0;  // 从off=0开始读
   }
-
+  int begin_off = off;
   while (ReadInode(ip, false, reinterpret_cast<uint64_t>(&entry), off,
                    sizeof(entry)) == sizeof(entry)) {
+    begin_off = off;
     off += sizeof(entry);
     if (entry.sfn.name[0] == 0x00) {
-      return read_dir_header.used;
+      goto out;
     }
+
+    // 不应该进入该分支
     if (entry.sfn.attrib != kFatAttrLongEntry) {  // 短文件目录项
       // 设置目录项类型
       if (entry.sfn.attrib & kFatAttrDirentory)
@@ -526,10 +598,13 @@ int Fat32FileSystem::ReadDir(
       else
         d_type = DT_REG;
       int n = copysfn(entry.sfn.name, name);
-      filldir(&read_dir_header, name, n, GetFirstCluster(entry), d_type);
+      if (filldir(&read_dir_header, name, n, GetStartCluster(entry), d_type)) {
+        goto out;
+      }
     }
     else if ((entry.lfn.sequence_number & 0xc0) == 0x40) {  // 长文件名目录项
       int nlfn = entry.lfn.sequence_number & ~0x40;  // 长文件目录项的数量
+      memset(name, 0, 64);
       int name_len = 0;
       name_len += copylfn(entry, name);
       for (int i = 1; i < nlfn; i++) {  // 读取剩下的lfn
@@ -538,12 +613,12 @@ int Fat32FileSystem::ReadDir(
           goto out;
         }
         off += sizeof(entry);
-        name_len += copylfn(entry, name + name_len);
+        name_len += copylfn(entry, name);
       }
       // 获取长文件目录项序列后面的短文件目录项
       if (ReadInode(ip, false, reinterpret_cast<uint64_t>(&entry), off,
                     sizeof(entry)) != sizeof(entry)) {
-        panic("except sfn");
+        goto out;
       }
       off += sizeof(entry);
 
@@ -552,13 +627,99 @@ int Fat32FileSystem::ReadDir(
         d_type = DT_DIR;
       else
         d_type = DT_REG;
-      filldir(&read_dir_header, name, name_len, GetFirstCluster(entry), d_type);
+      LOG_DEBUG("read_dir=%s", name);
+      if (filldir(&read_dir_header, name, name_len, GetStartCluster(entry),
+                  d_type) < 0) {
+        goto out;
+      }
     }
   }
 
 out:
-  fp->offset = off;
+  fp->offset = begin_off + 2;
   return read_dir_header.used;
+}
+
+int Fat32FileSystem::Mkdir(struct inode *dir, const char *name, int mode)
+{
+  if (Create(dir, name, mode | __S_IFDIR) < 0) {
+    return -1;
+  }
+  struct inode *ip = Lookup(dir, name);
+  ShortEntry    short_entries[2];
+  FillShortFile(short_entries, "", MSDOS_I(ip)->i_start, mode);
+  FillShortFile(short_entries + 1, "", MSDOS_I(dir)->i_start, dir->mode);
+
+  // 设置文件名
+  short_entries[0].name[0] = short_entries[1].name[0] = '.';
+  short_entries[1].name[1] = '.';
+
+  return WriteInode(ip, false, reinterpret_cast<uint64_t>(short_entries), 0,
+                    sizeof(short_entries));
+}
+
+int Fat32FileSystem::Unlink(struct inode *dir, const char *name)
+{
+  MsdosEntry entry;
+  char       tmp_name[64];
+  uint32_t   off = 0;
+  int        name_len = 0;
+  int        nlfn = 0;  // 长文件名目录项的数量
+  while (ReadInode(dir, false, reinterpret_cast<uint64_t>(&entry), off,
+                   sizeof(entry)) == sizeof(entry)) {
+    off += sizeof(entry);
+    if (entry.sfn.name[0] == 0x00) {
+      goto out;
+    }
+
+    if (entry.sfn.attrib != kFatAttrLongEntry) {  // 短文件目录项
+      // 不应该进入该分支
+      // copysfn(entry.sfn.name, tmp_name);
+    }
+    else if ((entry.lfn.sequence_number & 0xc0) == 0x40) {
+      nlfn = entry.lfn.sequence_number & ~0x40;  // 长文件目录项的数量
+      name_len = 0;
+      name_len += copylfn(entry, tmp_name);
+      for (int i = 1; i < nlfn; i++) {  // 读取剩下的lfn
+        if (ReadInode(dir, false, reinterpret_cast<uint64_t>(&entry), off,
+                      sizeof(entry)) != sizeof(entry)) {
+          goto out;
+        }
+        off += sizeof(entry);
+        name_len += copylfn(entry, tmp_name);
+      }
+      // 获取长文件目录项序列后面的短文件目录项
+      if (ReadInode(dir, false, reinterpret_cast<uint64_t>(&entry), off,
+                    sizeof(entry)) != sizeof(entry)) {
+        panic("except sfn");
+      }
+      off += sizeof(entry);
+    }
+
+    if (strncmp(name, tmp_name, name_len) != 0) {
+      continue;
+    }
+
+    uint64_t cluster =
+        (off - sizeof(entry)) / info_.bytes_per_cluster_;  // 获取当前逻辑簇
+    uint64_t pos = FirstSectorOfCluster(bmap(dir, cluster)) * kSectorSize;
+    pos += (off - sizeof(entry)) % info_.bytes_per_cluster_;
+    struct inode *ip = GetInode(pos);
+    if (ip != nullptr) {  // 判断该inode是否在被使用
+      ip->free();
+      return -1;
+    }
+
+    MarkEntryDeleted(dir, off - sizeof(entry), -(nlfn + 1));
+    FreeClusterChain(GetStartCluster(entry));
+    return 0;
+  }
+
+out:
+  return 0;
+
+  // bad:
+  //   return -1;
 }
 
 inline uint32_t Fat32FileSystem::FirstSectorOfCluster(uint32_t cluster)
@@ -603,6 +764,38 @@ inline uint32_t Fat32FileSystem::FatSectorOfCluster(uint32_t cluster)
 inline uint32_t Fat32FileSystem::FatOffsetOfCluster(uint32_t cluster)
 {
   return (cluster << 2) % info_.bytes_per_sector_;
+}
+
+void Fat32FileSystem::FreeClusterChain(uint32_t cluster)
+{
+  int next_cluster = cluster;
+  while (cluster != kEndOfCluster32) {
+    next_cluster = GetFatEntry(cluster);
+    SetFatEntey(cluster, 0);
+    cluster = next_cluster;
+  }
+}
+void Fat32FileSystem::MarkEntryDeleted(struct inode *ip,
+                                       uint32_t      off,
+                                       int           n) noexcept
+{
+  if (n == 0)
+    return;
+  int        flag = n > 0 ? 1 : -1;
+  MsdosEntry entry;
+  n = n > 0 ? n : -n;
+  while (n-- > 0) {
+    if (ReadInode(ip, false, reinterpret_cast<uint64_t>(&entry), off,
+                  sizeof(entry)) != sizeof(entry)) {
+      return;
+    }
+    entry.sfn.name[0] = kDeletedMark;
+    if (WriteInode(ip, false, reinterpret_cast<uint64_t>(&entry), off,
+                   sizeof(entry)) != sizeof(entry)) {
+      return;
+    }
+    off += flag * sizeof(entry);
+  }
 }
 
 inline int Fat32FileSystem::SetFatEntey(uint32_t cluster, uint32_t value)
@@ -668,5 +861,74 @@ int Fat32FileSystem::WriteSector(int sector, char *data)
                          sector * this->fat_bpb_.bytes_per_sector,
                          this->fat_bpb_.bytes_per_sector);
 }
+
+/******************Test Function Start****************************/
+void TestReadDir(Fat32FileSystem *fs)
+{
+  struct file f;
+  f.inode = &fs->info_.root_.vfs_inode;
+  f.offset = 0;
+  char buf[512];
+  memset(buf, 0, sizeof(buf));
+  linux_dirent *de = (linux_dirent *)buf;
+  memset(buf, 0, 512);
+  LOG_DEBUG("Test ReadDir");
+  while (true) {
+    int nread = fs->ReadDir(&f, f.inode, buf, 512, false);
+    if (nread == 0)
+      break;
+    de = (linux_dirent *)buf;
+    while (de != 0 && de->d_reclen != 0) {
+      LOG_DEBUG("dirent=%s", de->d_name);
+      de = (linux_dirent *)(de->d_off);
+    }
+  }
+  LOG_DEBUG("Test ReadDir success");
+}
+
+void TestCreate(Fat32FileSystem *fs)
+{
+  LOG_DEBUG("test create short name entry");
+  fs->Create(&fs->info_.root_.vfs_inode, "test", __S_IFREG);
+  LOG_DEBUG("test create long name entry");
+  fs->Create(&fs->info_.root_.vfs_inode, "test_create_long_name_file",
+             __S_IFREG);
+}
+
+void TestPrintShortName(Fat32FileSystem *fs, struct inode *ip)
+{
+  char        buf[512];
+  int         i = 0;
+  MsdosEntry *entry = (MsdosEntry *)buf;
+  while (true) {
+    memset(buf, 0, 512);
+    fs->ReadInode(ip, false, (uint64_t)buf, i * sizeof(MsdosEntry),
+                  sizeof(MsdosEntry));
+    if (entry->sfn.name[0] == 0) {
+      break;
+    }
+    if (entry->sfn.attrib != kFatAttrLongEntry) {
+      printf("attr=%p short name=%s\n", entry->sfn.attrib, entry->sfn.name);
+    }
+    ++i;
+  }
+}
+
+void TestMkdir(Fat32FileSystem *fs)
+{
+  fs->Mkdir(&fs->info_.root_.vfs_inode, "test_mkdir", __S_IFDIR);
+  TestPrintShortName(fs, fs->Lookup(&fs->info_.root_.vfs_inode, "test_mkdir"));
+}
+
+// void
+
+void Test(Fat32FileSystem *fs)
+{
+  TestCreate(fs);
+  TestPrintShortName(fs, &fs->info_.root_.vfs_inode);
+  TestMkdir(fs);
+  TestReadDir(fs);
+}
+/******************Test Function Start****************************/
 
 }  // namespace fat32

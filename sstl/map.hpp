@@ -187,7 +187,6 @@ public:
 private:
   uint_t hash(K key)
   {
-    printf("hash\n");
     return hash_64(key, bits_ - 1);
   }
 

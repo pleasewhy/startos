@@ -105,7 +105,11 @@ clean:
 	cd user;$(MAKE) clean
 	rm -f $T/*.bin $T/*.asm $T/*.sym $T/kernel k210.bin
 
-cleansbi:
+clean-fs.img:
+	rm fs.img
+	rm user/fs.img
+	
+clean-sbi:
 	cd ./rustsbi/rustsbi-k210; cargo clean
 	cd ./rustsbi/rustsbi-qemu; cargo clean
 

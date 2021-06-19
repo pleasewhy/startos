@@ -18,5 +18,5 @@ char *strrchr(const char *s, char c);
 // void  snstr(char* dst, wchar_t const* src, int len);
 // void  wnstr(wchar_t* dst, char const* src, int len);
 void CopyWcharToChar(char *dst, uint16_t const *src, int len);
-void CopyCharToWchar(wchar_t *dst, char const *src, int len);
+void CopyCharToWchar(uint16_t *dst, char const *src, int len);
 #endif
