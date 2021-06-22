@@ -5,6 +5,7 @@
 #include "param.hpp"
 #include "riscv.hpp"
 #include "types.hpp"
+
 // 内核切换进程需要保存的寄存器
 struct context {
   uint64_t ra;
@@ -94,6 +95,7 @@ class Task {
   // struct inode *current_dir;       // 当前目录
   struct file *openFiles[NOFILE];  // 用户打开文件，其下标为文件描述符。
   char currentDir[MAXPATH];
+  struct inode *cwd;
   uint64_t entry;
   int sticks;  // 程序在用户态下运行的时间
   int uticks;  // 程序在内核态下运行的时间

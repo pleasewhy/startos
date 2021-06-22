@@ -22,3 +22,13 @@ void inode::free()
   // this->file_system;
   sleeplock.unlock();
 }
+
+void inode::lock()
+{
+  this->sleeplock.lock();
+}
+
+void inode::unlock()
+{
+  this->sleeplock.unlock();
+}

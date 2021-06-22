@@ -5,7 +5,6 @@
 #include "device/Console.hpp"
 #include "fcntl.h"
 #include "file.h"
-#include "map.hpp"
 #include "fs/fat/Fat32.hpp"
 #include "fs/vfs/Vfs.hpp"
 #include "memlayout.hpp"
@@ -19,6 +18,8 @@
 #include "os/trap.hpp"
 #include "param.hpp"
 #include "time.h"
+#include "map.hpp"
+#include "list.hpp"
 
 #define NVMA 15
 
@@ -332,10 +333,11 @@ void forkret(void)
     // be run from main().
     //
     first = 0;
+// #define TEST_STL
 #ifdef TEST_STL
     TestSTL();
 #endif
-    fat32::Fat32FileSystem *fs = new fat32::Fat32FileSystem(0);
+    vfs::fat32::Fat32FileSystem *fs = new vfs::fat32::Fat32FileSystem(0);
     printf("fs=%p", fs);
     while (1)
       ;
@@ -1007,7 +1009,25 @@ void TestHashMap()
   delete map;
 }
 
+void TestList()
+{
+  auto list = new std::list<Task *>();
+  Task tasks[5];
+  for (int i = 0; i < 5; i++) {
+    tasks[i].pid = i + 1;
+    list->insert(tasks + i);
+  }
+  auto iter = list->begin();
+  while (iter != nullptr) {
+    printf("pid=%d\n", iter->data->pid);
+    iter++;
+    printf("%p\n",iter.node_);
+  }
+  delete list;
+}
+
 void TestSTL()
 {
   TestHashMap();
+  TestList();
 }

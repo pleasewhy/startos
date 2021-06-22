@@ -61,6 +61,25 @@ struct remove_cv
   typedef typename remove_const<typename remove_volatile<_Tp>::type>::type type;
 };
 
+/// remove_reference
+template <typename _Tp>
+struct remove_reference
+{
+  typedef _Tp type;
+};
+
+template <typename _Tp>
+struct remove_reference<_Tp &>
+{
+  typedef _Tp type;
+};
+
+template <typename _Tp>
+struct remove_reference<_Tp &&>
+{
+  typedef _Tp type;
+};
+
 template <typename>
 struct __is_pointer_helper : public false_type
 {
@@ -77,5 +96,6 @@ struct is_pointer
     : public __is_pointer_helper<typename remove_cv<_Tp>::type>::type
 {
 };
+
 }  // namespace std
 #endif

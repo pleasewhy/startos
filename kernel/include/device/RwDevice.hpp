@@ -3,6 +3,7 @@
 
 #include "device/DeviceManager.hpp"
 
+namespace dev{
 class RwDevice {
 public:
   char name[DEV_NAME_SIZE];
@@ -31,5 +32,5 @@ public:
    */
   virtual int write(char *buf, int offset, int n);
 };
-
+}
 #endif

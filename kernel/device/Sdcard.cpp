@@ -11,7 +11,7 @@
 #include "types.hpp"
 
 #define BSIZE 512
-
+namespace dev {
 void SD_CS_HIGH(void)
 {
   gpiohs_set_pin(7, GPIO_PV_HIGH);
@@ -504,3 +504,4 @@ int SdCard::write(char *buf, int offset, int n)
   this->sdcard_write_sector(buf, sector);
   return 512;
 }
+}  // namespace dev

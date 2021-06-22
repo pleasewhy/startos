@@ -18,15 +18,15 @@ class FileSystem;
  */
 struct inode
 {
-  uint_t          dev;          // 设备号
-  uint64_t        inum;         // Inode number
-  int             ref;          // 引用计数
-  SleepLock       sleeplock;    // 用于保护inode
-  short           mode;         // inode的类型和权限
-  FileSystem *    file_system;  // inode 所属文件系统
-  struct inode *  parent;       // 当前inode的父目录
-  short           nlink;  // 链接该inode的目录项,fat32中目录使用该字段作为目录项的数量
-  uint_t          sz;     // 文件大小
+  uint_t                dev;          // 设备号
+  uint64_t              inum;         // Inode number
+  int                   ref;          // 引用计数
+  SleepLock             sleeplock;    // 用于保护inode
+  short                 mode;         // inode的类型和权限
+  FileSystem *          file_system;  // inode 所属文件系统
+  struct inode *        parent;       // 当前inode的父目录
+  short                 nlink;  // 链接该inode的目录项,fat32中目录使用该字段作为目录项的数量
+  uint_t                sz;     // 文件大小
   struct time::timespec atime;  // 最后访问时间
   struct time::timespec mtime;  // 最后修改时间(文件内容)
   struct time::timespec ctime;  // 最后改变时间(元数据)
@@ -41,6 +41,9 @@ public:
    * @brief 递减ref，当为0时删除它
    */
   void free();
+
+  void lock();
+  void unlock();
 };
 
 struct dirent

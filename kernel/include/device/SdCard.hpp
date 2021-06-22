@@ -5,6 +5,7 @@
 #include "os/SleepLock.hpp"
 #include "types.hpp"
 
+namespace dev {
 class SdCard : public RwDevice {
 private:
   SleepLock sleepLock;
@@ -47,5 +48,5 @@ public:
    */
   virtual int write(char *buf, int offset, int n) override;
 };
-
+}  // namespace dev
 #endif
