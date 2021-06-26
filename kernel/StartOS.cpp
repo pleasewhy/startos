@@ -20,11 +20,14 @@ void *operator new(uint64_t size)
   if (size > PGSIZE) {
     panic("operator new");
   }
-  return buddy_alloc_.alloc(size);
+  void *p = buddy_alloc_.alloc(size);
+  // LOG_WARN("new=%p", p);
+  return p;
 }
 
 void operator delete(void *p)
 {
+  // LOG_WARN("free=%p", p);
   return buddy_alloc_.free(p);
 }
 

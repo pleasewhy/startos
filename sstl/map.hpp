@@ -67,7 +67,6 @@ struct HashMapNode
   // }
 };
 
-
 /**
  * @brief hashmap的简要实现
  * @note 该实现使用spinlock来保证并发安全，由于
@@ -213,9 +212,7 @@ struct MapIterator : public std::iterator<std::forward_iterator_tag, V>
   typedef size_t    size_type;
   typedef ptrdiff_t difference_type;
 
-  node_ptr    node_;  // 迭代器当前所指节点
-  contain_ptr map_;   // 保持与容器的连结
-
+public:
   MapIterator() = default;
 
   MapIterator(node_ptr n, contain_ptr t)
@@ -272,6 +269,10 @@ struct MapIterator : public std::iterator<std::forward_iterator_tag, V>
     ++*this;
     return tmp;
   }
+
+private:
+  node_ptr    node_;  // 迭代器当前所指节点
+  contain_ptr map_;   // 保持与容器的连结
 };
 }  // namespace std
 #endif

@@ -6,11 +6,11 @@
 #include "param.hpp"
 #include "common/logger.h"
 #include "file.h"
+#include "os/TaskScheduler.hpp"
 #include "common/string.hpp"
 #include "types.hpp"
 #include "riscv.hpp"
 #include "fs/vfs_file.h"
-
 
 namespace vfs {
 class FileSystem0 {
@@ -124,6 +124,8 @@ public:
    */
   virtual int Unlink(struct inode *dir, const char *name) = 0;
 
+  virtual void DebugInfo(){};
+
   // public:
   // int  dev_;                   // 设备号，文件系统主要用
 };
@@ -141,16 +143,18 @@ struct ReadDirHeader
 
 // #define ALIGN(a, base_align) (((a) + base_align - 1) & ~(base_align - 1))
 
-// 成功返回0，失败返回-1
+// 成功返回0，失败返回-1, ReadDir会使用该函数
+// 该函数可以很方便的项linux_dirent缓冲区写入数据
 __attribute__((used)) static int filldir(struct ReadDirHeader *direntHeader,
-                   const char *          name,
-                   int                   name_len,
-                   uint64_t              ino,
-                   uint_t                type)
+                                         const char *          name,
+                                         int                   name_len,
+                                         uint64_t              ino,
+                                         uint_t                type)
 {
   char *               buf = direntHeader->direntData + direntHeader->used;
   unsigned int         reclen;
   struct linux_dirent *de = reinterpret_cast<struct linux_dirent *>(buf);
+  struct linux_dirent  de_tmp;
 
   reclen = ALIGN(sizeof(struct linux_dirent) + name_len, sizeof(uint64_t));
   if (reclen > direntHeader->free) {
@@ -160,11 +164,15 @@ __attribute__((used)) static int filldir(struct ReadDirHeader *direntHeader,
   }
   direntHeader->free -= reclen;
   direntHeader->used += reclen;
-  de->d_off = reinterpret_cast<uint64_t>(buf + reclen);
-  de->d_ino = ino;
-  de->d_type = type;
-  memcpy(de->d_name, name, name_len);
-  de->d_reclen = reclen;
+
+  de_tmp.d_off = reinterpret_cast<uint64_t>(buf + reclen);
+  de_tmp.d_ino = ino;
+  de_tmp.d_type = type;
+  de_tmp.d_reclen = reclen;
+  either_copyout(direntHeader->user, (uint64_t)de, &de_tmp, sizeof(de_tmp));
+  either_copyout(direntHeader->user, (uint64_t)de->d_name, (void *)name,
+                 name_len);
+
   direntHeader->last_dirent = de;
   return 0;
 }

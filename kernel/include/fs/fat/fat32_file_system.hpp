@@ -136,6 +136,12 @@ namespace fat32 {
      */
     int Unlink(struct inode *dir, const char *name);
 
+    /**
+     * @brief 输出当前文件系统的全部inode
+     * 命令行输入~,会调用该函数
+     */
+    void DebugInfo() override;
+    
     // /**
     //  * @brief 删除一个空目录，该方法被系统调用rmdir调用
     //  *

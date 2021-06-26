@@ -35,15 +35,16 @@ uint64_t sys_getcwd(void)
 uint64_t sys_open(void)
 {
   char path[MAXPATH];
-  int  fd, mode;
+  int  flag;
   int  n;
-  LOG_DEBUG("sys_open");
-  if ((n = argstr(0, path, MAXPATH)) < 0 || argint(1, &mode) < 0) {
+  if ((n = argstr(0, path, MAXPATH)) < 0 || argint(1, &flag) < 0) {
     return -1;
   }
-
-  fd = vfs::open(path, mode);
-  return fd;
+  struct file *fp = vfs::VfsManager::openat(nullptr, path, flag, 0);
+  if (fp == nullptr) {
+    return -1;
+  }
+  return registerFileHandle(fp);
 }
 
 uint64_t sys_unlinkat()
@@ -63,19 +64,23 @@ uint64_t sys_unlinkat()
 uint64_t sys_openat(void)
 {
   char filename[MAXPATH];
-  int  fd, mode, flags;
+  int  dirfd, mode, flags;
   int  n;
-  LOG_DEBUG("sys_openat");
-  if (argint(0, &fd) < 0 || (n = argstr(1, filename, MAXPATH)) < 0) {
+  LOG_DEBUG("sys_openat dirfd=%d");
+  if (argint(0, &dirfd) < 0 || (n = argstr(1, filename, MAXPATH)) < 0) {
     return -1;
   }
 
   if (argint(2, &flags) || argint(3, &mode)) {
     return -1;
   }
-  fd = vfs::openat(fd, filename, flags, mode);
-  // fd = vfs::open(filename, flags);
-  LOG_DEBUG("openat fd=%d", fd);
+  struct file *dirfp = getFileByfd(dirfd);
+  struct file *fp = vfs::VfsManager::openat(dirfp, filename, flags, mode);
+  if (fp == nullptr) {
+    return -1;
+  }
+  int fd = registerFileHandle(fp);
+  LOG_DEBUG("\n\nopenat fd=%d\n\n", fd);
   return fd;
 }
 
@@ -85,10 +90,13 @@ uint64_t sys_close(void)
   if (argint(0, &fd) < 0) {
     return -1;
   }
+  if (fd < 0) {
+    return -1;
+  }
   LOG_DEBUG("sys_close fd=%d", fd);
   struct file *fp = getFileByfd(fd);
   struct Task *task = myTask();
-  vfs::close(fp);
+  vfs::VfsManager::close(fp);
   task->lock.lock();
   task->openFiles[fd] = NULL;
   task->lock.unlock();
@@ -104,9 +112,11 @@ uint64_t sys_write(void)
   if (argint(0, &fd) < 0 || argint(2, &n) < 0 || argaddr(1, &uaddr) < 0)
     return -1;
   if (fd >= 3) {
-    LOG_DEBUG("sys_write n=%d", n);
+    LOG_DEBUG("sys_write fd=%d n=%d", fd, n);
   }
-  return vfs::write(fd, true, reinterpret_cast<char *>(uaddr), n, 0);
+  struct file *fp = getFileByfd(fd);
+  return vfs::VfsManager::write(fp, (const char *)(uaddr), n, true);
+  // return vfs::write(fd, true, reinterpret_cast<char *>(uaddr), n, 0);
 }
 
 uint64_t sys_read(void)
@@ -117,7 +127,7 @@ uint64_t sys_read(void)
   if (argint(0, &fd) < 0 || argint(2, &n) < 0 || argaddr(1, &uaddr) < 0)
     return -1;
   struct file *fp = getFileByfd(fd);
-  return vfs::read(fd, true, reinterpret_cast<char *>(uaddr), n, 0);
+  return vfs::VfsManager::read(fp, reinterpret_cast<char *>(uaddr), n, true);
 }
 
 uint64_t sys_dup(void)
@@ -143,10 +153,10 @@ uint64_t sys_dup3(void)
   }
   LOG_DEBUG("old fd=%d new fd=%d", oldfd, newfd);
   struct file *fp = getFileByfd(oldfd);
-  vfs::dup(fp);
+  fp = vfs::VfsManager::dup(fp);
   ansfd = registerFileHandle(fp, newfd);
   if (ansfd < 0) {
-    vfs::close(fp);
+    vfs::VfsManager::close(fp);
   }
   return ansfd;
 }
@@ -183,12 +193,12 @@ uint64_t sys_pipe(void)
     return -1;
   }
 
-  vfs::createPipe(fds);
+  vfs::VfsManager::createPipe(fds);
   if (copyout(task->pagetable, fdarray, (char *)&fds[0], sizeof(fds[0])) < 0 ||
       copyout(task->pagetable, fdarray + sizeof(fds[0]), (char *)&fds[1],
               sizeof(fds[0])) < 0) {
-    vfs::close(getFileByfd(fds[0]));
-    vfs::close(getFileByfd(fds[1]));
+    vfs::VfsManager::close(getFileByfd(fds[0]));
+    vfs::VfsManager::close(getFileByfd(fds[1]));
     return -1;
   }
   return 0;
@@ -203,10 +213,12 @@ uint64_t sys_getdents64(void)
     return -1;
   }
   LOG_DEBUG("getdents64 fd=%d", fd);
-  int n = vfs::ls(fd, (char *)addr, len, true);
-  LOG_DEBUG("getdents64 nread=%d", n);
+  int nread =
+      vfs::VfsManager::ReadDir(getFileByfd(fd), (char *)addr, len, true);
+  // int n = vfs::ls(fd, (char *)addr, len, true);
+  LOG_DEBUG("getdents64 nread=%d", nread);
   // printf("%d",n);
-  return n;
+  return nread;
 }
 
 uint64_t sys_mount()
@@ -249,10 +261,7 @@ uint64_t sys_fstat()
   kst.st_dev = 1;
   kst.st_size = fp->size;
   kst.st_nlink = 1;
-  if (fp->directory)
-    kst.st_mode |= __S_IFDIR;
-  else
-    kst.st_mode |= __S_IFREG;
+  kst.st_mode = fp->inode->mode;
   return copyout(myTask()->pagetable, kstAddr, reinterpret_cast<char *>(&kst),
                  sizeof(struct kstat));
 }
@@ -291,7 +300,7 @@ uint64_t sys_mmap(void)
 
   a = allocVma();
 
-  vfs::dup(f);
+  vfs::VfsManager::dup(f);
   f->offset = 0;
   vfs::rewind(f);
 
@@ -347,7 +356,7 @@ uint64_t sys_munmap(void)
   userUnmap(task->pagetable, addr, PGROUNDUP(sz) / PGSIZE, 0);
   vma->length -= sz;
   if (vma->length == 0) {
-    vfs::close(vma->f);
+    vfs::VfsManager::close(vma->f);
     freeVma(vma);
     task->vma[index] = 0;
   }

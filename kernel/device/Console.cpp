@@ -2,6 +2,7 @@
 #include "common/logger.h"
 #include "common/sbi.h"
 #include "os/SpinLock.hpp"
+#include "fs/vfs/vfs.hpp"
 #include "os/TaskScheduler.hpp"
 
 #define Enter (13)
@@ -85,6 +86,9 @@ void Console::console_intr(char c)
       break;
     case CTRL('P'):
       // print_proc();
+      break;
+    case '~': // 输出文件系统debug信息
+      vfs::VfsManager::DebugInfo();
       break;
     default:
 // 显示输出字符

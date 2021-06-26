@@ -6,7 +6,7 @@ int main(void)
 {
   int pid, wpid;
 
-  open("dev/tty", O_RDWR);
+  open("/dev/tty", O_RDWR);
   dup(0);  // stdout
   dup(0);  // stderr
 

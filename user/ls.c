@@ -6,6 +6,8 @@
 char *DIR_STR = "DIR ";
 char *FILE_STR = "FILE";
 char *OTHER_STR = "OTHER";
+char *BLK_STR = "BLK ";
+char *CHR_STR = "CHR ";
 
 char *fmtname(char *path)
 {
@@ -46,6 +48,10 @@ void ls(const char *filepath)
       type = DIR_STR;
     else if (S_ISREG(kst.st_mode))
       type = FILE_STR;
+    else if(S_ISBLK(kst.st_mode))
+      type = BLK_STR;
+    else if(S_ISCHR(kst.st_mode))
+      type = CHR_STR;
     else
       type = OTHER_STR;
     printf("%s %s %d\n", fmtname(dirents_ptr->d_name), type, kst.st_size);

@@ -487,6 +487,7 @@ direct_write(const char *file, const char *buffer, size_t count, size_t offset)
 struct file *dup(struct file *fp)
 {
   fileTableLock.lock();
+  LOG_DEBUG("error");
   if (fp->ref < 1) {
     panic("vfs::dup");
   }

@@ -16,8 +16,8 @@ void inode::free()
   if (ref < 1) {
     panic("inode free");
   }
-  if (ref-- == 0) {
-    delete this;
+  if (--ref == 0) {
+    this->file_system->DeleteInode(this);
   }
   // this->file_system;
   sleeplock.unlock();

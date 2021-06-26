@@ -74,6 +74,7 @@ void *BuddyAllocator::alloc(size_t sz)
 
   if (block == NULL) {
     block = (buddy_block_t *)(memAllocator.alloc());
+    // LOG_WARN("alloc page sz=%d",sz);
     if (block == nullptr) {
       panic("buddy alloc");
     }
@@ -83,7 +84,7 @@ void *BuddyAllocator::alloc(size_t sz)
   buddy_block_t *buddy;
   for (; i > lv; i--) {
     buddy = _get_buddy(block, i - 1);  // 分割成两块
-    buddy->next = NULL;
+    buddy->next = this->freelist[i - 1];
     this->freelist[i - 1] = buddy;
   }
 
@@ -105,6 +106,7 @@ void BuddyAllocator::free(void *pa)
   for (;; ++i) {
     // 如果该内存块大小为PGSIZE，则将该块归还到page分配器
     if (i == this->maxlv) {
+      // LOG_WARN("free page");
       memAllocator.free(block);
       break;
     }
@@ -137,7 +139,7 @@ void BuddyAllocator::mem_info()
   for (int i = this->minlv; i <= this->maxlv; ++i) {
     buddy_block_t *block = this->freelist[i];
     size_t         sz = LEVEL_2_SIZE(i);
-    printf("Lv %-2d (%lu) : ", i, sz);
+    printf("Lv %d (%d) : ", i, sz);
     while (block) {
       printf("(%p--%p), ", block, (uint8_t *)block + sz);
       block = block->next;

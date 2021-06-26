@@ -59,7 +59,6 @@ void usertrap(void)
   int which_dev = 0;
   if ((r_sstatus() & SSTATUS_SPP) != 0)
     panic("usertrap: not from user mode");
-
   // 由于现在处于内核空间, 所以需要更改中断向量为kerneltrap()
   w_stvec((uint64_t)kernelvec);
   //    printf("usertrap: sp=%p\n",r_sp());

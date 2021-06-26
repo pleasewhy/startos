@@ -19,18 +19,42 @@ void VfsManager::Init()
   MountRoot();
   MountDev();
   LOG_DEBUG("mount over");
+#ifdef TEST_VFS
   Test();
+#endif
 }
 
 struct file *
 VfsManager::openat(struct file *dir, char *filepath, size_t flags, mode_t mode)
 {
-  struct inode *ip;
-  if (nullptr != dir) {
-    ip = namei(dir->inode, filepath);
+  struct inode *ip = nullptr;
+
+  struct inode *dp = nullptr;  // 父目录inode
+  if (dir != nullptr) {
+    dp = dir->inode;
+  }
+  else if (filepath[0] == '/') {
+    dp = root_->dup();
   }
   else {
-    ip = namei(root_, filepath + 1);
+    LOG_WARN("cwd");
+    dp = myTask()->cwd->dup();
+  }
+
+  if (O_CREATE & flags) {
+    char name[kMaxFileName];
+    nameiparent(dp, filepath, name);
+    if (dp->file_system->Create(dp, name, mode) < 0) {
+      panic("can't create file");
+      // return -1;
+    }
+    ip = namei(dp, name);
+  }
+  else {
+    ip = namei(nullptr, filepath);
+  }
+  if (ip == nullptr) {
+    return nullptr;
   }
   LOG_DEBUG("namei=%p", ip);
   struct file *fp = new struct file;
@@ -40,7 +64,7 @@ VfsManager::openat(struct file *dir, char *filepath, size_t flags, mode_t mode)
   fp->offset = 0;
   fp->pipe = nullptr;
   fp->type = fp->FD_INODE;
-  fp->ref++;
+  fp->ref = 1;
   fp->size = ip->sz;
   return fp;
 }
@@ -70,6 +94,9 @@ int VfsManager::write(struct file *fp, const char *buf, int n, bool user)
 {
   if (fp == nullptr) {
     panic("fp is nullptr");
+  }
+  if (!fp->writable) {
+    return -1;
   }
   int nwrite = 0;
   switch (fp->type) {
@@ -101,9 +128,10 @@ void VfsManager::close(struct file *fp)
     fp->ref_lock.unlock();
     return;
   }
-  ff = *fp;
-  delete fp;
   fp->ref_lock.unlock();
+  ff = *fp;
+  LOG_DEBUG("delete fp");
+  delete fp;
 
   if (ff.type == ff.FD_PIPE) {
     if (ff.writable)
@@ -112,10 +140,11 @@ void VfsManager::close(struct file *fp)
       ff.pipe->close(ff.pipe->READ_END);
   }
   else if (ff.type == ff.FD_INODE) {
-    fp->inode->free();
+    ff.inode->free();
   }
   else if (ff.type == ff.FD_DEVICE) {
   }
+  LOG_DEBUG("delete fp finish");
 };
 
 struct file *VfsManager::rewind(struct file *fp)
@@ -125,17 +154,47 @@ struct file *VfsManager::rewind(struct file *fp)
     panic("filerewind");
   fp->offset = 0;
   fp->ref_lock.unlock();
+  return fp;
 }
 
 struct file *VfsManager::dup(struct file *fp)
 {
   fp->ref_lock.lock();
+  LOG_DEBUG("file=%d", fp->ref);
   if (fp->ref < 1) {
     panic("vfs::dup");
   }
   fp->ref++;
   fp->ref_lock.unlock();
   return fp;
+}
+
+int VfsManager::createPipe(int fds[])
+{
+  struct file *f0 = new struct file;
+  struct file *f1 = new struct file;
+  Pipe *       pipe = new Pipe(f0, f1);
+  if (pipe == NULL) {
+    delete f0;
+    delete f1;
+    return -1;
+  }
+  f0->ref = 1;
+  f1->ref = 1;
+  int fd0 = registerFileHandle(f0);
+  int fd1 = registerFileHandle(f1);
+  fds[0] = fd0;
+  fds[1] = fd1;
+  return 0;
+}
+
+int VfsManager::ReadDir(struct file *fp, char *buf, int max_len, bool user)
+{
+  if (!fp->readable) {
+    return -1;
+  }
+  auto fs = fp->inode->file_system;
+  return fs->ReadDir(fp, fp->inode, buf, max_len, user);
 }
 
 int VfsManager::Mount(const char *        source,
@@ -162,6 +221,15 @@ int VfsManager::Mount(const char *        source,
   // source_mp->fs.l
   vfs_sleeplock_.unlock();
   return 0;
+}
+
+void VfsManager::DebugInfo()
+{
+  for (int i = 0; i < kMountPointNumber; i++) {
+    if (mount_points_[i].fs != nullptr) {
+      mount_points_[i].fs->DebugInfo();
+    }
+  }
 }
 
 //                        88
@@ -257,6 +325,7 @@ struct inode *VfsManager::ConvertInodeByMp(struct inode *ip)
 {
   for (int i = 0; i < kMountPointNumber; i++) {
     if (mount_points_[i].origin == ip) {
+      LOG_DEBUG("convert");
       ip->free();
       return mount_points_[i].target->dup();
     }
@@ -301,8 +370,26 @@ VfsManager::namex(struct inode *ip, char *path, bool nameiparent, char *name)
 
 struct inode *VfsManager::namei(struct inode *dir, char *path)
 {
+  if (dir == nullptr) {  // 不指定目录
+    LOG_DEBUG("name=%s", path);
+    if (path[0] == '/') {  // "/"开始，根目录
+      dir = root_->dup();
+      // ip = namei(root_->dup(), path);
+    }
+    else {
+      LOG_DEBUG("openat cwd");  // 当前目录
+      dir = myTask()->cwd->dup();
+      // ip = namei(myTask()->cwd->dup(), path);
+    }
+  }
   char name[kMaxFileName];
+  LOG_DEBUG("namei");
   return namex(dir, path, false, name);
+}
+
+struct inode *VfsManager::nameiparent(struct inode *dir, char *path, char *name)
+{
+  return namex(dir, path, true, name);
 }
 
 void TestOpenat()

@@ -341,13 +341,15 @@ void forkret(void)
 #endif
 
     vfs::VfsManager::Init();
+    myTask()->cwd = vfs::VfsManager::namei(nullptr, (char *)"/");
+    LOG_DEBUG("cwd=%p", myTask()->cwd);
     // vfs::fat32::Fat32FileSystem *fs = new vfs::fat32::Fat32FileSystem(0);
     // printf("fat fs=%p\n", fs);
     // vfs::devfs::DeviceFileSystem *fs1 = new vfs::devfs::DeviceFileSystem(-1);
     // printf("dev fs=%p\n",fs1);
-    while (1)
-      ;
-    // vfs::init();
+    // while (1)
+    //   ;
+    vfs::init();
     // char buf[1000];
     // memset(buf, 0, 1000);
     // int fd = vfs::open("/", O_RDONLY);
@@ -573,7 +575,7 @@ int fork()
   child->sz = task->sz;
   child->parent = task;
   // child->trapframe->ra = MAXVA;
-
+  child->cwd = task->cwd->dup();
   // 复制父进程的用户空间的寄存器
   // *(child->trapframe) = *(task->trapframe);
   memmove(child->trapframe, task->trapframe, sizeof(struct trapframe));
@@ -581,9 +583,10 @@ int fork()
   child->trapframe->a0 = 0;
 
   // 复制文件资源
+  LOG_DEBUG("fork:dup files");
   for (int i = 0; i < NOFILE; i++) {
     if (task->openFiles[i] != 0) {
-      child->openFiles[i] = vfs::dup(task->openFiles[i]);
+      child->openFiles[i] = vfs::VfsManager::dup(task->openFiles[i]);
     }
   }
 
@@ -594,7 +597,7 @@ int fork()
     if (vma) {
       childVma = allocVma();
       *(childVma) = *(vma);
-      vfs::dup(vma->f);
+      vfs::VfsManager::dup(vma->f);
       child->vma[i] = childVma;
     }
   }
@@ -620,6 +623,7 @@ int clone(uint64_t stack, int flags)
   if (userVmCopy(task->pagetable, child->pagetable, task->sz) < 0) {
     return -1;
   }
+  child->cwd = task->cwd->dup();
   child->sz = task->sz;
   child->parent = task;
   // 复制父进程的用户空间的寄存器
@@ -631,7 +635,7 @@ int clone(uint64_t stack, int flags)
   // 复制文件资源
   for (int i = 0; i < NOFILE; i++) {
     if (task->openFiles[i] != 0) {
-      child->openFiles[i] = vfs::dup(task->openFiles[i]);
+      child->openFiles[i] = vfs::VfsManager::dup(task->openFiles[i]);
     }
   }
 
@@ -643,7 +647,7 @@ int clone(uint64_t stack, int flags)
     if (vma) {
       childVma = allocVma();
       *(childVma) = *(vma);
-      vfs::dup(vma->f);
+      vfs::VfsManager::dup(vma->f);
       child->vma[i] = childVma;
     }
   }
@@ -689,8 +693,8 @@ int growtask(int n)
 
 void FreeTaskPagetable(pagetable_t pagetable, uint64_t sz)
 {
-  userUnmap(pagetable, TRAMPOLINE, 1, 0);
-  userUnmap(pagetable, TRAPFRAME, 1, 0);
+  userUnmap(pagetable, TRAMPOLINE, 1, false);
+  userUnmap(pagetable, TRAPFRAME, 1, false);
   FreeUserPageTable(pagetable, sz);
 }
 
@@ -921,7 +925,7 @@ int either_copyin(bool user_src, void *dst, uint64_t src, uint64_t len)
  */
 int registerFileHandle(struct file *fp, int fd)
 {
-  if (fd > NFILE) {
+  if (fd > NFILE || fp == nullptr) {
     return -1;
   }
   Task *task = myTask();
@@ -1027,7 +1031,7 @@ void TestList()
   while (iter != nullptr) {
     printf("pid=%d\n", iter->data->pid);
     iter++;
-    printf("%p\n",iter.node_);
+    printf("%p\n", iter.node_);
   }
   delete list;
 }

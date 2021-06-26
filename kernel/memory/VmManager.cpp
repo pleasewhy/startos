@@ -186,8 +186,9 @@ void freewalk(pagetable_t pagetable)
  */
 void FreeUserPageTable(pagetable_t pagetable, uint64_t sz)
 {
-  if (sz > 0)
-    userUnmap(pagetable, 0, PGROUNDUP(sz) / PGSIZE, 1);
+  if (sz > 0) {
+    userUnmap(pagetable, 0, PGROUNDUP(sz) / PGSIZE, true);
+  }
   freewalk(pagetable);
 }
 

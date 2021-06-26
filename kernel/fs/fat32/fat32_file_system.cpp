@@ -100,10 +100,15 @@ namespace fat32 {
     info_.reserve_sectors_ = fat_bpb_.reserved_sectors;
     info_.bytes_per_sector_ = fat_bpb_.bytes_per_sector;
 
+    // 设置根目录信息
+
     info_.root_.i_start = fat_bpb_.root_directory_cluster_start;
     info_.root_.i_pos =
         FirstSectorOfCluster(info_.root_.i_start) * fat_bpb_.bytes_per_sector;
+    info_.root_.vfs_inode.parent = &info_.root_.vfs_inode;
 
+    info_.root_.vfs_inode.ref = 1;
+    info_.root_.vfs_inode.sz = -1;
     info_.root_.vfs_inode.mode |= __S_IFDIR;
     info_.root_.vfs_inode.nlink++;
     info_.root_.vfs_inode.inum = kMsdosRootIno;
@@ -143,6 +148,14 @@ namespace fat32 {
     }
     return c;
   }
+
+  // static char toLowCase(char c)
+  // {
+  //   if (c >= 'A' && c <= 'Z') {
+  //     return c + 32;
+  //   }
+  //   return c;
+  // }
 
   // 暂时不处理文件名重复的情况
   static void
@@ -305,9 +318,10 @@ namespace fat32 {
     ip->inum = GetStartCluster(entry);
     parent->ref++;
     ip->parent = parent;
-    ip->sz = entry.sfn.file_size;
     ip->sleeplock.init("inode");
     ip->nlink = 0;
+    ip->ref = 1;
+    memcpy(ip->test_name, entry.sfn.name, sizeof(ip->test_name));
     FatTime2Unix(&ip->ctime, entry.sfn.creation_date, entry.sfn.creation_time);
     FatTime2Unix(&ip->atime, entry.sfn.accessed_date, 0);
     FatTime2Unix(&ip->mtime, entry.sfn.modification_date,
@@ -316,9 +330,13 @@ namespace fat32 {
     // 目录项类型
     if (entry.sfn.attrib & kFatAttrDirentory) {
       ip->mode |= __S_IFDIR;
+      ip->sz = -1;
     }
-    else
+    else {
       ip->mode |= __S_IFREG;
+      ip->sz = entry.sfn.file_size;
+    }
+
     LOG_DEBUG("Leave Build");
     return ip;
   }
@@ -326,6 +344,8 @@ namespace fat32 {
   void Fat32FileSystem::DeleteInode(struct inode *inode)
   {
     // inode->free();
+    LOG_DEBUG("delete inode");
+    inode_cache_map_->poll(MSDOS_I(inode)->i_pos);
     delete MSDOS_I(inode);
   }
 
@@ -346,10 +366,12 @@ namespace fat32 {
               enteies_of_sector * (sector - info_.reserve_sectors_) + i;
           ZeroCluster(cluster);
           LOG_DEBUG("alloc cluster=%d", cluster);
+          delete fat_sector;
           return cluster;
         }
       }
     }
+    delete fat_sector;
     panic("alloc cluster");
     return 0;
   }
@@ -377,6 +399,7 @@ namespace fat32 {
         break;
       }
     }
+    delete data;
     return total;
   }
 
@@ -389,6 +412,7 @@ namespace fat32 {
     char *data = new char[info_.bytes_per_sector_];
     ReadSector(sector, data);
     memmove(data + off, &entry, sizeof(entry));
+    delete data;
     return 0;
   }
 
@@ -417,6 +441,7 @@ namespace fat32 {
       ip->sz = off;
     }
     UpdateInode(ip);
+    delete data;
     return total;
   }
 
@@ -529,6 +554,7 @@ namespace fat32 {
   int Fat32FileSystem::ReadDir(
       struct file *fp, struct inode *ip, char *buf, int max_len, bool user)
   {
+    LOG_DEBUG("read dir=%d", max_len);
     // struct linux_dirent *dirent;
     MsdosEntry    entry;
     ReadDirHeader read_dir_header;
@@ -539,7 +565,7 @@ namespace fat32 {
     read_dir_header.user = user;
     read_dir_header.last_dirent = 0;
 
-    int off = fp->offset - 2;  // 前两字节是虚拟的，磁盘上不存在
+    int off = 0;
     int d_type;
     // 根目录，需要添加虚假的.和..节点
     // 用off=1代表"."
@@ -547,6 +573,7 @@ namespace fat32 {
     // 但实际目录内容中，不包含这两个目录项，
     // 故需要从0开始读
     if (ip->inum == kMsdosRootIno) {
+      off = fp->offset - 2;  // 根目录前两字节是虚拟的，磁盘上不存在
       while (off < 0) {
         if (filldir(&read_dir_header, "..", off + 3, kMsdosRootIno, DT_DIR) <
             0) {
@@ -557,6 +584,7 @@ namespace fat32 {
       }
     }
     int begin_off = off;
+    LOG_WARN("read off=%d sz=%d", off, ip->sz);
     while (ReadInode(ip, false, reinterpret_cast<uint64_t>(&entry), off,
                      sizeof(entry)) == sizeof(entry)) {
       begin_off = off;
@@ -698,6 +726,27 @@ namespace fat32 {
     //   return -1;
   }
 
+  void Fat32FileSystem::DebugInfo()
+  {
+    printf("Fat32 inodes info\n");
+    auto iter = inode_cache_map_->begin();
+    while (iter != nullptr) {
+      printf("inode=%s ref=%d\n", iter->val->test_name, iter->val->ref);
+      ++iter;
+    }
+  }
+
+  //                        88
+  //                        ""                          ,d
+  //                                                    88
+  // 8b,dPPYba,  8b,dPPYba, 88 8b       d8 ,adPPYYba, MM88MMM ,adPPYba,
+  // 88P'    "8a 88P'   "Y8 88 `8b     d8' ""     `Y8   88   a8P_____88
+  // 88       d8 88         88  `8b   d8'  ,adPPPPP88   88   8PP"""""""
+  // 88b,   ,a8" 88         88   `8b,d8'   88,    ,88   88,  "8b,   ,aa
+  // 88`YbbdP"'  88         88     "8"     `"8bbdP"Y8   "Y888 `"Ybbd8"'
+  // 88
+  // 88
+
   inline uint32_t Fat32FileSystem::FirstSectorOfCluster(uint32_t cluster)
   {
     return info_.first_data_sector_ +
@@ -731,6 +780,7 @@ namespace fat32 {
     for (size_t i = 0; i < info_.sectors_per_cluster; i++) {
       WriteSector(FirstSectorOfCluster(cluster) + i, data);
     }
+    delete data;
   }
 
   inline uint32_t Fat32FileSystem::FatSectorOfCluster(uint32_t cluster)
@@ -787,6 +837,7 @@ namespace fat32 {
     ReadSector(fat_sector, data);
     *reinterpret_cast<uint32_t *>(data + fat_offset) = value;
     WriteSector(fat_sector, data);
+    delete data;
     return 0;
   }
 
@@ -800,7 +851,9 @@ namespace fat32 {
     uint32_t fat_sector = FatSectorOfCluster(cluster);
     uint32_t fat_offset = FatOffsetOfCluster(cluster);
     ReadSector(fat_sector, data);
-    return *reinterpret_cast<uint32_t *>(data + fat_offset);
+    uint32_t ans = *reinterpret_cast<uint32_t *>(data + fat_offset);
+    delete data;
+    return ans;
   }
 
   inline int Fat32FileSystem::WriteCluster(uint32_t cluster, char *data)

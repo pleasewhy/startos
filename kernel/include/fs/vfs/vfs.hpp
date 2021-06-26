@@ -128,7 +128,25 @@ public:
    * @brief 将fp偏移量置为0
    */
   static struct file *rewind(struct file *fp);
+
+  /**
+   * @brief 复制fp
+   *
+   * @param fp
+   * @return struct file*
+   */
   static struct file *dup(struct file *fp);
+
+  /**
+   * @brief 创建一个无名管道
+   *
+   * @param fds
+   * @return int
+   */
+  static int createPipe(int fds[]);
+
+  static int ReadDir(struct file *fp, char *buf, int max_len, bool user);
+
   /**
    * @brief 将source路径中包含的文件系统(通常为设备，也可以是文件)
    * 挂载到target路径(目录或者文件).
@@ -143,6 +161,15 @@ public:
    */
   static int
   Mount(const char *source, const char *target, FileSystemType_DTMP type);
+
+  /**
+   * @brief namei的一个包装函数
+   * 找到dir目录下path对应文件的inode
+   * @return struct inode*
+   */
+  static struct inode *namei(struct inode *dir, char *path);
+
+  static void DebugInfo();
 
 private:
   /**
@@ -187,12 +214,13 @@ private:
   namex(struct inode *ip, char *path, bool nameiparent, char *name);
 
   /**
-   * @brief namei的一个包装函数
-   * 找到dir目录下path对应文件的inode
-   * @note path不能以"/"开始
+   * @brief namex的包装函数
+   *
+   * @param path
+   * @param name
    * @return struct inode*
    */
-  static struct inode *namei(struct inode *dir, char *path);
+  static struct inode *nameiparent(struct inode *dir, char *path, char *name);
 
   /**
    * @brief 判断该inode是否被挂载，若是，则返回挂载
