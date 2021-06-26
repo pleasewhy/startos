@@ -2,6 +2,7 @@
 #define VFS_HPP
 
 #include "FileSystem.hpp"
+#include "file_system.hpp"
 #include "StartOS.hpp"
 #include "file.h"
 #include "types.hpp"

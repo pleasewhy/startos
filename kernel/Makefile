@@ -78,22 +78,22 @@ OBJS += \
 	os/Exec.o \
 	os/Intr.o
 
+# device:
+OBJS += \
+	device/Console.o \
+	device/DeviceManager.o
 
 #fs:
 OBJS += \
 	fs/fat32/Fat.o \
 	fs/vfs/Vfs.o \
+	fs/vfs/vfs.o \
 	fs/devfs/DeviceFileSystem.o \
+	fs/devfs/device_file_system.o \
 	fs/vfs_file.o \
 	fs/fat32/fat32_file_system.o \
 	fs/fat32/fat_utils.o \
 	fs/Pipe.o
-
-
-# device:
-OBJS += \
-	device/Console.o \
-	device/DeviceManager.o
 
 # memory:
 OBJS += \

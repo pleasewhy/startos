@@ -11,15 +11,14 @@ namespace devfs {
    */
   struct DevInodeInfo
   {
+    char                       name[10];
     std::list<DevInodeInfo *> *children_list;
     struct inode               vfs_inode;
+
     DevInodeInfo()
     {
       children_list = new std::list<DevInodeInfo *>();
-    }
-    DevInodeInfo()
-    {
-      children_list = new std::list<DevInodeInfo *>();
+      vfs_inode.sleeplock.init("dev inode");
     }
   };
 
@@ -138,6 +137,10 @@ namespace devfs {
      * @return 失败返回-1，成功返回0
      */
     int Unlink(struct inode *dir, const char *name);
+
+  private:
+    void FillInode(
+        struct inode *ip, struct inode *parent, int dev, int ino, mode_t mode);
 
   private:
     struct DevInodeInfo *root_;

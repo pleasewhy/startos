@@ -13,6 +13,7 @@
 #include "os/Cpu.hpp"
 #include "os/Intr.hpp"
 #include "fs/fat/fat32_file_system.hpp"
+#include "fs/devfs/device_file_system.hpp"
 #include "os/Process.hpp"
 #include "os/Timer.hpp"
 #include "os/trap.hpp"
@@ -20,6 +21,7 @@
 #include "time.h"
 #include "map.hpp"
 #include "list.hpp"
+#include "fs/vfs/vfs.hpp"
 
 #define NVMA 15
 
@@ -337,8 +339,12 @@ void forkret(void)
 #ifdef TEST_STL
     TestSTL();
 #endif
-    vfs::fat32::Fat32FileSystem *fs = new vfs::fat32::Fat32FileSystem(0);
-    printf("fs=%p", fs);
+
+    vfs::VfsManager::Init();
+    // vfs::fat32::Fat32FileSystem *fs = new vfs::fat32::Fat32FileSystem(0);
+    // printf("fat fs=%p\n", fs);
+    // vfs::devfs::DeviceFileSystem *fs1 = new vfs::devfs::DeviceFileSystem(-1);
+    // printf("dev fs=%p\n",fs1);
     while (1)
       ;
     // vfs::init();

@@ -7,7 +7,8 @@
 #include "types.hpp"
 
 // 内核切换进程需要保存的寄存器
-struct context {
+struct context
+{
   uint64_t ra;
   uint64_t sp;
 
@@ -30,7 +31,8 @@ struct context {
   uint64_t s11;
 };
 
-struct trapframe {
+struct trapframe
+{
   /*   0 */ uint64_t kernel_satp;    // kernel page table
   /*   8 */ uint64_t kernel_sp;      // top of process's kernel stack
   /*  16 */ uint64_t kernel_trap;    // usertrap()
@@ -72,37 +74,40 @@ struct trapframe {
 // extern struct cpu cpus[NCPU];
 enum procstate { UNUSED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
-struct vma {
-  uint64_t addr;
-  int length;
-  int prot;
+struct vma
+{
+  uint64_t     addr;
+  int          length;
+  int          prot;
   struct file *f;
-  int flag;
+  int          flag;
 };
 
 // 进程
 class Task {
- public:
-  SpinLock lock;                // 进程锁
-  enum procstate state;         // 进程的状态
-  Task *parent;                 // 父进程
-  void *chan;                   // 如果非空，将在chan睡眠
-  int killed;                   // 如果非空，将被杀死
-  int xstate;                   // 返回给父进程的退出状态
-  int pid;                      // 进程ID
+// public:
+//   bool SetFileTable();
+public:
+  SpinLock          lock;       // 进程锁
+  enum procstate    state;      // 进程的状态
+  Task *            parent;     // 父进程
+  void *            chan;       // 如果非空，将在chan睡眠
+  int               killed;     // 如果非空，将被杀死
+  int               xstate;     // 返回给父进程的退出状态
+  int               pid;        // 进程ID
   struct trapframe *trapframe;  // trampoline.S保存进程数据在这里
-  pagetable_t pagetable;        // 用户页表
+  pagetable_t       pagetable;  // 用户页表
   // struct inode *current_dir;       // 当前目录
   struct file *openFiles[NOFILE];  // 用户打开文件，其下标为文件描述符。
-  char currentDir[MAXPATH];
-  struct inode *cwd;
-  uint64_t entry;
-  int sticks;  // 程序在用户态下运行的时间
-  int uticks;  // 程序在内核态下运行的时间
-  struct vma *vma[NOMMAPFILE];
-  uint64_t kstack;         // 进程的内核空间栈。
-  struct context context;  // 被保存的寄存器，用于pswitch
-  char name[16];           // 进程名
-  int sz;                  // 进程使用空间的大小
+  char           currentDir[MAXPATH];
+  struct inode * cwd;
+  uint64_t       entry;
+  int            sticks;  // 程序在用户态下运行的时间
+  int            uticks;  // 程序在内核态下运行的时间
+  struct vma *   vma[NOMMAPFILE];
+  uint64_t       kstack;    // 进程的内核空间栈。
+  struct context context;   // 被保存的寄存器，用于pswitch
+  char           name[16];  // 进程名
+  int            sz;        // 进程使用空间的大小
 };
 #endif  // PROCESS_HPP

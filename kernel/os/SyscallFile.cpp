@@ -5,6 +5,7 @@
 #include "file.h"
 #include "fs/vfs/FileSystem.hpp"
 #include "fs/vfs/Vfs.hpp"
+#include "fs/vfs/vfs.hpp"
 #include "memory/MemAllocator.hpp"
 #include "os/Syscall.hpp"
 #include "os/TaskScheduler.hpp"
@@ -115,7 +116,7 @@ uint64_t sys_read(void)
   // LOG_DEBUG("sys_read");
   if (argint(0, &fd) < 0 || argint(2, &n) < 0 || argaddr(1, &uaddr) < 0)
     return -1;
-
+  struct file *fp = getFileByfd(fd);
   return vfs::read(fd, true, reinterpret_cast<char *>(uaddr), n, 0);
 }
 
@@ -130,7 +131,7 @@ uint64_t sys_dup(void)
     return -1;
   }
   LOG_DEBUG("dup fd=%d fp=%p fp->ref=%d\n", fd, fp, fp->ref);
-  vfs::dup(fp);
+  fp = vfs::VfsManager::dup(fp);
   return registerFileHandle(fp);
 }
 

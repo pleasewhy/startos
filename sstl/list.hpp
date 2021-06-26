@@ -1,4 +1,9 @@
+#ifndef _SSTL_LIST_HPP
+#define _SSTL_LIST_HPP
 #include <os/SpinLock.hpp>
+#include "iterator.hpp"
+#include "type_traits.hpp"
+#include "utility.hpp"
 
 namespace std {
 
@@ -140,3 +145,4 @@ struct ListIterator : public std::iterator<std::forward_iterator_tag, T>
   }
 };
 }  // namespace std
+#endif

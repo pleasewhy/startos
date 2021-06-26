@@ -3,9 +3,14 @@
 
 #include "StartOS.hpp"
 #include "common/printk.hpp"
-#include "fs/vfs_file.h"
 #include "param.hpp"
+#include "common/logger.h"
+#include "file.h"
+#include "common/string.hpp"
 #include "types.hpp"
+#include "riscv.hpp"
+#include "fs/vfs_file.h"
+
 
 namespace vfs {
 class FileSystem0 {
@@ -119,8 +124,49 @@ public:
    */
   virtual int Unlink(struct inode *dir, const char *name) = 0;
 
-// public:
+  // public:
   // int  dev_;                   // 设备号，文件系统主要用
 };
+
+// 方便readdir维护缓冲区空间
+// 的大小
+struct ReadDirHeader
+{
+  char *               direntData;
+  int                  free;         // direntData剩余空间大小(byte)
+  int                  used;         // 已使用空间
+  struct linux_dirent *last_dirent;  // 上一个目录项
+  bool                 user;         // direntData是否为user空间地址
+};
+
+// #define ALIGN(a, base_align) (((a) + base_align - 1) & ~(base_align - 1))
+
+// 成功返回0，失败返回-1
+__attribute__((used)) static int filldir(struct ReadDirHeader *direntHeader,
+                   const char *          name,
+                   int                   name_len,
+                   uint64_t              ino,
+                   uint_t                type)
+{
+  char *               buf = direntHeader->direntData + direntHeader->used;
+  unsigned int         reclen;
+  struct linux_dirent *de = reinterpret_cast<struct linux_dirent *>(buf);
+
+  reclen = ALIGN(sizeof(struct linux_dirent) + name_len, sizeof(uint64_t));
+  if (reclen > direntHeader->free) {
+    direntHeader->last_dirent->d_off = 0;
+    LOG_DEBUG("readdir::filedir: reach max size");
+    return -1;
+  }
+  direntHeader->free -= reclen;
+  direntHeader->used += reclen;
+  de->d_off = reinterpret_cast<uint64_t>(buf + reclen);
+  de->d_ino = ino;
+  de->d_type = type;
+  memcpy(de->d_name, name, name_len);
+  de->d_reclen = reclen;
+  direntHeader->last_dirent = de;
+  return 0;
+}
 }  // namespace vfs
 #endif

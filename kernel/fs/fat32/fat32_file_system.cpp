@@ -108,7 +108,7 @@ namespace fat32 {
     info_.root_.vfs_inode.nlink++;
     info_.root_.vfs_inode.inum = kMsdosRootIno;
     info_.root_.vfs_inode.sleeplock.init("fat32 root");
-
+    info_.root_.vfs_inode.file_system = this;
     LOG_DEBUG("first data sector=%d", info_.first_data_sector_);
     // struct inode *ip = Lookup(&info_.root_.vfs_inode, "cat");
 #ifdef TEST_FAT32
@@ -300,9 +300,11 @@ namespace fat32 {
     inode_info->i_pos = pos;
     inode_info->i_start = GetStartCluster(entry);
     // 填充inode数据
+    ip->file_system = this;
     ip->dev = this->dev_;
     ip->inum = GetStartCluster(entry);
-    ip->parent = parent->dup();
+    parent->ref++;
+    ip->parent = parent;
     ip->sz = entry.sfn.file_size;
     ip->sleeplock.init("inode");
     ip->nlink = 0;
@@ -317,6 +319,7 @@ namespace fat32 {
     }
     else
       ip->mode |= __S_IFREG;
+    LOG_DEBUG("Leave Build");
     return ip;
   }
 
@@ -462,16 +465,16 @@ namespace fat32 {
 
   struct inode *Fat32FileSystem::Lookup(struct inode *dir, const char *name)
   {
+    LOG_DEBUG("Look up=%s", name);
     if (strncmp(".", name, strlen(name)) == 0) {
-      dir->dup();
+      dir->ref++;
       return dir;
     }
 
     if (strncmp("..", name, strlen(name)) == 0) {
-      dir->parent->dup();
+      dir->parent->ref++;
       return dir->parent;
     }
-
     MsdosEntry entry;
     char       tmp_name[64];
     uint64_t   off = 0;
@@ -521,45 +524,6 @@ namespace fat32 {
     // fp->offset = off;
     // return read_dir_header.used;
     return nullptr;
-  }
-
-  // 方便readdir维护缓冲区空间
-  // 的大小
-  struct ReadDirHeader
-  {
-    char *               direntData;
-    int                  free;         // direntData剩余空间大小(byte)
-    int                  used;         // 已使用空间
-    struct linux_dirent *last_dirent;  // 上一个目录项
-    bool                 user;         // direntData是否为user空间地址
-  };
-
-  // 成功返回0，失败返回-1
-  static int filldir(struct ReadDirHeader *direntHeader,
-                     const char *          name,
-                     int                   name_len,
-                     uint64_t              ino,
-                     uint_t                type)
-  {
-    char *               buf = direntHeader->direntData + direntHeader->used;
-    unsigned int         reclen;
-    struct linux_dirent *de = reinterpret_cast<struct linux_dirent *>(buf);
-
-    reclen = ALIGN(sizeof(struct linux_dirent) + name_len, sizeof(uint64_t));
-    if (reclen > direntHeader->free) {
-      direntHeader->last_dirent->d_off = 0;
-      LOG_DEBUG("readdir::filedir: reach max size");
-      return -1;
-    }
-    direntHeader->free -= reclen;
-    direntHeader->used += reclen;
-    de->d_off = reinterpret_cast<uint64_t>(buf + reclen);
-    de->d_ino = ino;
-    de->d_type = type;
-    memcpy(de->d_name, name, name_len);
-    de->d_reclen = reclen;
-    direntHeader->last_dirent = de;
-    return 0;
   }
 
   int Fat32FileSystem::ReadDir(

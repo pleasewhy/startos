@@ -1,7 +1,8 @@
-#ifndef VFS_HPP
-#define VFS_HPP
+#ifndef NEW_VFS_HPP
+#define NEW_VFS_HPP
 
 #include "fs/vfs/file_system.hpp"
+#include "fs/fat/fat32_file_system.hpp"
 #include "StartOS.hpp"
 #include "file.h"
 #include "types.hpp"
@@ -26,22 +27,24 @@
 
 namespace vfs {
 
-const uint8_t kMaxFileName = 20;
+const uint8_t kMaxFileName = 35;
 const uint8_t kMountPointNumber = 5;
 
 // 维护挂载点数据
 struct MountPoint
 {
-  char        mp_path[MAXPATH];      // 挂载点绝对路径
-  char        device_path[MAXPATH];  // 挂载设备(or文件)绝对路径
-  int         dev;                   // 挂载设备号
-  FileSystem0 *fs;                    // 挂载的文件系统实例
+  char          mp_path[MAXPATH];      // 挂载点绝对路径
+  char          device_path[MAXPATH];  // 挂载设备(or文件)绝对路径
+  struct inode *origin;                // 挂载点原始文件对应的inode
+  struct inode *target;                // 新文件系统的根目录
+  int           dev;                   // 挂载设备号
+  FileSystem0 * fs;                    // 挂载的文件系统实例
 };
 
 /**
  * @brief 目前已支持文件系统的类型
  */
-enum class FileSystemType {
+enum class FileSystemType_DTMP {
   FAT32 = 1,     ///< FAT32
   SYSFS = 2,     ///< Sysfs
   DEVFS = 3,     ///< Devfs
@@ -84,7 +87,7 @@ public:
    * @return 成功返回struct file指针，失败返回nullptr
    */
   static struct file *
-  openat(struct file *dir, const char *filepath, size_t flags, mode_t mode);
+  openat(struct file *dir, char *filepath, size_t flags, mode_t mode);
 
   /**
    * @brief 关闭文件，系统调用close会调用该函数
@@ -109,7 +112,7 @@ public:
    * @param n 读取字节数
    * @return int 读取字节数
    */
-  static int read(struct file *fp, char *buf, int n, bool);
+  static int read(struct file *fp, char *buf, int n, bool user);
 
   /**
    * @brief 向文件写入数据
@@ -119,8 +122,13 @@ public:
    * @param n 期望写入的字节数
    * @return int 实际写入的字节数
    */
-  static int write(struct file *fp, const char *buf, int n);
+  static int write(struct file *fp, const char *buf, int n, bool user);
 
+  /**
+   * @brief 将fp偏移量置为0
+   */
+  static struct file *rewind(struct file *fp);
+  static struct file *dup(struct file *fp);
   /**
    * @brief 将source路径中包含的文件系统(通常为设备，也可以是文件)
    * 挂载到target路径(目录或者文件).
@@ -133,7 +141,8 @@ public:
    * @param type source中包含的文件系统类型
    * @return int 成功返回0，失败返回一个负数
    */
-  static int Mount(const char *source, const char *target, FileSystemType type);
+  static int
+  Mount(const char *source, const char *target, FileSystemType_DTMP type);
 
 private:
   /**
@@ -175,22 +184,43 @@ private:
    * @return struct inode*
    */
   static struct inode *
-  namex(FileSystem0 *fs, char *path, bool nameiparent, char *name);
+  namex(struct inode *ip, char *path, bool nameiparent, char *name);
 
-  static struct inode *namei();
+  /**
+   * @brief namei的一个包装函数
+   * 找到dir目录下path对应文件的inode
+   * @note path不能以"/"开始
+   * @return struct inode*
+   */
+  static struct inode *namei(struct inode *dir, char *path);
+
+  /**
+   * @brief 判断该inode是否被挂载，若是，则返回挂载
+   * 后文件系统的root inode，这里会调用%ip的free来
+   * 释放它
+   *
+   * @param ip
+   * @return struct inode*
+   */
+  static struct inode *ConvertInodeByMp(struct inode *ip);
 
 private:
+  // 在vfs.cpp中定义
   static SleepLock  vfs_sleeplock_;
   static MountPoint mount_points_[kMountPointNumber];
+  static inode *    root_;
 };
 
-static inline FileSystem0 *createFileSystem(FileSystemType type, int dev)
+static inline FileSystem0 *createFileSystem(FileSystemType_DTMP type, int dev)
 {
   switch (type) {
     // case FileSystemType::DEVFS:
     // return new DeviceFileSystem(mountPoint, specialDev);
-    case FileSystemType::FAT32: return new fat32::Fat32FileSystem(dev);
-    default: panic("create file system"); break;
+    case FileSystemType_DTMP::FAT32:
+      return new fat32::Fat32FileSystem(dev);
+    default:
+      panic("create file system");
+      break;
   }
   return nullptr;
 }
