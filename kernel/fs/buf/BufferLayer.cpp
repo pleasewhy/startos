@@ -4,7 +4,8 @@
 
 #include "common/printk.hpp"
 #include "os/SleepLock.hpp"
-#include "fs/inodefs/BufferLayer.hpp"
+#include "device/DeviceManager.hpp"
+#include "fs/buf/BufferLayer.hpp"
 #include "os/TaskScheduler.hpp"
 #include "os/Timer.hpp"
 #include "param.hpp"
@@ -46,6 +47,7 @@ struct buf *BufferLayer::allocBuffer(int dev, int blockno)
   if (earliest == 0) {
     panic("alloc buf");
   }
+  // printf("expel\n");
   b = earliest;
   b->valid = 0;
   b->refcnt = 1;
@@ -67,11 +69,11 @@ void BufferLayer::freeBuffer(struct buf *b)
 }
 
 // 读取给定块的内容，返回一个包含该内容的buf
-struct buf *BufferLayer::read(int dev, int blockno)
+struct buf *BufferLayer::read(int dev, int sector)
 {
-  struct buf *b = allocBuffer(dev, blockno);
+  struct buf *b = allocBuffer(dev, sector);
   if (!b->valid) {
-    disk_read(b);
+    dev::RwDevRead(dev, b->data, sector * BSIZE, BSIZE);
   }
   b->valid = 1;
   return b;
@@ -80,5 +82,5 @@ struct buf *BufferLayer::read(int dev, int blockno)
 // 将缓冲区写入磁盘
 void BufferLayer::write(struct buf *b)
 {
-  disk_write(b);
+  // dev::RwDevWrite(b->dev, b->data, b->blockno * BSIZE, BSIZE);
 };

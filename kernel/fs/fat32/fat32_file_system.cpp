@@ -4,14 +4,15 @@
 #include "common/string.hpp"
 #include "common/logger.h"
 #include "fs/fat/fat32_file_system.hpp"
+#include "fs/buf/BufferLayer.hpp"
 #include "file.h"
 #include "os/TaskScheduler.hpp"
 #include "map.hpp"
 #include "fcntl.h"
 
+extern BufferLayer buffer_layer;
 namespace vfs {
 namespace fat32 {
-
   // 测试的入口函数
   static void Test(Fat32FileSystem *fs);
 
@@ -381,25 +382,28 @@ namespace fat32 {
       struct inode *ip, bool user, uint64_t buf, uint64_t offset, uint_t n)
   {
     // MsdosInodeInfo *msdos_info = MSDOS_I(ip);
-
     if (offset > ip->sz || offset + n < offset)
       return 0;
     if (offset + n > ip->sz)
       n = ip->sz - offset;
 
     uint_t nread, total, mod;
-    char * data = new char[info_.bytes_per_cluster_];
-    for (total = 0; total < n; total += nread, buf += nread) {
-      ReadCluster(bmap(ip, (offset / info_.bytes_per_cluster_)), data);
-
+    // char * data = new char[info_.bytes_per_cluster_];
+    for (total = 0; total < n; total += nread, buf += nread, offset += nread) {
+      uint32_t cluster = bmap(ip, (offset / info_.bytes_per_cluster_));
+      int      sector = FirstSectorOfCluster(cluster);
+      // LOG_DEBUG("sector=%d offset=%d", sector, offset);
+      struct buf *b = buffer_layer.read(dev_, sector);
+      // ReadCluster(bmap(ip, (offset / info_.bytes_per_cluster_)), data);
       mod = offset % info_.bytes_per_cluster_;
       nread = min(n - total, info_.bytes_per_cluster_ - mod);
-      if (either_copyout(user, buf, data + mod, nread) < 0) {
+      if (either_copyout(user, buf, b->data + mod, nread) < 0) {
         total = -1;
         break;
       }
+      buffer_layer.freeBuffer(b);
     }
-    delete data;
+    // delete data;
     return total;
   }
 
@@ -763,8 +767,8 @@ namespace fat32 {
       uint32_t now = GetFatEntry(cur);
       if (now == kEndOfCluster32) {
         now = AllocCluster();
+        SetFatEntey(cur, now);
       }
-      SetFatEntey(cur, now);
       cur = now;
     }
     if (cur == kEndOfCluster32) {
@@ -831,13 +835,12 @@ namespace fat32 {
       return -1;
     }
 
-    char *   data = new char[info_.bytes_per_sector_];
-    uint32_t fat_sector = FatSectorOfCluster(cluster);
-    uint32_t fat_offset = FatOffsetOfCluster(cluster);
-    ReadSector(fat_sector, data);
-    *reinterpret_cast<uint32_t *>(data + fat_offset) = value;
-    WriteSector(fat_sector, data);
-    delete data;
+    uint32_t    fat_sector = FatSectorOfCluster(cluster);
+    uint32_t    fat_offset = FatOffsetOfCluster(cluster);
+    struct buf *b = buffer_layer.read(dev_, fat_sector);
+    *reinterpret_cast<uint32_t *>(b->data + fat_offset) = value;
+    buffer_layer.write(b);
+    buffer_layer.freeBuffer(b);
     return 0;
   }
 
@@ -847,12 +850,11 @@ namespace fat32 {
       return -1;
     }
 
-    char *   data = new char[info_.bytes_per_sector_];
-    uint32_t fat_sector = FatSectorOfCluster(cluster);
-    uint32_t fat_offset = FatOffsetOfCluster(cluster);
-    ReadSector(fat_sector, data);
-    uint32_t ans = *reinterpret_cast<uint32_t *>(data + fat_offset);
-    delete data;
+    uint32_t    fat_sector = FatSectorOfCluster(cluster);
+    uint32_t    fat_offset = FatOffsetOfCluster(cluster);
+    struct buf *b = buffer_layer.read(dev_, fat_sector);
+    uint32_t    ans = *reinterpret_cast<uint32_t *>(b->data + fat_offset);
+    buffer_layer.freeBuffer(b);
     return ans;
   }
 

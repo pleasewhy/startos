@@ -76,17 +76,22 @@ enum procstate { UNUSED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
 struct vma
 {
-  uint64_t     addr;
-  int          length;
-  int          prot;
-  struct file *f;
-  int          flag;
+  uint64_t addr;
+  enum { PROG, DATA } type;
+  int           length;
+  int           prot;
+  int           flag;
+  struct file * f;
+  struct inode *ip;
+  uint32_t      offset;
+
+  void free();
 };
 
 // 进程
 class Task {
-// public:
-//   bool SetFileTable();
+  // public:
+  //   bool SetFileTable();
 public:
   SpinLock          lock;       // 进程锁
   enum procstate    state;      // 进程的状态

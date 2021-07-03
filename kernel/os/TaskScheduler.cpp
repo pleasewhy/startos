@@ -455,7 +455,6 @@ void scheduler()
         alive++;
       }
       if (task->state == ZOMBIE) {
-        // LOG_DEBUG("wake up");
         wakeup(initTask);
       }
       if (task->state == RUNNABLE) {
@@ -466,7 +465,7 @@ void scheduler()
       }
       task->lock.unlock();
     }
-    if (alive <= 2) {
+    if (alive < 1) {
       intr_on();
       asm volatile("wfi");
     }
@@ -526,11 +525,11 @@ void prepareSched()
     panic("sched interruptible");
 
   intr_enable = Cpu::mycpu()->intr_enable;
-  // LOG_INFO("enter switch cpuid=%d task=%p gp=%d", Cpu::cpuid(),
-  // Cpu::mycpu()->task, r_gp());
+  // LOG_INFO("enter switch cpuid=%d task=%p", Cpu::cpuid(),
+  // Cpu::mycpu()->task);
   pswitch(&task->context, &Cpu::mycpu()->context);
-  // LOG_INFO("leave switch cpuid=%d task=%p gp=%d", Cpu::cpuid(),
-  // Cpu::mycpu()->task, r_gp()); LOG_DEBUG("epc=%p", myTask()->trapframe->epc);
+  // LOG_INFO("leave switch cpuid=%d task=%p", Cpu::cpuid(),
+  // Cpu::mycpu()->task); LOG_DEBUG("epc=%p", myTask()->trapframe->epc);
   Cpu::mycpu()->intr_enable = intr_enable;
 }
 
@@ -551,11 +550,11 @@ void wakeup(void *chan)
 {
   Task *task;
   for (task = taskTable; task < &taskTable[NTASK]; task++) {
-    // task->lock.lock();
+    task->lock.lock();
     if (task->state == SLEEPING && task->chan == chan) {
       task->state = RUNNABLE;
     }
-    // task->lock.unlock();
+    task->lock.unlock();
   }
 }
 
@@ -590,6 +589,7 @@ int fork()
     }
   }
 
+  LOG_DEBUG("fork:dup vma");
   struct vma *vma, *childVma;
   for (int i = 0; i < NOMMAPFILE; i++) {
     vma = task->vma[i];
@@ -597,7 +597,9 @@ int fork()
     if (vma) {
       childVma = allocVma();
       *(childVma) = *(vma);
-      vfs::VfsManager::dup(vma->f);
+      // vfs::VfsManager::dup(vma->f);
+      LOG_DEBUG("i=%d %p", i, vma->ip);
+      vma->ip->dup();
       child->vma[i] = childVma;
     }
   }
@@ -817,7 +819,12 @@ void exit(int status)
 {
   Task *task, *child;
   task = myTask();
-  LOG_DEBUG("pid=%d xstate=%d", task->pid, task->xstate);
+
+  if (task == initTask) {
+    panic("init task exit");
+  }
+
+  LOG_DEBUG("pid=%d xstate=%d name=%s", task->pid, task->xstate, task->name);
   // 关闭打开的文件
   for (int fd = 0; fd < NOFILE; fd++) {
     if (task->openFiles[fd] != NULL) {
@@ -844,11 +851,10 @@ void exit(int status)
         vfs::rewind(vma->f);
         vfs::write(vma->f, true, (const char *)(vma->addr), vma->length, 0);
       }
-      LOG_DEBUG("vma.addr=%p", vma->addr);
-      userUnmap(task->pagetable, vma->addr, PGROUNDUP(vma->length) / PGSIZE, 0);
-      // uvmunmap(p->pagetable, vma->addr, PGROUNDUP(vma->length) / PGSIZE, 0);
-      vfs::close(vma->f);
-      freeVma(vma);
+      userUnmap(task->pagetable, PGROUNDDOWN(vma->addr), PGROUNDUP(vma->length) / PGSIZE, 0);
+      vma->free();
+      // vfs::close(vma->f);
+      task->vma[i] = 0;
     }
   }
   task->state = ZOMBIE;
@@ -990,10 +996,11 @@ struct vma *allocVma()
 {
   struct vma *a;
   for (a = vma; a < vma + NVMA; a++) {
-    if (a->f == 0) {
+    if (a->ip == 0) {
       return a;
     }
   }
+  panic("not enough vma");
   return 0;
 }
 

@@ -2,6 +2,7 @@
 #include "common/printk.hpp"
 #include "common/string.hpp"
 #include "fs/vfs/Vfs.hpp"
+#include "fs/vfs/vfs.hpp"
 #include "memlayout.hpp"
 #include "os/TaskScheduler.hpp"
 #include "param.hpp"
@@ -9,58 +10,94 @@
 #include "common/logger.h"
 #include "types.hpp"
 
-static int loadseg(pte_t *     pagetable,
-                   uint64_t    addr,
-                   const char *path,
-                   uint_t      offset,
-                   uint_t      sz);
+__attribute__((used)) static int loadseg(pagetable_t   pagetable,
+                                         uint64_t      va,
+                                         struct inode *ip,
+                                         uint_t        offset,
+                                         uint_t        sz);
+
+static int LazyLoadSeg(
+    struct Task *task, struct inode *ip, uint32_t off, uint64_t va, int len)
+{
+  struct vma *vma = allocVma();
+  vma->ip = ip->dup();
+  vma->flag = MAP_PRIVATE;
+  vma->prot = PROT_EXEC | PROT_READ | PROT_WRITE;
+  vma->offset = off;
+  vma->type = vma->PROG;
+  vma->length = len;
+  vma->addr = (va);
+  for (int i = 0; i < NOMMAPFILE; i++) {
+    if (task->vma[i] == 0) {
+      task->vma[i] = vma;
+      return 0;
+    }
+  }
+  panic("lazy load segment");
+  return -1;
+}
 
 int exec(char *path, char **argv)
 {
-  int           i, off, argc, oldsz;
-  uint64_t      sz = 0, stackbase, sp;
-  uint64_t      ustack[MAXARG + 1];  // 最后一项为0，用于标记结束
-  pagetable_t   old_pagetable;
-  struct elfhdr elf;
-  // struct inode *ip;
+  int            i, off, argc, oldsz;
+  uint64_t       sz = 0, stackbase, sp;
+  uint64_t       ustack[MAXARG + 1];  // 最后一项为0，用于标记结束
+  pagetable_t    old_pagetable;
+  struct elfhdr  elf;
+  struct inode * ip;
   struct proghdr ph;
   pagetable_t    pagetable = 0;
   Task *         task = myTask();
 
+  LOG_DEBUG("exec start");
   if ((pagetable = taskPagetable(task)) == 0) {
     return 0;
   }
-
-  // if ((ip = namei(path)) == 0) {
-  //     return 0;
-  // }
+  if ((ip = vfs::VfsManager::namei(nullptr, path)) == nullptr) {
+    return 0;
+  }
 
   // lock_inode(ip);
-
+  // ip->lock();
   // 检查ELF头
-  // LOG_DEBUG("exec0");
-  if (vfs::direct_read(path, reinterpret_cast<char *>(&elf), sizeof(elf), 0) !=
+  memset(&elf, 0, sizeof(elf));
+  if (ip->read(reinterpret_cast<char *>(&elf), 0, sizeof(elf), false) !=
       sizeof(elf)) {
     LOG_DEBUG("exec read error");
     goto bad;
   }
-  // LOG_DEBUG("exec1");
   // if (read_inode(ip, 0, (uint64_t) &elf, 0, sizeof(elf)) != sizeof(elf))
   //     goto bad;
-  if (elf.magic != ELF_MAGIC) {
-    LOG_DEBUG("not a elf file");
-    goto bad;
+  for (int i = 0; i < NOMMAPFILE; i++) {
+    struct vma *a = task->vma[i];
+    if (a != 0 && a->type == a->PROG) {
+      a->free();
+      LOG_DEBUG("free vma");
+      task->vma[i] = 0;
+    }
   }
 
+  if (elf.magic != ELF_MAGIC) {
+    LOG_DEBUG("not a elf file,elf=%p", elf.magic);
+    LOG_DEBUG("entry=%d", elf.entry);
+    LOG_DEBUG("version=%d", elf.version);
+    LOG_DEBUG("sz=%d", ip->sz);
+    LOG_DEBUG("name=%s", ip->test_name);
+    goto bad;
+  }
   oldsz = task->sz;
   // 加载程序到内存中
   for (i = 0, off = elf.phoff; i < elf.phnum; i++, off += sizeof(ph)) {
-    if (vfs::direct_read(path, reinterpret_cast<char *>(&ph), sizeof(ph),
-                         off) != sizeof(ph)) {
+    LOG_DEBUG("i=%d", i);
+    if (ip->read(reinterpret_cast<char *>(&ph), off, sizeof(ph), false) !=
+        sizeof(ph)) {
+      LOG_DEBUG("read inode error");
       goto bad;
     }
-    // if (read_inode(ip, 0, (uint64_t) &ph, off, sizeof(ph)) != sizeof(ph))
-    //     goto bad;
+    // if (vfs::direct_read(path, reinterpret_cast<char *>(&ph), sizeof(ph),
+    //                      off) != sizeof(ph)) {
+    //   goto bad;
+    // }
     if (ph.type != ELF_PROG_LOAD)
       continue;
     if (ph.memsz < ph.filesz)
@@ -68,14 +105,22 @@ int exec(char *path, char **argv)
     if (ph.vaddr + ph.memsz < ph.vaddr)
       goto bad;
     uint64_t sz1;
-    if ((sz1 = userAlloc(pagetable, sz, ph.vaddr + ph.memsz)) == 0)
-      goto bad;
+    sz1 = ph.vaddr + ph.memsz;
+    // if ((sz1 = userAlloc(pagetable, sz, ph.vaddr + ph.memsz)) == 0)
+    //   goto bad;
     sz = sz1;
-    if (ph.vaddr % PGSIZE != 0)
+    if (ph.vaddr % PGSIZE != 0) {
+      LOG_DEBUG("type=%d", ph.type);
+      LOG_DEBUG("need align pgsize");
+      // goto bad;
+    }
+    if (LazyLoadSeg(task, ip, ph.off, ph.vaddr, ph.filesz) < 0) {
       goto bad;
-    if (loadseg(pagetable, ph.vaddr, path, ph.off, ph.filesz) < 0)
-      goto bad;
+    }
+    // if (loadseg(pagetable, ph.vaddr, ip, ph.off, ph.filesz) < 0)
+    // goto bad;
   }
+  LOG_DEBUG("exec2");
   // unlock_and_putback(ip);
   // ip = 0;
   // LOG_DEBUG("exec2");
@@ -134,10 +179,15 @@ int exec(char *path, char **argv)
   task->trapframe->sp = sp;
   LOG_DEBUG("sp=%p oldsz=%d", sp, oldsz);
   FreeTaskPagetable(old_pagetable, oldsz);
+  ip->free();
+  task->lock.lock();
+  task->lock.unlock();
   return argc;
 
 bad:
+  ip->free();
   LOG_DEBUG("exec bad, path=%s", path);
+  // TODO FIXME 释放VMA
   if (pagetable)
     FreeTaskPagetable(pagetable, sz);
   return -1;
@@ -151,35 +201,40 @@ bad:
  * @param pagetable 给定的pagetable
  * @param va 段被加载到的虚拟地址
  * @param ip 该可执行文件的inode
- * @param offset
- * @param sz 段在文件中的偏移量
+ * @param offset 段在文件中的偏移量
+ * @param sz
  * @return 是否成功
  */
-static int loadseg(pagetable_t pagetable,
-                   uint64_t    va,
-                   const char *path,
-                   uint_t      offset,
-                   uint_t      sz)
+static int loadseg(pagetable_t   pagetable,
+                   uint64_t      va,
+                   struct inode *ip,
+                   uint_t        offset,
+                   uint_t        sz)
 {
   uint_t   i, n;
   uint64_t pa;
 
-  if ((va % PGSIZE) != 0)
-    panic("loadseg: va must be page aligned");
+  LOG_DEBUG("sz=%d", sz);
+  // if ((va % PGSIZE) != 0)
+  //   panic("loadseg: va must be page aligned");
 
-  for (i = 0; i < sz; i += PGSIZE) {
+  uint32_t newsz = sz > 10 * PGSIZE ? 10 * PGSIZE : sz;
+
+  for (i = 0; i < newsz; i += n) {
+    LOG_DEBUG("i=%d offset=%p newsz=%d", i, offset, newsz);
     pa = walkAddr(pagetable, va + i);
     if (pa == 0)
       panic("loadseg: address should exist");
-    if (sz - i < PGSIZE)
-      n = sz - i;
-    else
-      n = PGSIZE;
-    if (vfs::direct_read(path, reinterpret_cast<char *>(pa), n, offset + i) !=
-        n)
+    pa += (va + i) % PGSIZE;
+    n = min(newsz - i, PGSIZE - pa % PGSIZE);
+    LOG_DEBUG("va=%p pa=%p n=%d", va, pa, n);
+    // if (newsz - i < PGSIZE)
+    // n = newsz - i;
+    // else
+    // n = PGSIZE;
+    if (ip->read(reinterpret_cast<char *>(pa), offset + i, n, false) != n) {
       return -1;
-    // if (read_inode(ip, 0, (uint64_t)pa, offset + i, n) != n) return -1;
+    }
   }
-
   return 0;
 }

@@ -39,6 +39,8 @@ void ls(const char *filepath)
   fstat(fd, &kst);
   if (!S_ISDIR(kst.st_mode)) {
     printf("%s %s %d\n", fmtname(filepath), DIR_STR, kst.st_size);
+    close(fd);
+    return;
   }
   getdents64(fd, dirents_ptr, 512);
   while (dirents_ptr->d_reclen != 0) {

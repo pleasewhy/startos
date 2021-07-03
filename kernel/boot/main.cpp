@@ -11,6 +11,7 @@
 #include "memlayout.hpp"
 #include "memory/BuddyAllocator.hpp"
 #include "memory/MemAllocator.hpp"
+#include "fs/buf/BufferLayer.hpp"
 #include "memory/VmManager.hpp"
 #include "os/Cpu.hpp"
 #include "os/SpinLock.hpp"
@@ -24,6 +25,7 @@ Console             console;
 Cpu                 cpus[2];
 MemAllocator        memAllocator;  // 用于分配页
 mem::BuddyAllocator buddy_alloc_;  // 用于通用内存内配
+BufferLayer         buffer_layer;
 
 static inline void inithartid(unsigned long hartid)
 {
@@ -71,9 +73,11 @@ extern "C" void main(unsigned long hartid, unsigned long dtb_pa)
     initKernelVm();              // 初始化内核虚拟内存
     initHartVm();                // 启用分页
     timer::init();
-    trapinithart();  // 初始化trap
-    syscall_init();  // 初始化系统调用
-    plic::init();    // 初始化plic
+    LOG_DEBUG("buf");
+    buffer_layer.init();  // 初始化缓存区
+    trapinithart();       // 初始化trap
+    syscall_init();       // 初始化系统调用
+    plic::init();         // 初始化plic
     plic::initHart();
 
     dev::Init();  // 初始化已有设备

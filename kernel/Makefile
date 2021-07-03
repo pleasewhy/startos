@@ -69,6 +69,7 @@ OBJS += \
 	os/Timer.o \
 	os/time.o \
 	os/TaskScheduler.o \
+	os/task.o \
 	os/SleepLock.o \
 	os/switch.o \
 	os/trampoline.o \
@@ -93,7 +94,8 @@ OBJS += \
 	fs/vfs_file.o \
 	fs/fat32/fat32_file_system.o \
 	fs/fat32/fat_utils.o \
-	fs/Pipe.o
+	fs/Pipe.o \
+	fs/buf/BufferLayer.o
 
 # memory:
 OBJS += \

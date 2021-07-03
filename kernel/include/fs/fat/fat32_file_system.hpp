@@ -141,7 +141,7 @@ namespace fat32 {
      * 命令行输入~,会调用该函数
      */
     void DebugInfo() override;
-    
+
     // /**
     //  * @brief 删除一个空目录，该方法被系统调用rmdir调用
     //  *
@@ -310,6 +310,7 @@ namespace fat32 {
     FatFsInfo fat_fs_info_;    // fat32信息扇区
     int       dev_;            // 挂载设备号
     int       max_inode_num_;  // inode缓存最大数量
+    char *    fat_table_;
     std::map<uint64_t, struct inode *> *inode_cache_map_;
   };
 

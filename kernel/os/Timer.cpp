@@ -11,7 +11,7 @@
 namespace timer {
 int ticks;
 SpinLock spinLock;
-uint32_t interval;
+uint32_t interval = 1000000;
 void init() {
   ticks = 0;
   spinLock.init("timer");

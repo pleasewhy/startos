@@ -219,6 +219,8 @@ uint64_t userAlloc(pagetable_t pagetable, uint64_t oldsz, uint64_t newsz)
   return newsz;
 }
 
+
+
 void userUnmap(pagetable_t pagetable,
                uint64_t    va,
                uint64_t    npages,
@@ -234,7 +236,8 @@ void userUnmap(pagetable_t pagetable,
     if ((pte = walk(pagetable, a, 0)) == 0)
       panic("uvmunmap: walk");
     if ((*pte & PTE_V) == 0) {
-      LOG_WARN("uvmunmap: not mapped");
+      // LOG_WARN("uvmunmap: not mapped");
+      continue;
     }
     if (PTE_FLAGS(*pte) == PTE_V)
       panic("uvmunmap: not a leaf");

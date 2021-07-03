@@ -72,7 +72,8 @@ void runcmd(struct cmd *cmd)
     exit(1);
 
   switch (cmd->type) {
-    default: panic("runcmd");
+    default:
+      panic("runcmd");
 
     case EXEC:
       ecmd = (struct execcmd *)cmd;
@@ -155,7 +156,6 @@ int main(void)
       break;
     }
   }
-
   // Read and run input commands.
   while (getcmd(buf, sizeof(buf)) >= 0) {
     if (buf[0] == 'c' && buf[1] == 'd' && buf[2] == ' ') {
@@ -165,7 +165,9 @@ int main(void)
         fprintf(2, "cannot cd %s\n", buf + 3);
       continue;
     }
+    printf("has getcmd\n");
     if (fork1() == 0) {
+      printf("forkover\n\n");
       runcmd(parsecmd(buf));
     }
     wait(0);
@@ -271,13 +273,16 @@ int gettoken(char **ps, char *es, char **q, char **eq)
     *q = s;
   ret = *s;
   switch (*s) {
-    case 0: break;
+    case 0:
+      break;
     case '|':
     case '(':
     case ')':
     case ';':
     case '&':
-    case '<': s++; break;
+    case '<':
+      s++;
+      break;
     case '>':
       s++;
       if (*s == '>') {
@@ -320,15 +325,19 @@ struct cmd *parsecmd(char *s)
 {
   char *      es;
   struct cmd *cmd;
-
+  printf("parse cmd\n\n");
   es = s + strlen(s);
   cmd = parseline(&s, es);
+  printf("parse cmd1\n\n");
   peek(&s, es, "");
+  printf("parse cmd2\n\n");
   if (s != es) {
     fprintf(2, "leftovers: %s\n", s);
     panic("syntax");
   }
   nulterminate(cmd);
+  printf("parse cmd3\n\n");
+  printf("parse cmd over\n\n");
   return cmd;
 }
 
@@ -370,7 +379,9 @@ struct cmd *parseredirs(struct cmd *cmd, char **ps, char *es)
     if (gettoken(ps, es, &q, &eq) != 'a')
       panic("missing file for redirection");
     switch (tok) {
-      case '<': cmd = redircmd(cmd, q, eq, O_RDONLY, 0); break;
+      case '<':
+        cmd = redircmd(cmd, q, eq, O_RDONLY, 0);
+        break;
       case '>':
         cmd = redircmd(cmd, q, eq, O_WRONLY | O_CREATE | O_TRUNC, 1);
         break;

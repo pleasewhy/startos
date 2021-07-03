@@ -15,7 +15,7 @@ struct buf {
   uint64_t last_use_tick;
   SleepLock sleeplock;
   uint_t refcnt;
-  uchar_t data[BSIZE];
+  char data[BSIZE];
 };
 
 class BufferLayer {

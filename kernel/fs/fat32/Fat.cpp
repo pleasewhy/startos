@@ -76,7 +76,7 @@ size_t
 Fat32FileSystem::read(const char *path, bool user, char *buf, int offset, int n)
 {
   sleep_lock.lock();
-  LOG_DEBUG("read filepath=%s", path);
+  // LOG_DEBUG("read filepath=%s", path);
   TFFile *fp = tf_fopen(path, "r");
 
   if (fp == NULL) {

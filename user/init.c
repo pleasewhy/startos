@@ -17,7 +17,7 @@ int main(void)
       printf("init: fork failed\n");
       exit(1);
     }
-    
+
     if (pid == 0) {
       execve("shell", argv, 0);
       printf("init: exec sh failed\n");
@@ -30,6 +30,8 @@ int main(void)
       wpid = wait((int *)0);
       if (wpid == pid) {
         // the shell exited; restart it.
+        while (1)
+          ;
         break;
       }
       else if (wpid < 0) {
