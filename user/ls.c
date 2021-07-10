@@ -36,6 +36,10 @@ void ls(const char *filepath)
 
   struct linux_dirent *dirents_ptr = buf;
   fd = open(filepath, O_RDONLY);
+  if (fd < 0) {
+    printf("%s isn't exist", filepath);
+    exit(-1);
+  }
   fstat(fd, &kst);
   if (!S_ISDIR(kst.st_mode)) {
     printf("%s %s %d\n", fmtname(filepath), DIR_STR, kst.st_size);
@@ -50,9 +54,9 @@ void ls(const char *filepath)
       type = DIR_STR;
     else if (S_ISREG(kst.st_mode))
       type = FILE_STR;
-    else if(S_ISBLK(kst.st_mode))
+    else if (S_ISBLK(kst.st_mode))
       type = BLK_STR;
-    else if(S_ISCHR(kst.st_mode))
+    else if (S_ISCHR(kst.st_mode))
       type = CHR_STR;
     else
       type = OTHER_STR;

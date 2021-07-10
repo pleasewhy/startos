@@ -21,6 +21,7 @@
 #include "os/TaskScheduler.hpp"
 #include "os/Timer.hpp"
 #include "riscv.hpp"
+#include "memory/mmap.hpp"
 #include "types.hpp"
 
 // kernelvec.S, 调用kerneltrap
@@ -83,7 +84,6 @@ void usertrap(void)
   else if (r_scause() == 13 || r_scause() == 5 || r_scause() == 12 ||
            r_scause() == 15) {
     uint64_t    eaddr;
-    struct vma *vma = 0;
     char *      mem;
     eaddr = r_stval();
     // ELF LOAD2:
@@ -91,50 +91,35 @@ void usertrap(void)
     // trap:
     //  va=1ad2a0
     //  va=1aafb0
+    bool loaded = false;
     LOG_DEBUG("cause=%d pc=%p eaddr=%p", r_scause(), r_sepc(), eaddr);
     for (int i = 0; i < NOMMAPFILE; i++) {
-      if (task->vma[i] != 0 && eaddr >= task->vma[i]->addr &&
-          eaddr < task->vma[i]->addr + task->vma[i]->length) {
-        vma = task->vma[i];
+      if (task->vma[i] != 0 &&
+          task->vma[i]->LoadIfContain(task->pagetable, eaddr)) {
+        loaded = true;
         break;
       }
     }
-    if (vma != 0) {
-      mem = (char *)memAllocator.alloc();
-      memset(mem, 0, PGSIZE);
-      eaddr = PGROUNDDOWN(eaddr);
 
-      // 设置权限
-      int perm = PTE_V | PTE_U;
-      if (vma->prot & PROT_READ)
+    if (!loaded) {
+      // 这里用来处理bss段
+      if (eaddr < task->sz) {
+        LOG_DEBUG("bss segment");
+        mem = (char *)memAllocator.alloc();
+        memset(mem, -1, PGSIZE);
+        eaddr = PGROUNDDOWN(eaddr);
+
+        // 设置权限
+        int perm = PTE_V | PTE_U;
         perm |= PTE_R;
-      if (vma->prot & PROT_WRITE)
         perm |= PTE_W;
-      if (vma->prot & PROT_EXEC)
         perm |= PTE_X;
-      // LOG_DEBUG("map page va=%p", vma->addr);
-      mappages(task->pagetable, eaddr, PGSIZE, (uint64_t)mem, perm);
-
-      // 这里有点小复杂，需要仔细想想
-
-      // eaddr不能小于vma->addr，即vma的起始地址，因为
-      // 不能保证vma->addr对齐PGSIZE。
-      eaddr = vma->addr > eaddr ? vma->addr : eaddr;
-      uint64_t high = PGROUNDUP(eaddr + 1);
-      uint64_t high_max = vma->addr + vma->length;
-      high = high > high_max ? high_max : high;
-
-      int nread = high - eaddr;
-      nread = nread > PGSIZE ? PGSIZE : nread;
-      uint32_t file_off = vma->offset + (eaddr - vma->addr);
-      uint64_t pa = (uint64_t)mem + eaddr - PGROUNDDOWN(eaddr);
-      LOG_DEBUG("cal eaddr=%p len=%d nread=%d file_off=%d", eaddr, vma->length,
-                nread, file_off);
-      int n = vma->ip->read((char *)pa, file_off, nread, false);
-      LOG_DEBUG("n=%d", n);
-    }
-    else {
-      task->killed = 1;
+        // LOG_DEBUG("map page va=%p", vma->addr);
+        mappages(task->pagetable, eaddr, PGSIZE, (uint64_t)mem, perm);
+      }
+      else {
+        task->killed = 1;
+      }
     }
   }
   else if ((which_dev = device_intr()) != 0) {

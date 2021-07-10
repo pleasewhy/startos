@@ -163,10 +163,10 @@ uint64_t sys_brk(void)
 
 #define OFFSET(structure, member) ((uint64_t)(&((structure *)0)->member));
 
-const char *sysname = "startos";
-const char *nodename = "test";
-const char *release = "statos hasn't been released yet";
-const char *version = "0.0.1";
+const char *sysname = "linux";
+const char *nodename = "ubuntu";
+const char *release = "5.8.0-59-generic";
+const char *version = "#66~20.04.1-Ubuntu";
 #ifdef K210
 const char *machine = "Sipeed M1 DOCK";
 #else

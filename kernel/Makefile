@@ -55,6 +55,10 @@ OBJS = \
 	boot/main.o \
 	StartOS.o
 
+#startos
+OBJS += \
+	startos/binformat.o \
+
 # common
 OBJS += \
 	common/printk.o \
@@ -69,7 +73,6 @@ OBJS += \
 	os/Timer.o \
 	os/time.o \
 	os/TaskScheduler.o \
-	os/task.o \
 	os/SleepLock.o \
 	os/switch.o \
 	os/trampoline.o \
@@ -101,7 +104,8 @@ OBJS += \
 OBJS += \
 	memory/VmManager.o \
 	memory/MemAllocator.o \
-	memory/BuddyAllocator.o
+	memory/BuddyAllocator.o \
+	memory/mmap.o \
 
 # driver:
 OBJS += \

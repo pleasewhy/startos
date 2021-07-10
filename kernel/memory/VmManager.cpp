@@ -309,7 +309,6 @@ int copyinstr(pagetable_t pagetable, char *dst, uint64_t vsrc, int maxsz)
 {
   uint64_t va0, pa0 = 0;
   int      got_null = 0, n;
-
   while (got_null == 0 && maxsz > 0) {
     va0 = PGROUNDDOWN(vsrc);
     pa0 = walkAddr(pagetable, va0);

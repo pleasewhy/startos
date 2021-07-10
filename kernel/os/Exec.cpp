@@ -1,4 +1,5 @@
 #include "Elf.hpp"
+#include "startos/binformat.hpp"
 #include "common/printk.hpp"
 #include "common/string.hpp"
 #include "fs/vfs/Vfs.hpp"
@@ -10,23 +11,51 @@
 #include "common/logger.h"
 #include "types.hpp"
 
+const char *env[] = {
+    "SHELL=shell",
+    "PWD=/",
+    "HOME=/",
+    "USER=root",
+    "MOTD_SHOWN=pam",
+    "LANG=C.UTF-8",
+    "INVOCATION_ID=e9500a871cf044d9886a157f53826684",
+    "TERM=vt220",
+    "SHLVL=2",
+    "JOURNAL_STREAM=8:9265",
+    "PATH=/usr/local/bin:/usr/bin:/bin:/usr/local/games:/usr/games",
+    "OLDPWD=/root",
+    "_=busybox",
+    0};
+
 __attribute__((used)) static int loadseg(pagetable_t   pagetable,
                                          uint64_t      va,
                                          struct inode *ip,
                                          uint_t        offset,
                                          uint_t        sz);
 
-static int LazyLoadSeg(
-    struct Task *task, struct inode *ip, uint32_t off, uint64_t va, int len)
+#define ELF_MIN_ALIGN PGSIZE
+
+#define ELF_PAGESTART(_v) ((_v) & ~(unsigned long)(ELF_MIN_ALIGN - 1))
+#define ELF_PAGEOFFSET(_v) ((_v) & (ELF_MIN_ALIGN - 1))
+#define ELF_PAGEALIGN(_v) (((_v) + ELF_MIN_ALIGN - 1) & ~(ELF_MIN_ALIGN - 1))
+
+static int LazyLoadSeg(struct Task *task, struct inode *ip, struct proghdr *ph)
 {
   struct vma *vma = allocVma();
+  // LOG_DEBUG("\nfilesz=%d, vaddr=%d mmsize=%d\n", ph->filesz, ph->vaddr);
+  // unsigned long size = ph->filesz + ELF_PAGEOFFSET(ph->vaddr);
+  // unsigned long off = ph->off - ELF_PAGEOFFSET(ph->vaddr);
+
+  // uint64_t addr = ELF_PAGESTART(ph->vaddr);
+  // size = ELF_PAGEALIGN(size);
+
   vma->ip = ip->dup();
   vma->flag = MAP_PRIVATE;
   vma->prot = PROT_EXEC | PROT_READ | PROT_WRITE;
-  vma->offset = off;
+  vma->offset = ph->off;
   vma->type = vma->PROG;
-  vma->length = len;
-  vma->addr = (va);
+  vma->length = ph->filesz;
+  vma->addr = ph->vaddr;
   for (int i = 0; i < NOMMAPFILE; i++) {
     if (task->vma[i] == 0) {
       task->vma[i] = vma;
@@ -37,10 +66,58 @@ static int LazyLoadSeg(
   return -1;
 }
 
+uint64_t CreateUserStack(struct BinProgram *bin_program, struct elfhdr *elf)
+{
+  int index = bin_program->argc + bin_program->envc + 2;
+
+  uint64_t filename = bin_program->CopyString("./busybox");
+#define NEW_AUX_ENT(id, val)                                                   \
+  do {                                                                         \
+    bin_program->ustack[index++] = id;                                         \
+    bin_program->ustack[index++] = val;                                        \
+  } while (0)
+
+  // 1
+  // 2
+  NEW_AUX_ENT(0x28, 0);
+  NEW_AUX_ENT(0x29, 0);
+  NEW_AUX_ENT(0x2a, 0);
+  NEW_AUX_ENT(0x2b, 0);
+  NEW_AUX_ENT(0x2c, 0);
+  NEW_AUX_ENT(0x2d, 0);
+
+  NEW_AUX_ENT(AT_PHDR, elf->phoff);               // 3
+  NEW_AUX_ENT(AT_PHENT, sizeof(struct proghdr));  // 4
+  NEW_AUX_ENT(AT_PHNUM, elf->phnum);              // 5
+  NEW_AUX_ENT(AT_PAGESZ, 0x1000);                 // 6
+  NEW_AUX_ENT(AT_BASE, 0);                        // 7
+  NEW_AUX_ENT(AT_FLAGS, 0);                       // 8
+  NEW_AUX_ENT(AT_ENTRY, elf->entry);              // 9
+  NEW_AUX_ENT(AT_UID, 0);                         // 11
+  NEW_AUX_ENT(AT_EUID, 0);                        // 12
+  NEW_AUX_ENT(AT_GID, 0);                         // 13
+  NEW_AUX_ENT(AT_EGID, 0);                        // 14
+  NEW_AUX_ENT(AT_HWCAP, 0x112d);                  // 16
+  NEW_AUX_ENT(AT_CLKTCK, 64);                     // 17
+  NEW_AUX_ENT(AT_EXECFN, filename);               // 31
+  NEW_AUX_ENT(0, 0);
+#undef NEW_AUX_ENT
+  bin_program->sp -= sizeof(uint64_t) * index;
+  if (copyout(bin_program->pagetable, bin_program->sp,
+              (char *)bin_program->ustack, sizeof(uint64_t) * index)) {
+    return -1;
+  }
+  uint64_t argc = bin_program->argc;
+  bin_program->sp -= sizeof(uint64_t);
+  copyout(bin_program->pagetable, bin_program->sp, (char *)&argc,
+          sizeof(uint64_t));
+  return 0;
+}
+
 int exec(char *path, char **argv)
 {
-  int            i, off, argc, oldsz;
-  uint64_t       sz = 0, stackbase, sp;
+  int            i, off, oldsz;
+  uint64_t       sz = 0, stackbase, sp, a0 = 0;
   uint64_t       ustack[MAXARG + 1];  // 最后一项为0，用于标记结束
   pagetable_t    old_pagetable;
   struct elfhdr  elf;
@@ -48,6 +125,7 @@ int exec(char *path, char **argv)
   struct proghdr ph;
   pagetable_t    pagetable = 0;
   Task *         task = myTask();
+  BinProgram     bin_prog;
 
   LOG_DEBUG("exec start");
   if ((pagetable = taskPagetable(task)) == 0) {
@@ -114,7 +192,7 @@ int exec(char *path, char **argv)
       LOG_DEBUG("need align pgsize");
       // goto bad;
     }
-    if (LazyLoadSeg(task, ip, ph.off, ph.vaddr, ph.filesz) < 0) {
+    if (LazyLoadSeg(task, ip, &ph) < 0) {
       goto bad;
     }
     // if (loadseg(pagetable, ph.vaddr, ip, ph.off, ph.filesz) < 0)
@@ -136,31 +214,23 @@ int exec(char *path, char **argv)
   sp = sz;
   stackbase = sz - PGSIZE;
 
+  sp -= sizeof(uint64_t);
+  a0 = sp;
+
   // 先将参数push到用户栈中，并准备ustack数组，它的每一个
   // 元素都按顺序指向参数。
-  for (argc = 0; argv[argc]; argc++) {
-    if (argc > MAXARG)
-      goto bad;
-    sp -= strlen(argv[argc]) + 1;
-    sp -= sp % 16;
-    if (sp < stackbase) {
-      goto bad;
-    }
-    if (copyout(pagetable, sp, argv[argc], strlen(argv[argc]) + 1) < 0)
-      goto bad;
-    ustack[argc] = sp;
-  }
-  ustack[argc] = 0;
 
-  // push argv指针数组
-  sp -= (argc + 1) * sizeof(uint64_t);
-  sp -= sp % 16;
-  if (sp < stackbase) {
-    goto bad;
-  }
+  bin_prog.stack_top = 0;
+  bin_prog.sp = sp;
+  bin_prog.stackbase = stackbase;
+  bin_prog.pagetable = pagetable;
+  bin_prog.ustack = ustack;
 
-  if (copyout(pagetable, sp, (char *)ustack, (argc + 2) * sizeof(uint64_t)) < 0)
-    goto bad;
+  bin_prog.argc = bin_prog.CopyString2Stack(argv);
+  bin_prog.envc = bin_prog.CopyString2Stack((char **)env);
+  CreateUserStack(&bin_prog, &elf);
+
+  sp = bin_prog.sp;
 
   // 用户代码main(argc, argv)的参数
   // argc通过系统调用返回，也就是a0
@@ -172,17 +242,18 @@ int exec(char *path, char **argv)
       last = s + 1;
   safestrcpy(task->name, last, sizeof(task->name) + 1);
 
+  task->trapframe->ra = 0;
   old_pagetable = task->pagetable;
   task->pagetable = pagetable;
   task->sz = sz;
   task->trapframe->epc = elf.entry;
   task->trapframe->sp = sp;
-  LOG_DEBUG("sp=%p oldsz=%d", sp, oldsz);
+  LOG_DEBUG("sp=%p oldsz=%d entry=%p", sp, oldsz, elf.entry);
   FreeTaskPagetable(old_pagetable, oldsz);
   ip->free();
   task->lock.lock();
   task->lock.unlock();
-  return argc;
+  return -20;
 
 bad:
   ip->free();
@@ -190,7 +261,7 @@ bad:
   // TODO FIXME 释放VMA
   if (pagetable)
     FreeTaskPagetable(pagetable, sz);
-  return -1;
+  return a0;
 }
 
 /**

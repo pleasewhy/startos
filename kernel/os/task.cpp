@@ -3,10 +3,12 @@
 #include "fs/vfs_file.h"
 #include "common/string.hpp"
 
-void vma::free()
+bool Task::LoadIfValid(uint64_t va)
 {
-  if (ip != 0)
-    ip->free();
-  memset(this, 0, sizeof(struct vma));
-  freeVma(this);
+  for (int i = 0; i < NOMMAPFILE; i++) {
+    if (this->vma[i] != 0 && this->vma[i]->LoadIfContain(this->pagetable, va)) {
+      return true;
+    }
+  }
+  return false;
 }

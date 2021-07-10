@@ -12,6 +12,7 @@
 #include "param.hpp"
 #include "riscv.hpp"
 #include "types.hpp"
+#include "io.h"
 
 uint64_t sys_getcwd(void)
 {
@@ -37,7 +38,9 @@ uint64_t sys_open(void)
   char path[MAXPATH];
   int  flag;
   int  n;
+  LOG_DEBUG("sys_open");
   if ((n = argstr(0, path, MAXPATH)) < 0 || argint(1, &flag) < 0) {
+    LOG_DEBUG("error");
     return -1;
   }
   struct file *fp = vfs::VfsManager::openat(nullptr, path, flag, 0);
@@ -117,6 +120,29 @@ uint64_t sys_write(void)
   struct file *fp = getFileByfd(fd);
   return vfs::VfsManager::write(fp, (const char *)(uaddr), n, true);
   // return vfs::write(fd, true, reinterpret_cast<char *>(uaddr), n, 0);
+}
+
+uint64_t sys_writev()
+{
+  int      fd;
+  int      n;
+  uint64_t iovec_addr;
+  if (argint(0, &fd) < 0 || argint(2, &n) < 0 || argaddr(1, &iovec_addr) < 0)
+    return -1;
+  if (n > 10)
+    return -1;
+  struct iovec vec[10];
+  if (copyin(myTask()->pagetable, (char *)vec, iovec_addr,
+             n * sizeof(struct iovec)) < 0)
+    return -1;
+  struct file *fp = getFileByfd(fd);
+
+  int nwrite = 0;
+  for (int i = 0; i < n; i++) {
+    nwrite += vfs::VfsManager::write(fp, (const char *)(vec[i].iov_base),
+                                     vec[i].iov_len, true);
+  }
+  return 0;
 }
 
 uint64_t sys_read(void)
@@ -357,7 +383,7 @@ uint64_t sys_munmap(void)
   vma->length -= sz;
   if (vma->length == 0) {
     vfs::VfsManager::close(vma->f);
-    freeVma(vma);
+    vma->free();
     task->vma[index] = 0;
   }
   LOG_DEBUG("mummap finish");

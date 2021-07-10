@@ -27,6 +27,7 @@ void VfsManager::Init()
 struct file *
 VfsManager::openat(struct file *dir, char *filepath, size_t flags, mode_t mode)
 {
+  LOG_DEBUG("vfs::openat\n");
   struct inode *ip = nullptr;
 
   struct inode *dp = nullptr;  // 父目录inode
@@ -51,7 +52,8 @@ VfsManager::openat(struct file *dir, char *filepath, size_t flags, mode_t mode)
     ip = namei(dp, name);
   }
   else {
-    ip = namei(nullptr, filepath);
+    LOG_DEBUG("file=%s",filepath);
+    ip = namei(dp, filepath);
   }
   if (ip == nullptr) {
     return nullptr;

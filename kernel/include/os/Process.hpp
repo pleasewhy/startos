@@ -5,6 +5,7 @@
 #include "param.hpp"
 #include "riscv.hpp"
 #include "types.hpp"
+#include "memory/mmap.hpp"
 
 // 内核切换进程需要保存的寄存器
 struct context
@@ -74,24 +75,13 @@ struct trapframe
 // extern struct cpu cpus[NCPU];
 enum procstate { UNUSED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
-struct vma
-{
-  uint64_t addr;
-  enum { PROG, DATA } type;
-  int           length;
-  int           prot;
-  int           flag;
-  struct file * f;
-  struct inode *ip;
-  uint32_t      offset;
-
-  void free();
-};
-
 // 进程
 class Task {
   // public:
   //   bool SetFileTable();
+public:
+  bool LoadIfValid(uint64_t va);
+
 public:
   SpinLock          lock;       // 进程锁
   enum procstate    state;      // 进程的状态

@@ -197,20 +197,6 @@ int exec(char *path, char **argv);
 int taskTimes(struct tms *tm);
 
 /**
- * @brief 获取一个vma结构体
- *
- * @return struct vma*
- */
-struct vma *allocVma();
-
-/**
- * @brief 释放vma结构体
- *
- * @param a
- */
-void freeVma(struct vma *a);
-
-/**
  * @brief 释放进程的页表
  * @note ummap进程的trapframe和trampoline，并释放
  * 递归的释放该页表所拥有的全部物理内存

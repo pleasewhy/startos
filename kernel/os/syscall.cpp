@@ -13,12 +13,18 @@ uint64_t argraw(int n)
 {
   Task *task = myTask();
   switch (n) {
-    case 0: return task->trapframe->a0;
-    case 1: return task->trapframe->a1;
-    case 2: return task->trapframe->a2;
-    case 3: return task->trapframe->a3;
-    case 4: return task->trapframe->a4;
-    case 5: return task->trapframe->a5;
+    case 0:
+      return task->trapframe->a0;
+    case 1:
+      return task->trapframe->a1;
+    case 2:
+      return task->trapframe->a2;
+    case 3:
+      return task->trapframe->a3;
+    case 4:
+      return task->trapframe->a4;
+    case 5:
+      return task->trapframe->a5;
   }
   panic("argraw");
   return -1;
@@ -112,6 +118,7 @@ extern uint64_t sys_getcwd(void);
 extern uint64_t sys_exec(void);
 extern uint64_t sys_open(void);
 extern uint64_t sys_write(void);
+extern uint64_t sys_writev(void);
 extern uint64_t sys_read(void);
 extern uint64_t sys_dup(void);
 extern uint64_t sys_dup3(void);
@@ -152,6 +159,7 @@ void syscall_init()
   syscalls[SYS_execve] = sys_exec;
   syscalls[SYS_open] = sys_open;
   syscalls[SYS_write] = sys_write;
+  syscalls[SYS_writev] = sys_writev;
   syscalls[SYS_read] = sys_read;
   syscalls[SYS_dup] = sys_dup;
   syscalls[SYS_dup3] = sys_dup3;
@@ -194,8 +202,11 @@ void syscall(void)
     task->trapframe->a0 = syscalls[num]();
   }
   else {
-    printf("%d %s: unknown sys call %d\n", task->pid, task->name, num);
-    task->trapframe->a0 = -1;
+    printf("%d %s: pc=%p unknown sys call %d\n", task->pid, task->name,
+           task->trapframe->epc, num);
+    printf("a1=%p a2=%p\n", task->trapframe->a1, task->trapframe->a2);
+    printf("a0=%p \n", task->trapframe->a0);
+    task->trapframe->a0 = 0;
     panic("syscall error");
   }
 }
