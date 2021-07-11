@@ -32,10 +32,10 @@ size_t DeviceFileSystem::read(
   }
 #ifdef K210
   else if (strncmp(path, "/dev/vda2", strlen(path)) == 0) {
-    dev::RwDevRead(0, buf, offset, n);
+    dev::RwDevRead(0, (char *)buf, offset, n);
   }
   else if (strncmp(path, "/dev/hda1", strlen("/dev/hda1")) == 0) {
-    dev::RwDevRead(0, buf, offset, n);
+    dev::RwDevRead(0, (char *)buf, offset, n);
   }
   else {
     panic("not support path");
@@ -52,10 +52,10 @@ size_t DeviceFileSystem::write(
   }
 #ifdef K210
   else if (strncmp(path, "/dev/vda2", strlen("/dev/vda2")) == 0) {
-    dev::RwDevWrite(0, buf, offset, n);
+    dev::RwDevWrite(0, (char *)buf, offset, n);
   }
   else if (strncmp(path, "/dev/hda1", strlen("/dev/hda1")) == 0) {
-    dev::RwDevWrite(0, buf, offset, n);
+    dev::RwDevWrite(0, (char *)buf, offset, n);
   }
   else {
     panic("not support path");

@@ -7,7 +7,7 @@ OBJCOPY = $(TOOLPREFIX)objcopy
 OBJDUMP = $(TOOLPREFIX)objdump
 
 CFLAGS += -MD
-CFLAGS += -mcmodel=medany
+CFLAGS += -mcmodel=medany -O
 CFLAGS += -ffreestanding -fno-common -nostdlib -mno-relax
 CFLAGS += -I. -I../lib
 CFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
@@ -48,8 +48,9 @@ initcode: initcode.S
 
 submit: _oscmp_init
 	$(OBJCOPY) -S -O binary _oscmp_init oscmp_init.bin
-	od -t xC oscmp_init.bin > submit.txt
-	python3 gen_submit_init.py ./submit.txt >> submit.txt
+	od -t xC oscmp_init.bin > oscmp/submit.txt
+	cp oscmp_init.asm oscmp/oscmp_init.asm
+	python3 gen_submit_init.py oscmp/submit.txt >> oscmp/submit.txt
 
 
 dst=/mnt

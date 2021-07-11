@@ -310,7 +310,6 @@ namespace fat32 {
     FatFsInfo fat_fs_info_;    // fat32信息扇区
     int       dev_;            // 挂载设备号
     int       max_inode_num_;  // inode缓存最大数量
-    char *    fat_table_;
     std::map<uint64_t, struct inode *> *inode_cache_map_;
   };
 

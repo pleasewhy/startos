@@ -165,9 +165,7 @@ int main(void)
         fprintf(2, "cannot cd %s\n", buf + 3);
       continue;
     }
-    printf("has getcmd\n");
     if (fork1() == 0) {
-      printf("forkover\n\n");
       runcmd(parsecmd(buf));
     }
     wait(0);
@@ -325,19 +323,14 @@ struct cmd *parsecmd(char *s)
 {
   char *      es;
   struct cmd *cmd;
-  printf("parse cmd\n\n");
   es = s + strlen(s);
   cmd = parseline(&s, es);
-  printf("parse cmd1\n\n");
   peek(&s, es, "");
-  printf("parse cmd2\n\n");
   if (s != es) {
     fprintf(2, "leftovers: %s\n", s);
     panic("syntax");
   }
   nulterminate(cmd);
-  printf("parse cmd3\n\n");
-  printf("parse cmd over\n\n");
   return cmd;
 }
 

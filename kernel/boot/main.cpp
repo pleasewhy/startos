@@ -75,6 +75,7 @@ extern "C" void main(unsigned long hartid, unsigned long dtb_pa)
     timer::init();
     LOG_DEBUG("buf");
     buffer_layer.init();  // 初始化缓存区
+    // InitVmaTable();       // 初始化全部vma
     trapinithart();       // 初始化trap
     syscall_init();       // 初始化系统调用
     plic::init();         // 初始化plic
@@ -102,8 +103,8 @@ extern "C" void main(unsigned long hartid, unsigned long dtb_pa)
     trapinithart();    // 初始化trap
     plic::initHart();  // ask PLIC for device interrupts
     printf("hart %d finish init\n", r_tp());
-    while (1) {
-    }
+    // while (1) {
+    // }
   }
   scheduler();
 }

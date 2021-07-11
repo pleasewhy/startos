@@ -58,7 +58,7 @@ static int LazyLoadSeg(struct Task *task, struct inode *ip, struct proghdr *ph)
     vma->prot |= PROT_READ;
   if (ph->flags & ELF_PROG_FLAG_WRITE)
     vma->prot |= PROT_WRITE;
-    
+
   vma->offset = ph->off;
   vma->type = vma->PROG;
   vma->length = ph->filesz;

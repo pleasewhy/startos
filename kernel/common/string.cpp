@@ -162,9 +162,10 @@ void CopyCharToWchar(uint16_t *dst, char const *src, int len)
 // 将wchar字符串装换为char字符串
 void CopyWcharToChar(char *dst, uint16_t const *src, int len)
 {
-  int i;
+  int   i;
+  char *s = (char *)src;
   for (i = 0; i < len; i++) {
-    *dst++ = (uchar_t)(*src & 0xff);
+    *dst++ = s[i * 2];
     src++;
   }
   for (; i < len; i++) {

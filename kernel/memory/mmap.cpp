@@ -73,3 +73,8 @@ struct vma *allocVma()
   panic("not enough vma");
   return 0;
 }
+
+void InitVmaTable()
+{
+  memset(vma_table_, 0, sizeof(struct vma) * NVMA);
+}

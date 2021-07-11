@@ -1,4 +1,4 @@
-#include "user.h"
+#include "oscmp/oscom_user.h"
 
 // void test_cwd() {
 //   char buf[100];
@@ -64,54 +64,93 @@
 //   }
 // }
 
-void test(char *argc, char *argv[]) {
+void print_success(char *argv[])
+{
+  printf("testcase busybox ");
+  for (int i = 0; argv[i] != 0; i++)
+    printf("%s ", argv[i]);
+  printf("success\n");
+}
+
+void test(char *name, char *argv[])
+{
   int pid = fork();
   if (pid == 0) {
-    execve(argc, argv, NULL);
-  } else {
-    wait(0);
+    execve(name, argv, NULL);
   }
+  else {
+    int status;
+    wait(&status);
+    if (status >= 0) {
+      print_success(argv);
+    }
+  }
+}
+
+void main()
+{
+  open("dev/tty", O_RDWR);
+  dup(0);
+  dup(0);
+  char *echo_args[] = {"echo", "\"#### independent command test\"", 0};
+  char *basename_args[] = {"basename", "/aaa/bbb", 0};
+  char *cal_args[] = {"cal", 0};
+  // clear
+  char *date_args[] = {"date", 0};
+  // df
+  char *dirname_args[] = {"dirname", "/aaa/bbb", 0};
+  // dmesg
+  // du
+  char *expr_args[] = {"expr", "1", "+", "1", 0};
+
+  test("busybox", echo_args);
+  test("busybox", basename_args);
+  test("busybox", cal_args);
+  test("busybox", date_args);
+  test("busybox", dirname_args);
+  test("busybox", expr_args);
+  while (1) {}
 }
 
 // void test
 
-void main() {
-  open("dev/tty", O_RDWR);
-  dup(0);
-  dup(0);
-  test("/getpid", NULL);
-  test("/getppid", NULL);
-  test("/getcwd", NULL);
-  test("/fork", NULL);
-  test("/exit", NULL);
-  test("/mkdir_", NULL);
-  test("/dup", NULL);
-  test("/write", NULL);
-  test("/read", NULL);
-  test("/open", NULL);
-  test("/wait", NULL);
-  test("/waitpid", NULL);
-  test("/yield", NULL);
-  test("/openat", NULL);
-  test("/close", NULL);
-  // test("/clone", NULL);
-  test("/chdir", NULL);
-  test("/execve", NULL);
-  test("/dup2", NULL);
-  test("/brk", NULL);
-  test("/uname", NULL);
-  test("/pipe", NULL);
-  test("/getdents", NULL);
-  test("/mount", NULL);
-  test("/umount", NULL);
-  test("/times", NULL);
-  test("/gettimeofday", NULL);
-  test("/mmap", NULL);
-  test("/munmap", NULL);
-  test("/fstat", NULL);
-  test("/unlink", NULL);
-  test("/clone", NULL);
-  test("/sleep", NULL);
-  while (1) {
-  };
-}
+// void main() {
+//   open("dev/tty", O_RDWR);
+//   dup(0);
+//   dup(0);
+//   test("/getpid", NULL);
+//   test("/getppid", NULL);
+//   test("/getcwd", NULL);
+//   test("/fork", NULL);
+//   test("/exit", NULL);
+//   test("/mkdir_", NULL);
+//   test("/dup", NULL);
+//   test("/write", NULL);
+//   test("/read", NULL);
+//   test("/open", NULL);
+//   test("/wait", NULL);
+//   test("/waitpid", NULL);
+//   test("/yield", NULL);
+//   test("/openat", NULL);
+//   test("/close", NULL);
+//   // test("/clone", NULL);
+//   test("/chdir", NULL);
+//   test("/execve", NULL);
+//   test("/dup2", NULL);
+//   test("/brk", NULL);
+//   test("/uname", NULL);
+//   test("/pipe", NULL);
+//   test("/getdents", NULL);
+//   test("/mount", NULL);
+//   test("/umount", NULL);
+//   test("/times", NULL);
+//   test("/gettimeofday", NULL);
+//   test("/mmap", NULL);
+//   test("/munmap", NULL);
+//   test("/fstat", NULL);
+//   test("/unlink", NULL);
+//   test("/clone", NULL);
+//   test("/sleep", NULL);
+//   while (1) {
+//   };
+// }

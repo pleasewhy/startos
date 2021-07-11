@@ -30,4 +30,6 @@ struct vma
 
 struct vma *allocVma();
 
+void InitVmaTable();
+
 #endif

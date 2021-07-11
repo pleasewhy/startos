@@ -64,8 +64,8 @@ void usertrap(void)
   w_stvec((uint64_t)kernelvec);
   //    printf("usertrap: sp=%p\n",r_sp());
 
-  Task *task = myTask();
-
+  Task *   task = myTask();
+  uint64_t scause = r_scause();
   // 保存用户空间的PC
   task->trapframe->epc = r_sepc();
   if (r_scause() == 8) {
@@ -81,8 +81,8 @@ void usertrap(void)
     intr_on();
     syscall();
   }
-  else if (r_scause() == 13 || r_scause() == 5 || r_scause() == 12 ||
-           r_scause() == 15) {
+  else if (scause == 1 || scause == 13 || scause == 5 || scause == 12 ||
+           scause == 15 || scause == 7) {
     uint64_t eaddr;
     eaddr = r_stval();
     // ELF LOAD2:

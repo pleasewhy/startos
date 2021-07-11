@@ -78,10 +78,12 @@ sd = /dev/sdb
 sd: fs.img
 	@if [ "$(sd)" != "" ]; then \
 		echo "flashing into sd card..."; \
-		sudo dd if=fs.img of=$(sd); \
+		dd if=fs.img of=$(sd); \
 	else \
 		echo "sd card not detected!"; fi
 
+submit:
+	cd user; $(MAKE) submit
 
 qemu: $T/kernel fs.img
 	$(QEMU) $(QEMUOPTS)

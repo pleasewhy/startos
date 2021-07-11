@@ -64,6 +64,7 @@ void CurrentTimeSpec(struct timespec *ts)
   uint32_t count = rtc_timer_get_clock_count_value();
   uint32_t freq = sysctl_clock_get_freq(SYSCTL_CLOCK_IN0);
   uint64_t us = (count % freq) / (freq / 1000000);
+  ts->tv_nsec = us * 1000;
 #else
   ts->tv_nsec = 1234567;
   ts->tv_sec = 1623832156;

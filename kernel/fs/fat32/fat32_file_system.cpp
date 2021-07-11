@@ -13,6 +13,9 @@
 extern BufferLayer buffer_layer;
 namespace vfs {
 namespace fat32 {
+
+  char fat_cache_[512 * 1024];
+
   // 测试的入口函数
   static void Test(Fat32FileSystem *fs);
 
@@ -64,6 +67,10 @@ namespace fat32 {
     inode_cache_map_ = new std::map<uint64_t, struct inode *>(5);
     max_inode_num_ = 1 << 5;
     this->Init();
+    for (int i = info_.reserve_sectors_; i < 1024; i++) {
+      // printf("%d ", i);
+      ReadSector(i, fat_cache_ + (i - info_.reserve_sectors_) * 512);
+    }
     // inode_cache_map_->put(info_.root_.i_pos, &info_.root_.vfs_inode);
   }
 
@@ -398,7 +405,6 @@ namespace fat32 {
       n = ip->sz - offset;
 
     uint_t nread, total, mod;
-    // char * data = new char[info_.bytes_per_cluster_];
     for (total = 0; total < n; total += nread, buf += nread, offset += nread) {
       uint32_t    cluster = bmap(ip, (offset / info_.bytes_per_cluster_));
       int         sector = FirstSectorOfCluster(cluster);
@@ -411,7 +417,6 @@ namespace fat32 {
       }
       buffer_layer.freeBuffer(b);
     }
-    // delete data;
     return total;
   }
 
@@ -645,7 +650,7 @@ namespace fat32 {
         else
           d_type = DT_REG;
         LOG_DEBUG("read_dir=%s", name);
-        printf("name=%s\n", name);
+        LOG_DEBUG("name=%s\n", name);
         if (filldir(&read_dir_header, name, name_len, GetStartCluster(entry),
                     d_type) < 0) {
           goto out;
@@ -871,12 +876,19 @@ namespace fat32 {
       return -1;
     }
 
-    uint32_t    fat_sector = FatSectorOfCluster(cluster);
-    uint32_t    fat_offset = FatOffsetOfCluster(cluster);
-    struct buf *b = buffer_layer.read(dev_, fat_sector);
-    uint32_t    ans = *reinterpret_cast<uint32_t *>(b->data + fat_offset);
-    buffer_layer.freeBuffer(b);
-    return ans;
+    uint32_t fat_sector = FatSectorOfCluster(cluster);
+    uint32_t fat_offset = FatOffsetOfCluster(cluster);
+    uint32_t val = 0;
+    if (fat_sector < 1024) {
+      char *data = fat_cache_ + (fat_sector - info_.reserve_sectors_) * 512;
+      val = *reinterpret_cast<uint32_t *>(data + fat_offset);
+    }
+    else {
+      struct buf *b = buffer_layer.read(dev_, fat_sector);
+      val = *reinterpret_cast<uint32_t *>(b->data + fat_offset);
+      buffer_layer.freeBuffer(b);
+    }
+    return val;
   }
 
   inline int Fat32FileSystem::WriteCluster(uint32_t cluster, char *data)
