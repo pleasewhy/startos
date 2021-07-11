@@ -102,8 +102,8 @@ extern "C" void main(unsigned long hartid, unsigned long dtb_pa)
     trapinithart();    // 初始化trap
     plic::initHart();  // ask PLIC for device interrupts
     printf("hart %d finish init\n", r_tp());
-    // while (1) {
-    // }
+    while (1) {
+    }
   }
   scheduler();
 }

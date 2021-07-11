@@ -51,7 +51,14 @@ static int LazyLoadSeg(struct Task *task, struct inode *ip, struct proghdr *ph)
 
   vma->ip = ip->dup();
   vma->flag = MAP_PRIVATE;
-  vma->prot = PROT_EXEC | PROT_READ | PROT_WRITE;
+  vma->prot = 0;
+  if (ph->flags & ELF_PROG_FLAG_EXEC)
+    vma->prot |= PROT_EXEC;
+  if (ph->flags & ELF_PROG_FLAG_READ)
+    vma->prot |= PROT_READ;
+  if (ph->flags & ELF_PROG_FLAG_WRITE)
+    vma->prot |= PROT_WRITE;
+    
   vma->offset = ph->off;
   vma->type = vma->PROG;
   vma->length = ph->filesz;
@@ -253,7 +260,7 @@ int exec(char *path, char **argv)
   ip->free();
   task->lock.lock();
   task->lock.unlock();
-  return -20;
+  return 0;
 
 bad:
   ip->free();

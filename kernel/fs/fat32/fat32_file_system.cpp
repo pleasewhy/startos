@@ -33,7 +33,7 @@ namespace fat32 {
     printf(" Total Sectors (16): %d\n", bpb->total_sectors);
     printf(" Total Sectors (32): %d\n", bpb->total_sectors_long);
 
-    printf("     FAT Size (32b): %d\n", bpb->sectors_per_fat_v32);
+    printf("     FAT Size (32): %d\n", bpb->sectors_per_fat_v32);
     printf("         FS Version: %x\n", bpb->version);
     printf("       Root Cluster: %d\n", bpb->root_directory_cluster_start);
     printf("      FSINFO Sector: %d\n", bpb->fs_information_sector);
@@ -64,6 +64,7 @@ namespace fat32 {
     inode_cache_map_ = new std::map<uint64_t, struct inode *>(5);
     max_inode_num_ = 1 << 5;
     this->Init();
+    // inode_cache_map_->put(info_.root_.i_pos, &info_.root_.vfs_inode);
   }
 
   Fat32FileSystem::~Fat32FileSystem()
@@ -78,10 +79,10 @@ namespace fat32 {
     dev::RwDevRead(this->dev_, (char *)&this->fat_bpb_, 0, sizeof(fat_bpb_));
     dev::RwDevRead(this->dev_, (char *)&this->fat_fs_info_,
                    this->fat_bpb_.fs_information_sector, sizeof(fat_fs_info_));
-#ifdef LOG_TRACE_ENABLE
+    // #ifdef LOG_TRACE_ENABLE
     PrintBootSectorInfo(&this->fat_bpb_);
     PrintFsInfo(&this->fat_fs_info_);
-#endif
+    // #endif
 
     info_.bytes_per_cluster_ =
         fat_bpb_.bytes_per_sector * fat_bpb_.sectors_per_cluster;
@@ -115,6 +116,9 @@ namespace fat32 {
     info_.root_.vfs_inode.inum = kMsdosRootIno;
     info_.root_.vfs_inode.sleeplock.init("fat32 root");
     info_.root_.vfs_inode.file_system = this;
+    info_.root_.vfs_inode.test_name[0] = '/';
+    info_.root_.vfs_inode.test_name[1] = 0;
+    LOG_WARN("test name=%s", info_.root_.vfs_inode.test_name);
     LOG_DEBUG("first data sector=%d", info_.first_data_sector_);
     // struct inode *ip = Lookup(&info_.root_.vfs_inode, "cat");
 #ifdef TEST_FAT32
@@ -131,7 +135,8 @@ namespace fat32 {
     }
     ms_inode->i_start = 0;
     ms_inode->i_pos = 0;
-    ms_inode->i_logstart = 0;
+    ms_inode->i_logi = 0;
+    ms_inode->i_clus = 0;
     ms_inode->i_attrs = 0;
 
     return &ms_inode->vfs_inode;
@@ -302,17 +307,20 @@ namespace fat32 {
                                             uint64_t      pos,
                                             struct inode *parent)
   {
-    LOG_DEBUG("build inode");
+    LOG_WARN("build inode entry=%s", entry.sfn.name);
     struct inode *ip = GetInode(pos);
     if (ip != nullptr)
       return ip;
     ip = AllocInode();
+    LOG_WARN("ip=%s", entry.sfn.name);
     inode_cache_map_->put(pos, ip);
     MsdosInodeInfo *inode_info = MSDOS_I(ip);
 
     // 填充对应MsdosInodeInfo数据
     inode_info->i_pos = pos;
     inode_info->i_start = GetStartCluster(entry);
+    inode_info->i_clus = inode_info->i_start;
+    inode_info->i_logi = 0;
     // 填充inode数据
     ip->file_system = this;
     ip->dev = this->dev_;
@@ -345,9 +353,11 @@ namespace fat32 {
   void Fat32FileSystem::DeleteInode(struct inode *inode)
   {
     // inode->free();
-    LOG_DEBUG("delete inode");
+    // LOG_WARN("delete inode");
+    LOG_WARN("ip=%s", inode->test_name);
     inode_cache_map_->poll(MSDOS_I(inode)->i_pos);
     delete MSDOS_I(inode);
+    // LOG_WARN("delete over");
   }
 
   uint32_t Fat32FileSystem::AllocCluster()
@@ -390,11 +400,9 @@ namespace fat32 {
     uint_t nread, total, mod;
     // char * data = new char[info_.bytes_per_cluster_];
     for (total = 0; total < n; total += nread, buf += nread, offset += nread) {
-      uint32_t cluster = bmap(ip, (offset / info_.bytes_per_cluster_));
-      int      sector = FirstSectorOfCluster(cluster);
-      // LOG_DEBUG("sector=%d offset=%d", sector, offset);
+      uint32_t    cluster = bmap(ip, (offset / info_.bytes_per_cluster_));
+      int         sector = FirstSectorOfCluster(cluster);
       struct buf *b = buffer_layer.read(dev_, sector);
-      // ReadCluster(bmap(ip, (offset / info_.bytes_per_cluster_)), data);
       mod = offset % info_.bytes_per_cluster_;
       nread = min(n - total, info_.bytes_per_cluster_ - mod);
       if (either_copyout(user, buf, b->data + mod, nread) < 0) {
@@ -517,7 +525,8 @@ namespace fat32 {
 
       if (entry.sfn.attrib != kFatAttrLongEntry) {  // 短文件目录项
         // 不应该进入该分支
-        copysfn(entry.sfn.name, tmp_name);
+        // panic("not short name");
+        name_len = copysfn(entry.sfn.name, tmp_name);
       }
       else if ((entry.lfn.sequence_number & 0xc0) == 0x40) {
         int nlfn = entry.lfn.sequence_number & ~0x40;  // 长文件目录项的数量
@@ -541,7 +550,7 @@ namespace fat32 {
       if (strncmp(name, tmp_name, name_len) != 0) {
         continue;
       }
-      LOG_DEBUG("found");
+      LOG_DEBUG("found\n");
       uint64_t cluster =
           (off - sizeof(entry)) / info_.bytes_per_cluster_;  // 获取当前逻辑簇
       uint64_t pos = FirstSectorOfCluster(bmap(dir, cluster)) * kSectorSize;
@@ -636,6 +645,7 @@ namespace fat32 {
         else
           d_type = DT_REG;
         LOG_DEBUG("read_dir=%s", name);
+        printf("name=%s\n", name);
         if (filldir(&read_dir_header, name, name_len, GetStartCluster(entry),
                     d_type) < 0) {
           goto out;
@@ -738,6 +748,8 @@ namespace fat32 {
       printf("inode=%s ref=%d\n", iter->val->test_name, iter->val->ref);
       ++iter;
     }
+    printf("inode=%s ref=%d\n", info_.root_.vfs_inode.test_name,
+           info_.root_.vfs_inode.ref);
   }
 
   //                        88
@@ -762,9 +774,15 @@ namespace fat32 {
     MsdosInodeInfo *msdos_info = MSDOS_I(ip);
 
     uint32_t cur = msdos_info->i_start;
-    size_t   i;
-    for (i = 1; i <= logi_cluster && cur != kEndOfCluster32; i++) {
+    size_t   i = 0;
+    if (logi_cluster >= msdos_info->i_logi) {
+      cur = msdos_info->i_clus;
+      i = msdos_info->i_logi;
+    }
+    // printf("logi=%d cur=%d\n", logi_cluster, cur);
+    for (; i < logi_cluster && cur != kEndOfCluster32; i++) {
       uint32_t now = GetFatEntry(cur);
+      // printf("now=%d\n", now);
       if (now == kEndOfCluster32) {
         now = AllocCluster();
         SetFatEntey(cur, now);
@@ -774,6 +792,9 @@ namespace fat32 {
     if (cur == kEndOfCluster32) {
       return -1;
     }
+    msdos_info->i_logi = logi_cluster;
+    msdos_info->i_clus = cur;
+    // printf("1 cur=%d\n", cur);
     return cur;
   }
 

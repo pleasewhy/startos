@@ -80,7 +80,6 @@ struct buf *BufferLayer::read(int dev, int sector)
 }
 
 // 将缓冲区写入磁盘
-void BufferLayer::write(struct buf *b)
-{
-  // dev::RwDevWrite(b->dev, b->data, b->blockno * BSIZE, BSIZE);
+void BufferLayer::write(struct buf *b){
+    // dev::RwDevWrite(b->dev, b->data, b->blockno * BSIZE, BSIZE);
 };

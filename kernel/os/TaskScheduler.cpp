@@ -621,7 +621,7 @@ void exit(int status)
     vma = task->vma[i];
     if (vma) {
       if (vma->flag & MAP_SHARED) {
-        vfs::rewind(vma->f);
+        vfs::VfsManager::rewind(vma->f);
         vfs::write(vma->f, true, (const char *)(vma->addr), vma->length, 0);
       }
       userUnmap(task->pagetable, PGROUNDDOWN(vma->addr), PGROUNDUP(vma->length) / PGSIZE, 0);

@@ -27,12 +27,12 @@ void VfsManager::Init()
 struct file *
 VfsManager::openat(struct file *dir, char *filepath, size_t flags, mode_t mode)
 {
-  LOG_DEBUG("vfs::openat\n");
+  LOG_WARN("vfs::openat filepath=%s", filepath);
   struct inode *ip = nullptr;
 
   struct inode *dp = nullptr;  // 父目录inode
   if (dir != nullptr) {
-    dp = dir->inode;
+    dp = dir->inode->dup();
   }
   else if (filepath[0] == '/') {
     dp = root_->dup();
@@ -52,13 +52,13 @@ VfsManager::openat(struct file *dir, char *filepath, size_t flags, mode_t mode)
     ip = namei(dp, name);
   }
   else {
-    LOG_DEBUG("file=%s",filepath);
+    LOG_WARN("file=%s", filepath);
     ip = namei(dp, filepath);
   }
   if (ip == nullptr) {
     return nullptr;
   }
-  LOG_DEBUG("namei=%p", ip);
+  LOG_WARN("namei=%s", ip->test_name);
   struct file *fp = new struct file;
   fp->inode = ip;
   fp->readable = !(flags & O_WRONLY);
@@ -252,6 +252,7 @@ void VfsManager::MountRoot()
   root_mp->fs = new fat32::Fat32FileSystem(0);
   strncpy(root_mp->mp_path, "/", 1);
   root_ = root_mp->fs->GetRootInode();
+  LOG_WARN("root=%s", root_);
   // 不需要设置设备路径
 }
 
@@ -346,11 +347,13 @@ VfsManager::namex(struct inode *ip, char *path, bool nameiparent, char *name)
     if (!S_ISDIR(ip->mode)) {
       ip->unlock();
       ip->free();
+      LOG_DEBUG("error0");
       return 0;
     }
     if (nameiparent && *path == '\0') {
       // Stop one level early.
       ip->unlock();
+      LOG_DEBUG("error1");
       return ip;
     }
     if ((next = fs->Lookup(ip, name)) == 0) {
@@ -367,6 +370,7 @@ VfsManager::namex(struct inode *ip, char *path, bool nameiparent, char *name)
     ip->free();
     return 0;
   }
+  LOG_DEBUG("return");
   return ip;
 }
 
@@ -385,7 +389,7 @@ struct inode *VfsManager::namei(struct inode *dir, char *path)
     }
   }
   char name[kMaxFileName];
-  LOG_DEBUG("namei");
+  LOG_WARN("ip=%s ref=%d", dir->test_name, dir->ref);
   return namex(dir, path, false, name);
 }
 

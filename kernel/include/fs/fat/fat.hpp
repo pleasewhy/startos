@@ -166,7 +166,8 @@ namespace fat32 {
   struct MsdosInodeInfo
   {
     int          i_start;     // 第一个簇号或0
-    int          i_logstart;  // 逻辑簇
+    int          i_logi;      // 当前逻辑簇
+    int          i_clus;      // 当前物理簇
     int          i_attrs;     // 属性
     uint64_t     i_pos;       // 目录项在磁盘上的位置或0
     struct inode vfs_inode;

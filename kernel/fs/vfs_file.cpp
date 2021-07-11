@@ -16,6 +16,7 @@ void inode::free()
   if (ref < 1) {
     panic("inode free");
   }
+  // parent->free();
   if (--ref == 0) {
     this->file_system->DeleteInode(this);
   }

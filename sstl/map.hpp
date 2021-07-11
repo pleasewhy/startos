@@ -104,6 +104,7 @@ public:
    */
   void put(K key, V val)
   {
+    // LOG_WARN("put key=%d", key);
     spinlock_.lock();
     uint64_t h = hash(key);
     Node *   node = hashtable_[h];
@@ -125,11 +126,13 @@ public:
    */
   V get(K key)
   {
+    spinlock_.lock();
     uint64_t h = hash(key);
     Node *   node = hashtable_[h];
     while (node != nullptr && node->key != key) {
       node = node->next;
     }
+    spinlock_.unlock();
     return node == nullptr ? NULL : node->val;
   }
 
@@ -138,10 +141,16 @@ public:
    */
   V poll(K key)
   {
+    spinlock_.lock();
     uint64_t h = hash(key);
     Node *   dummy = new Node;
     Node *   head = hashtable_[h];
-    Node *   node = head;
+    // LOG_WARN("poll key=%d", key);
+    if (head == nullptr) {
+      LOG_WARN("poll error: key=%d", key);
+      panic("poll");
+    }
+    Node *node = head;
     dummy->next = node;
 
     while (node->next != nullptr && node->key != key) {
@@ -157,6 +166,7 @@ public:
     if (head == node) {
       hashtable_[h] = node->next;
     }
+    spinlock_.unlock();
     delete node;
     return v;
   }

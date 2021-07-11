@@ -158,7 +158,10 @@ __attribute__((used)) static int filldir(struct ReadDirHeader *direntHeader,
 
   reclen = ALIGN(sizeof(struct linux_dirent) + name_len, sizeof(uint64_t));
   if (reclen > direntHeader->free) {
-    direntHeader->last_dirent->d_off = 0;
+    uint64_t val = 0;
+    either_copyout(direntHeader->user,
+                   (uint64_t)(&direntHeader->last_dirent->d_off), &val,
+                   sizeof(uint64_t));
     LOG_DEBUG("readdir::filedir: reach max size");
     return -1;
   }

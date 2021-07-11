@@ -73,6 +73,7 @@ OBJS += \
 	os/Timer.o \
 	os/time.o \
 	os/TaskScheduler.o \
+	os/task.o \
 	os/SleepLock.o \
 	os/switch.o \
 	os/trampoline.o \

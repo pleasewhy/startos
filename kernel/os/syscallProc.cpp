@@ -16,10 +16,20 @@
 #include "time.h"
 #include "types.hpp"
 #include "utsname.h"
+#include <time.h>
 
 extern MemAllocator memAllocator;
 
 uint64_t sys_exit(void)
+{
+  int n;
+  if (argint(0, &n) < 0)
+    return -1;
+  exit(n);
+  return 0;  // not reached
+}
+
+uint64_t sys_exit_group(void)
 {
   int n;
   if (argint(0, &n) < 0)
@@ -120,6 +130,12 @@ uint64_t sys_getpid()
 {
   return myTask()->pid;
 }
+
+uint64_t sys_getuid()
+{
+  return 0;
+}
+
 uint64_t sys_getppid()
 {
   return myTask()->parent->pid;
@@ -144,7 +160,7 @@ uint64_t sys_sbrk(void)
     return task->sz;
   addr = task->sz;
   growtask(n);
-  LOG_DEBUG("sys_sbrk success n=%d",n);
+  LOG_DEBUG("sys_sbrk success n=%d", n);
   return addr;
 }
 
@@ -154,11 +170,12 @@ uint64_t sys_brk(void)
   if (argaddr(0, &addr) < 0) {
     return -1;
   }
-  LOG_DEBUG("sys_brk");
+  LOG_DEBUG("sys_brk0 addr=%p", addr);
   Task *task = myTask();
   if (addr == 0)
     return task->sz;
-  return growtask(addr - task->sz);
+  growtask(addr - task->sz);
+  return task->sz;
 }
 
 #define OFFSET(structure, member) ((uint64_t)(&((structure *)0)->member));
@@ -236,7 +253,7 @@ uint64_t sys_nanosleep(void)
 {
   TimeVal  tv;
   uint64_t addr;
-  if (argaddr(0, &addr) < 0) {
+  if (argaddr(1, &addr) < 0) {
     return -1;
   }
   if (copyin(myTask()->pagetable, reinterpret_cast<char *>(&tv), addr,
@@ -245,5 +262,18 @@ uint64_t sys_nanosleep(void)
   }
 
   sleepTime((tv.sec * 1000 + tv.usec / 1000) / INTERVAL);
+  return 0;
+}
+
+uint64_t sys_clock_gettime(void)
+{
+  time::timespec ts;
+  LOG_DEBUG("clock gettime");
+  uint64_t addr;
+  if (argaddr(1, &addr) < 0) {
+    return -1;
+  }
+  time::CurrentTimeSpec(&ts);
+  copyout(myTask()->pagetable, addr, (char *)&ts, sizeof(ts));
   return 0;
 }

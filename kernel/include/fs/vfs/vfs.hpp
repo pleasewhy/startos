@@ -200,14 +200,14 @@ private:
   static char *SkipElememt(char *path, char *name);
 
   /**
-   * @brief 获取%path路径下%name对应的文件的inode
+   * @brief 获取ip下path对应的文件的inode
    *
    *
    * @param fs 文件所属文件系统
-   * @param dir_path 父目录的路径
-   * @param nameiparent if nameiparent==true，则返回path对应的文件的inode,
+   * @param ip path所属目录, ip不能为空, 并且该函数会free该ip
+   * @param nameiparent if nameiparent==true，则返回path对应的文件父目录的inode,
    * 并且将path的最后一个元素复制到name中
-   * @param name 文件名指针，根据nameiparent的取值有不同的含义。
+   * @param name 文件名指针，根据nameiparent的取值有不同的含义:
    * @return struct inode*
    */
   static struct inode *

@@ -18,6 +18,10 @@ bool vma::LoadIfContain(pagetable_t pagetable, uint64_t va)
     return false;
   }
 
+  // 表明改地址已被加载
+  if (walkAddr(pagetable, va) != 0)
+    return false;
+
   char *mem = (char *)memAllocator.alloc();
   memset(mem, 0, PGSIZE);
   va = PGROUNDDOWN(va);
@@ -44,10 +48,10 @@ bool vma::LoadIfContain(pagetable_t pagetable, uint64_t va)
   nread = nread > PGSIZE ? PGSIZE : nread;
   uint32_t file_off = this->offset + (va - this->addr);
   uint64_t pa = (uint64_t)mem + va - PGROUNDDOWN(va);
-  LOG_DEBUG("cal va=%p len=%d nread=%d file_off=%d", va, this->length, nread,
-            file_off);
-  int n = this->ip->read((char *)pa, file_off, nread, false);
-  LOG_DEBUG("n=%d", n);
+  // LOG_DEBUG("cal va=%p len=%d nread=%d file_off=%d", va, this->length, nread,
+  //           file_off);
+  this->ip->read((char *)pa, file_off, nread, false);
+  // LOG_DEBUG("n=%d", n);
   return true;
 }
 

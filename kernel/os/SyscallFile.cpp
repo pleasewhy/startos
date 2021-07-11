@@ -156,6 +156,22 @@ uint64_t sys_read(void)
   return vfs::VfsManager::read(fp, reinterpret_cast<char *>(uaddr), n, true);
 }
 
+uint64_t sys_readlinkat()
+{
+  int        dirfd, n;
+  char       filename[MAXPATH];
+  const char s[] = "/busybox";
+  LOG_DEBUG("readlinkat");
+  uint64_t ubuf;  // 用户缓冲区
+  if (argint(0, &dirfd) < 0 || argstr(1, filename, MAXPATH) < 0)
+    return -1;
+  if (argaddr(2, &ubuf) < 0 || argint(3, &n))
+    return -1;
+  copyout(myTask()->pagetable, ubuf, (char *)s, sizeof(s) + 1);
+  LOG_DEBUG("s=%s n=%d", s, sizeof(s));
+  return sizeof(s);
+}
+
 uint64_t sys_dup(void)
 {
   int fd;
@@ -387,5 +403,10 @@ uint64_t sys_munmap(void)
     task->vma[index] = 0;
   }
   LOG_DEBUG("mummap finish");
+  return 0;
+}
+
+uint64_t sys_ioctl(void)
+{
   return 0;
 }

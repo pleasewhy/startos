@@ -46,7 +46,7 @@ void ls(const char *filepath)
     close(fd);
     return;
   }
-  getdents64(fd, dirents_ptr, 512);
+  getdents64(fd, dirents_ptr, 800);
   while (dirents_ptr->d_reclen != 0) {
     int fd1 = openat(fd, dirents_ptr->d_name, O_RDONLY, 0);
     fstat(fd1, &kst);

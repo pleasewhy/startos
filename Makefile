@@ -19,24 +19,25 @@ else
 RUSTSBI = ./rustsbi/sbi-qemu
 endif
 
-# RUSTSBI:
-# ifeq ($(platform), K210)
-# 	@cd ./rustsbi/rustsbi-k210 && \
-# 	cargo build && cp ./target/riscv64gc-unknown-none-elf/debug/rustsbi-k210 ../sbi-k210
-# 	@$(OBJDUMP) -S rustsbi/sbi-k210 > $T/rustsbi-k210.asm
-# 	$(OBJDUMP) -t rustsbi/sbi-k210 | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $T/k210-sbi.sym
-# else
-# 	@cd ./rustsbi/rustsbi-qemu && \
-# 	cargo build && cp ./target/riscv64gc-unknown-none-elf/debug/rustsbi-qemu ../sbi-qemu
-# 	@$(OBJDUMP) -S rustsbi/sbi-qemu > $T/rustsbi-qemu.asm
-# 	$(OBJDUMP) -t rustsbi/sbi-qemu | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $T/qemu-sbi.sym
-# endif
+RUSTSBI:
+ifeq ($(platform), K210)
+	@cd ./rustsbi/rustsbi-k210 && \
+	cargo build && cp ./target/riscv64gc-unknown-none-elf/debug/rustsbi-k210 ../sbi-k210
+	@$(OBJDUMP) -S rustsbi/sbi-k210 > $T/rustsbi-k210.asm
+	$(OBJDUMP) -t rustsbi/sbi-k210 | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $T/k210-sbi.sym
+else
+	@cd ./rustsbi/rustsbi-qemu && \
+	cargo build && cp ./target/riscv64gc-unknown-none-elf/debug/rustsbi-qemu ../sbi-qemu
+	@$(OBJDUMP) -S rustsbi/sbi-qemu > $T/rustsbi-qemu.asm
+	$(OBJDUMP) -t rustsbi/sbi-qemu | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $T/qemu-sbi.sym
+endif
 
-QEMUOPTS = -machine virt -bios none -kernel $T/kernel -m 8M -smp $(CPUS) -nographic
+QEMUOPTS = -machine virt -cpu rv64 -kernel $T/kernel -m 1G -smp $(CPUS) -nographic
 QEMUOPTS += -bios $(RUSTSBI)
 QEMUOPTS += -drive file=fs.img,if=none,format=raw,id=x0
 QEMUOPTS += -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0
 
+# QEMUOPTS = -machine virt -cpu rv64 -m 1G -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0 -drive file=fs.img,if=none,id=x0 -device virtio-net-device,netdev=net -netdev user,id=net,hostfwd=tcp::8000-:22 -bios ./rustsbi/sbi-qemu -kernel target/kernel -object rng-random,filename=/dev/urandom,id=rng -device virtio-rng-device,rng=rng -nographic -append "root=LABEL=rootfs console=ttyS0"
 
 
 $T/kernel:

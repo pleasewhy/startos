@@ -2,6 +2,7 @@
 #include "StartOS.hpp"
 #include "common/printk.hpp"
 #include "common/string.hpp"
+#include "common/logger.h"
 #include "memlayout.hpp"
 #include "os/SyscallNum.hpp"
 #include "os/TaskScheduler.hpp"
@@ -85,6 +86,7 @@ int argfd(int n, int *fdp, struct file **fp)
 int argaddr(int n, uint64_t *addr)
 {
   *addr = argraw(n);
+  myTask()->LoadIfValid(*addr);
   return 0;
 }
 
@@ -119,14 +121,18 @@ extern uint64_t sys_exec(void);
 extern uint64_t sys_open(void);
 extern uint64_t sys_write(void);
 extern uint64_t sys_writev(void);
+extern uint64_t sys_readlinkat(void);
 extern uint64_t sys_read(void);
 extern uint64_t sys_dup(void);
 extern uint64_t sys_dup3(void);
+extern uint64_t sys_ioctl(void);
 extern uint64_t sys_getpid(void);
 extern uint64_t sys_getppid(void);
+extern uint64_t sys_getuid(void);
 extern uint64_t sys_fork(void);
 extern uint64_t sys_clone(void);
 extern uint64_t sys_exit(void);
+extern uint64_t sys_exit_group(void);
 extern uint64_t sys_wait(void);
 extern uint64_t sys_wait4(void);
 extern uint64_t sys_chdir(void);
@@ -148,6 +154,7 @@ extern uint64_t sys_munmap(void);
 extern uint64_t sys_fstat(void);
 extern uint64_t sys_unlinkat();
 extern uint64_t sys_nanosleep();
+extern uint64_t sys_clock_gettime();
 
 static uint64_t (*syscalls[400])(void);
 
@@ -160,15 +167,19 @@ void syscall_init()
   syscalls[SYS_open] = sys_open;
   syscalls[SYS_write] = sys_write;
   syscalls[SYS_writev] = sys_writev;
+  syscalls[SYS_readlinkat] = sys_readlinkat;
   syscalls[SYS_read] = sys_read;
   syscalls[SYS_dup] = sys_dup;
   syscalls[SYS_dup3] = sys_dup3;
+  syscalls[SYS_ioctl] = sys_ioctl;
   syscalls[SYS_getcwd] = sys_getcwd;
   syscalls[SYS_getpid] = sys_getpid;
   syscalls[SYS_getppid] = sys_getppid;
+  syscalls[SYS_getuid] = sys_getuid;
   syscalls[SYS_fork] = sys_fork;
   syscalls[SYS_clone] = sys_clone;
   syscalls[SYS_exit] = sys_exit;
+  syscalls[SYS_exit_group] = sys_exit_group;
   syscalls[SYS_wait] = sys_wait;
   syscalls[SYS_wait4] = sys_wait4;
   syscalls[SYS_chdir] = sys_chdir;
@@ -190,6 +201,7 @@ void syscall_init()
   syscalls[SYS_fstat] = sys_fstat;
   syscalls[SYS_unlinkat] = sys_unlinkat;
   syscalls[SYS_nanosleep] = sys_nanosleep;
+  syscalls[SYS_clock_gettime] = sys_clock_gettime;
 }
 
 void syscall(void)
@@ -204,8 +216,11 @@ void syscall(void)
   else {
     printf("%d %s: pc=%p unknown sys call %d\n", task->pid, task->name,
            task->trapframe->epc, num);
+    char buf[100];
+    argstr(1, buf, 50);
+    printf("buf=%s\n", buf);
     printf("a1=%p a2=%p\n", task->trapframe->a1, task->trapframe->a2);
-    printf("a0=%p \n", task->trapframe->a0);
+    printf("a0=%d \n", task->trapframe->a0);
     task->trapframe->a0 = 0;
     panic("syscall error");
   }

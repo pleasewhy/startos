@@ -83,43 +83,18 @@ void usertrap(void)
   }
   else if (r_scause() == 13 || r_scause() == 5 || r_scause() == 12 ||
            r_scause() == 15) {
-    uint64_t    eaddr;
-    char *      mem;
+    uint64_t eaddr;
     eaddr = r_stval();
     // ELF LOAD2:
     //  va=1a7b10
     // trap:
     //  va=1ad2a0
     //  va=1aafb0
-    bool loaded = false;
     LOG_DEBUG("cause=%d pc=%p eaddr=%p", r_scause(), r_sepc(), eaddr);
-    for (int i = 0; i < NOMMAPFILE; i++) {
-      if (task->vma[i] != 0 &&
-          task->vma[i]->LoadIfContain(task->pagetable, eaddr)) {
-        loaded = true;
-        break;
-      }
-    }
+    bool loaded = task->LoadIfValid(eaddr);
 
     if (!loaded) {
-      // 这里用来处理bss段
-      if (eaddr < task->sz) {
-        LOG_DEBUG("bss segment");
-        mem = (char *)memAllocator.alloc();
-        memset(mem, -1, PGSIZE);
-        eaddr = PGROUNDDOWN(eaddr);
-
-        // 设置权限
-        int perm = PTE_V | PTE_U;
-        perm |= PTE_R;
-        perm |= PTE_W;
-        perm |= PTE_X;
-        // LOG_DEBUG("map page va=%p", vma->addr);
-        mappages(task->pagetable, eaddr, PGSIZE, (uint64_t)mem, perm);
-      }
-      else {
-        task->killed = 1;
-      }
+      task->killed = true;
     }
   }
   else if ((which_dev = device_intr()) != 0) {
