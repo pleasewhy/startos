@@ -73,7 +73,6 @@ extern "C" void main(unsigned long hartid, unsigned long dtb_pa)
     initKernelVm();              // 初始化内核虚拟内存
     initHartVm();                // 启用分页
     timer::init();
-    LOG_DEBUG("buf");
     buffer_layer.init();  // 初始化缓存区
     // InitVmaTable();       // 初始化全部vma
     trapinithart();       // 初始化trap

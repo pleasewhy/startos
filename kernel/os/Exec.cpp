@@ -11,21 +11,20 @@
 #include "common/logger.h"
 #include "types.hpp"
 
-const char *env[] = {
-    "SHELL=shell",
-    "PWD=/",
-    "HOME=/",
-    "USER=root",
-    "MOTD_SHOWN=pam",
-    "LANG=C.UTF-8",
-    "INVOCATION_ID=e9500a871cf044d9886a157f53826684",
-    "TERM=vt220",
-    "SHLVL=2",
-    "JOURNAL_STREAM=8:9265",
-    "PATH=/usr/local/bin:/usr/bin:/bin:/usr/local/games:/usr/games",
-    "OLDPWD=/root",
-    "_=busybox",
-    0};
+const char *env[] = {"SHELL=shell",
+                     "PWD=/",
+                     "HOME=/",
+                     "USER=root",
+                     "MOTD_SHOWN=pam",
+                     "LANG=C.UTF-8",
+                     "INVOCATION_ID=e9500a871cf044d9886a157f53826684",
+                     "TERM=vt220",
+                     "SHLVL=2",
+                     "JOURNAL_STREAM=8:9265",
+                     "PATH=/",
+                     "OLDPWD=/root",
+                     "_=busybox",
+                     0};
 
 __attribute__((used)) static int loadseg(pagetable_t   pagetable,
                                          uint64_t      va,
@@ -42,7 +41,7 @@ __attribute__((used)) static int loadseg(pagetable_t   pagetable,
 static int LazyLoadSeg(struct Task *task, struct inode *ip, struct proghdr *ph)
 {
   struct vma *vma = allocVma();
-  // LOG_DEBUG("\nfilesz=%d, vaddr=%d mmsize=%d\n", ph->filesz, ph->vaddr);
+  // LOG_TRACE("\nfilesz=%d, vaddr=%d mmsize=%d\n", ph->filesz, ph->vaddr);
   // unsigned long size = ph->filesz + ELF_PAGEOFFSET(ph->vaddr);
   // unsigned long off = ph->off - ELF_PAGEOFFSET(ph->vaddr);
 
@@ -60,9 +59,12 @@ static int LazyLoadSeg(struct Task *task, struct inode *ip, struct proghdr *ph)
     vma->prot |= PROT_WRITE;
 
   vma->offset = ph->off;
+  // vma->offset = off;
   vma->type = vma->PROG;
   vma->length = ph->filesz;
+  // vma->length = size;
   vma->addr = ph->vaddr;
+  // vma->addr = addr;
   for (int i = 0; i < NOMMAPFILE; i++) {
     if (task->vma[i] == 0) {
       task->vma[i] = vma;
@@ -123,6 +125,7 @@ uint64_t CreateUserStack(struct BinProgram *bin_program, struct elfhdr *elf)
 
 int exec(char *path, char **argv)
 {
+  // printf("exec\n");
   int            i, off, oldsz;
   uint64_t       sz = 0, stackbase, sp, a0 = 0;
   uint64_t       ustack[MAXARG + 1];  // 最后一项为0，用于标记结束
@@ -134,7 +137,7 @@ int exec(char *path, char **argv)
   Task *         task = myTask();
   BinProgram     bin_prog;
 
-  LOG_DEBUG("exec start");
+  LOG_TRACE("exec start");
   if ((pagetable = taskPagetable(task)) == 0) {
     return 0;
   }
@@ -148,7 +151,7 @@ int exec(char *path, char **argv)
   memset(&elf, 0, sizeof(elf));
   if (ip->read(reinterpret_cast<char *>(&elf), 0, sizeof(elf), false) !=
       sizeof(elf)) {
-    LOG_DEBUG("exec read error");
+    LOG_TRACE("exec read error");
     goto bad;
   }
   // if (read_inode(ip, 0, (uint64_t) &elf, 0, sizeof(elf)) != sizeof(elf))
@@ -157,26 +160,26 @@ int exec(char *path, char **argv)
     struct vma *a = task->vma[i];
     if (a != 0 && a->type == a->PROG) {
       a->free();
-      LOG_DEBUG("free vma");
+      LOG_TRACE("free vma");
       task->vma[i] = 0;
     }
   }
 
   if (elf.magic != ELF_MAGIC) {
-    LOG_DEBUG("not a elf file,elf=%p", elf.magic);
-    LOG_DEBUG("entry=%d", elf.entry);
-    LOG_DEBUG("version=%d", elf.version);
-    LOG_DEBUG("sz=%d", ip->sz);
-    LOG_DEBUG("name=%s", ip->test_name);
+    LOG_TRACE("not a elf file,elf=%p", elf.magic);
+    LOG_TRACE("entry=%d", elf.entry);
+    LOG_TRACE("version=%d", elf.version);
+    LOG_TRACE("sz=%d", ip->sz);
+    LOG_TRACE("name=%s", ip->test_name);
     goto bad;
   }
   oldsz = task->sz;
   // 加载程序到内存中
   for (i = 0, off = elf.phoff; i < elf.phnum; i++, off += sizeof(ph)) {
-    LOG_DEBUG("i=%d", i);
+    LOG_TRACE("i=%d", i);
     if (ip->read(reinterpret_cast<char *>(&ph), off, sizeof(ph), false) !=
         sizeof(ph)) {
-      LOG_DEBUG("read inode error");
+      LOG_TRACE("read inode error");
       goto bad;
     }
     // if (vfs::direct_read(path, reinterpret_cast<char *>(&ph), sizeof(ph),
@@ -195,8 +198,8 @@ int exec(char *path, char **argv)
     //   goto bad;
     sz = sz1;
     if (ph.vaddr % PGSIZE != 0) {
-      LOG_DEBUG("type=%d", ph.type);
-      LOG_DEBUG("need align pgsize");
+      LOG_TRACE("type=%d", ph.type);
+      LOG_TRACE("need align pgsize");
       // goto bad;
     }
     if (LazyLoadSeg(task, ip, &ph) < 0) {
@@ -205,14 +208,14 @@ int exec(char *path, char **argv)
     // if (loadseg(pagetable, ph.vaddr, ip, ph.off, ph.filesz) < 0)
     // goto bad;
   }
-  LOG_DEBUG("exec2");
+  LOG_TRACE("exec2");
   // unlock_and_putback(ip);
   // ip = 0;
-  // LOG_DEBUG("exec2");
+  // LOG_TRACE("exec2");
   // 设置用户空间栈
   // 用户空间栈大小为一页(4096字节), 其被放置在程序空间最后一页
   // 的下一页, 注意，栈是从上向下增长的。
-  LOG_DEBUG("exec task sz=%x", sz);
+  // LOG_TRACE("exec task sz=%x", sz);
   sz = PGROUNDUP(sz);
   uint64_t sz1;
   if ((sz1 = userAlloc(pagetable, sz, sz + PGSIZE)) == 0)
@@ -255,7 +258,7 @@ int exec(char *path, char **argv)
   task->sz = sz;
   task->trapframe->epc = elf.entry;
   task->trapframe->sp = sp;
-  LOG_DEBUG("sp=%p oldsz=%d entry=%p", sp, oldsz, elf.entry);
+  LOG_TRACE("sp=%p oldsz=%d sz=%d entry=%p", sp, oldsz, sz, elf.entry);
   FreeTaskPagetable(old_pagetable, oldsz);
   ip->free();
   task->lock.lock();
@@ -264,7 +267,7 @@ int exec(char *path, char **argv)
 
 bad:
   ip->free();
-  LOG_DEBUG("exec bad, path=%s", path);
+  LOG_TRACE("exec bad, path=%s", path);
   // TODO FIXME 释放VMA
   if (pagetable)
     FreeTaskPagetable(pagetable, sz);
@@ -292,20 +295,20 @@ static int loadseg(pagetable_t   pagetable,
   uint_t   i, n;
   uint64_t pa;
 
-  LOG_DEBUG("sz=%d", sz);
+  LOG_TRACE("sz=%d", sz);
   // if ((va % PGSIZE) != 0)
   //   panic("loadseg: va must be page aligned");
 
   uint32_t newsz = sz > 10 * PGSIZE ? 10 * PGSIZE : sz;
 
   for (i = 0; i < newsz; i += n) {
-    LOG_DEBUG("i=%d offset=%p newsz=%d", i, offset, newsz);
+    LOG_TRACE("i=%d offset=%p newsz=%d", i, offset, newsz);
     pa = walkAddr(pagetable, va + i);
     if (pa == 0)
       panic("loadseg: address should exist");
     pa += (va + i) % PGSIZE;
     n = min(newsz - i, PGSIZE - pa % PGSIZE);
-    LOG_DEBUG("va=%p pa=%p n=%d", va, pa, n);
+    LOG_TRACE("va=%p pa=%p n=%d", va, pa, n);
     // if (newsz - i < PGSIZE)
     // n = newsz - i;
     // else

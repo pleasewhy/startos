@@ -20,7 +20,7 @@ bool Task::LoadIfValid(uint64_t va)
 
   // 检查是否为bss段
   if (va < this->sz) {
-    LOG_DEBUG("bss segment");
+    LOG_TRACE("bss segment");
     char *mem = (char *)memAllocator.alloc();
     memset(mem, 0, PGSIZE);
     va = PGROUNDDOWN(va);
@@ -32,6 +32,7 @@ bool Task::LoadIfValid(uint64_t va)
     // perm |= PTE_X;
     // LOG_DEBUG("map page va=%p", vma->addr);
     mappages(pagetable, va, PGSIZE, (uint64_t)mem, perm);
+    printf("load\n");
     return true;
   }
   return false;

@@ -12,10 +12,33 @@ extern MemAllocator memAllocator;
 #define NVMA 30
 struct vma vma_table_[NVMA];
 
+/**
+ * @brief
+ *
+ * @note [...bss...|...load...]和[...load...|...bss...]
+ *  当先触发bss的page fault时，那么同一页的load段就不会触发page fault,
+ *  从而不会从文件中读取数据
+ * @param pagetable
+ * @param va
+ * @return true
+ * @return false
+ */
 bool vma::LoadIfContain(pagetable_t pagetable, uint64_t va)
 {
-  if (va < this->addr || va >= this->addr + this->length) {
+  uint64_t start = PGROUNDDOWN(this->addr);
+  uint64_t end = PGROUNDUP(this->addr + this->length);
+  if (va < start || va >= end) {
     return false;
+  }
+
+  if (va < this->addr) {  // [...bss...|...load...]
+    panic("load if contain");
+    va = this->addr;
+  }
+
+  if (va >= this->addr + this->length) {
+    panic("load if contain");
+    va = this->addr + this->length - 1;
   }
 
   // 表明改地址已被加载
@@ -34,7 +57,7 @@ bool vma::LoadIfContain(pagetable_t pagetable, uint64_t va)
     perm |= PTE_W;
   if (this->prot & PROT_EXEC)
     perm |= PTE_X;
-  // LOG_DEBUG("map page va=%p", this->addr);
+  // LOG_TRACE("map page va=%p", this->addr);
   mappages(pagetable, va, PGSIZE, (uint64_t)mem, perm);
 
   // eaddr不能小于this->addr，即vma的起始地址，因为
@@ -48,10 +71,10 @@ bool vma::LoadIfContain(pagetable_t pagetable, uint64_t va)
   nread = nread > PGSIZE ? PGSIZE : nread;
   uint32_t file_off = this->offset + (va - this->addr);
   uint64_t pa = (uint64_t)mem + va - PGROUNDDOWN(va);
-  // LOG_DEBUG("cal va=%p len=%d nread=%d file_off=%d", va, this->length, nread,
+  // LOG_TRACE("cal va=%p len=%d nread=%d file_off=%d", va, this->length, nread,
   //           file_off);
   this->ip->read((char *)pa, file_off, nread, false);
-  // LOG_DEBUG("n=%d", n);
+  // LOG_TRACE("n=%d", n);
   return true;
 }
 

@@ -16,7 +16,6 @@
 #include "time.h"
 #include "types.hpp"
 #include "utsname.h"
-#include <time.h>
 
 extern MemAllocator memAllocator;
 
@@ -40,22 +39,28 @@ uint64_t sys_exit_group(void)
 
 uint64_t sys_fork(void)
 {
-  LOG_DEBUG("fork");
+  LOG_TRACE("fork");
   return fork();
 }
 
 uint64_t sys_clone(void)
 {
-  LOG_DEBUG("clone");
+  LOG_TRACE("sys_clone");
   int      flags;
   uint64_t stackHighAddr;
   if (argint(0, &flags) < 0 || argaddr(1, &stackHighAddr) < 0) {
     return -1;
   }
-  if (stackHighAddr == 0)
-    return fork();
-  else
+  if (stackHighAddr == 0) {
+    LOG_TRACE("do fork");
+    int pid = fork();
+    LOG_TRACE("do fork over");
+    return pid;
+  }
+  else {
+    LOG_TRACE("do clone");
     return clone(stackHighAddr, flags);
+  }
 }
 
 //   uint64_t sys_clone(void){
@@ -65,7 +70,7 @@ uint64_t sys_clone(void)
 uint64_t sys_exec(void)
 {
   char path[MAXPATH], *argv[MAXARG];
-  LOG_DEBUG("exec");
+  LOG_TRACE("exec");
   uint64_t uargv, uarg = 0;
   int      ret = 0;
   if (argstr(0, path, MAXPATH) < 0 || argaddr(1, &uargv) < 0)
@@ -89,15 +94,15 @@ uint64_t sys_exec(void)
       goto bad;
   }
   vfs::calAbsolute(path);
-  LOG_DEBUG("path=%s", path);
+  LOG_TRACE("path=%s", path);
   ret = exec(path, argv);
   for (int i = 0; i <= MAXARG && argv[i] != 0; i++)
     memAllocator.free(argv[i]);
-  LOG_DEBUG("exec over");
+  LOG_TRACE("exec over");
   return ret;
 
 bad:
-  LOG_DEBUG("exec bad");
+  LOG_TRACE("exec bad");
   for (int i = 0; i <= MAXARG && argv[i] != 0; i++)
     memAllocator.free(argv[i]);
   return -1;
@@ -119,7 +124,7 @@ uint64_t sys_wait4(void)
   if (argint(0, &pid) < 0 || argaddr(1, &uaddr) < 0) {
     return -1;
   }
-  LOG_DEBUG("wait4");
+  LOG_TRACE("wait4");
   if (pid == -1) {
     return wait(uaddr);
   }
@@ -132,6 +137,22 @@ uint64_t sys_getpid()
 }
 
 uint64_t sys_getuid()
+{
+  return 0;
+}
+
+uint64_t sys_geteuid()
+{
+  return 0;
+}
+
+uint64_t sys_setpgid()
+{
+  // myTask()->gid =
+  return 0;
+}
+
+uint64_t sys_getpgid()
 {
   return 0;
 }
@@ -154,13 +175,13 @@ uint64_t sys_sbrk(void)
   if (argaddr(0, &n) < 0) {
     return -1;
   }
-  LOG_DEBUG("sys_sbrk");
+  LOG_TRACE("sys_sbrk pid=%d", myTask()->pid);
   Task *task = myTask();
   if (n == 0)
     return task->sz;
   addr = task->sz;
   growtask(n);
-  LOG_DEBUG("sys_sbrk success n=%d", n);
+  LOG_TRACE("sys_sbrk success n=%d", n);
   return addr;
 }
 
@@ -170,7 +191,7 @@ uint64_t sys_brk(void)
   if (argaddr(0, &addr) < 0) {
     return -1;
   }
-  LOG_DEBUG("sys_brk0 addr=%p", addr);
+  LOG_TRACE("sys_brk0 addr=%p", addr);
   Task *task = myTask();
   if (addr == 0)
     return task->sz;
@@ -181,7 +202,7 @@ uint64_t sys_brk(void)
 #define OFFSET(structure, member) ((uint64_t)(&((structure *)0)->member));
 
 const char *sysname = "linux";
-const char *nodename = "ubuntu";
+const char *nodename = "debian";
 const char *release = "5.8.0-59-generic";
 const char *version = "#66~20.04.1-Ubuntu";
 #ifdef K210
@@ -243,7 +264,7 @@ uint64_t sys_gettimeofday()
 #ifdef K210
   clock::getTimeVal(tv);
 #endif
-  LOG_DEBUG("sec=%d usec=%d", tv.sec, tv.usec);
+  LOG_TRACE("sec=%d usec=%d", tv.sec, tv.usec);
   copyout(myTask()->pagetable, addr, reinterpret_cast<char *>(&tv),
           sizeof(TimeVal));
   return 0;
@@ -268,12 +289,21 @@ uint64_t sys_nanosleep(void)
 uint64_t sys_clock_gettime(void)
 {
   time::timespec ts;
-  LOG_DEBUG("clock gettime");
+  LOG_TRACE("clock gettime");
   uint64_t addr;
-  if (argaddr(1, &addr) < 0) {
+  int      clock_id;
+  if (argint(0, &clock_id) < 0 && argaddr(1, &addr) < 0) {
     return -1;
   }
+  if (clock_id != CLOCK_REALTIME_COARSE)
+    panic("clock only support CLOCK_REALTIME_COARSE");
   time::CurrentTimeSpec(&ts);
   copyout(myTask()->pagetable, addr, (char *)&ts, sizeof(ts));
+  return 0;
+}
+
+uint64_t sys_rt_sigaction(void)
+{
+  printf("rt_sigaction\n");
   return 0;
 }

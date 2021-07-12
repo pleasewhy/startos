@@ -126,7 +126,7 @@ namespace fat32 {
     info_.root_.vfs_inode.test_name[0] = '/';
     info_.root_.vfs_inode.test_name[1] = 0;
     LOG_WARN("test name=%s", info_.root_.vfs_inode.test_name);
-    LOG_DEBUG("first data sector=%d", info_.first_data_sector_);
+    LOG_TRACE("first data sector=%d", info_.first_data_sector_);
     // struct inode *ip = Lookup(&info_.root_.vfs_inode, "cat");
 #ifdef TEST_FAT32
     Test(this);
@@ -249,10 +249,10 @@ namespace fat32 {
     int name_len = strlen(name);
     // (a+b-1)/b: a/b向上取整
     int lfn_num = (name_len + kLongNameLength - 1) / kLongNameLength;
-    LOG_DEBUG("lfn num=%d", lfn_num);
+    LOG_TRACE("lfn num=%d", lfn_num);
     // 获取短文件目录项的写入位置
     uint32_t off = FindFreeEntry(dir, lfn_num + 1) + lfn_num * kMsdosEntrySize;
-    LOG_DEBUG("off=%d", off);
+    LOG_TRACE("off=%d", off);
     // 填充短文件目录项
     FillShortFile(&short_entry, name, AllocCluster(), mode);
 
@@ -263,7 +263,7 @@ namespace fat32 {
 
     // 写入长文件目录名
     uchar_t checksum = FatChecksum(short_entry.name);
-    LOG_DEBUG("%s len=%d", name, lfn_num);
+    LOG_TRACE("%s len=%d", name, lfn_num);
     for (uint8_t seq = 1; seq <= lfn_num; seq++) {
       memset(&long_entry, 0xff, kMsdosEntrySize);
       long_entry.sequence_number = seq;
@@ -286,9 +286,9 @@ namespace fat32 {
   struct inode *Fat32FileSystem::GetInode(uint64_t pos)
   {
     struct inode *ip = nullptr;
-    LOG_DEBUG("%p", ip);
+    LOG_TRACE("%p", ip);
     ip = inode_cache_map_->get(pos);
-    LOG_DEBUG("%p", ip);
+    LOG_TRACE("%p", ip);
     if (ip != nullptr) {
       return ip->dup();
     }
@@ -353,7 +353,7 @@ namespace fat32 {
       ip->sz = entry.sfn.file_size;
     }
 
-    LOG_DEBUG("Leave Build");
+    LOG_TRACE("Leave Build");
     return ip;
   }
 
@@ -383,7 +383,7 @@ namespace fat32 {
           uint32_t cluster =
               enteies_of_sector * (sector - info_.reserve_sectors_) + i;
           ZeroCluster(cluster);
-          LOG_DEBUG("alloc cluster=%d", cluster);
+          LOG_TRACE("alloc cluster=%d", cluster);
           delete fat_sector;
           return cluster;
         }
@@ -507,7 +507,7 @@ namespace fat32 {
 
   struct inode *Fat32FileSystem::Lookup(struct inode *dir, const char *name)
   {
-    LOG_DEBUG("Look up=%s", name);
+    LOG_TRACE("Look up=%s", name);
     if (strncmp(".", name, strlen(name)) == 0) {
       dir->ref++;
       return dir;
@@ -555,7 +555,7 @@ namespace fat32 {
       if (strncmp(name, tmp_name, name_len) != 0) {
         continue;
       }
-      LOG_DEBUG("found\n");
+      LOG_TRACE("found\n");
       uint64_t cluster =
           (off - sizeof(entry)) / info_.bytes_per_cluster_;  // 获取当前逻辑簇
       uint64_t pos = FirstSectorOfCluster(bmap(dir, cluster)) * kSectorSize;
@@ -572,7 +572,7 @@ namespace fat32 {
   int Fat32FileSystem::ReadDir(
       struct file *fp, struct inode *ip, char *buf, int max_len, bool user)
   {
-    LOG_DEBUG("read dir=%d", max_len);
+    LOG_TRACE("read dir=%d", max_len);
     // struct linux_dirent *dirent;
     MsdosEntry    entry;
     ReadDirHeader read_dir_header;
@@ -649,8 +649,8 @@ namespace fat32 {
           d_type = DT_DIR;
         else
           d_type = DT_REG;
-        LOG_DEBUG("read_dir=%s", name);
-        LOG_DEBUG("name=%s\n", name);
+        LOG_TRACE("read_dir=%s", name);
+        LOG_TRACE("name=%s\n", name);
         if (filldir(&read_dir_header, name, name_len, GetStartCluster(entry),
                     d_type) < 0) {
           goto out;
@@ -937,25 +937,25 @@ namespace fat32 {
     memset(buf, 0, sizeof(buf));
     linux_dirent *de = (linux_dirent *)buf;
     memset(buf, 0, 512);
-    LOG_DEBUG("Test ReadDir");
+    LOG_TRACE("Test ReadDir");
     while (true) {
       int nread = fs->ReadDir(&f, f.inode, buf, 512, false);
       if (nread == 0)
         break;
       de = (linux_dirent *)buf;
       while (de != 0 && de->d_reclen != 0) {
-        LOG_DEBUG("dirent=%s", de->d_name);
+        LOG_TRACE("dirent=%s", de->d_name);
         de = (linux_dirent *)(de->d_off);
       }
     }
-    LOG_DEBUG("Test ReadDir success");
+    LOG_TRACE("Test ReadDir success");
   }
 
   void TestCreate(Fat32FileSystem *fs)
   {
-    LOG_DEBUG("test create short name entry");
+    LOG_TRACE("test create short name entry");
     fs->Create(&fs->info_.root_.vfs_inode, "test", __S_IFREG);
-    LOG_DEBUG("test create long name entry");
+    LOG_TRACE("test create long name entry");
     fs->Create(&fs->info_.root_.vfs_inode, "test_create_long_name_file",
                __S_IFREG);
   }

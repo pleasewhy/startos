@@ -36,11 +36,11 @@ namespace devfs {
       LOG_INFO("device filesystem: dev=%s", rw_devs[i]->name);
       DevInodeInfo *info = new DevInodeInfo();
       safestrcpy(info->name, rw_devs[i]->name, strlen(rw_devs[i]->name) + 1);
-      LOG_DEBUG("before insert");
+      LOG_TRACE("before insert");
       FillInode(&info->vfs_inode, &root_->vfs_inode, dev_no++, kConsoleIno,
                 __S_IFBLK);
-      LOG_DEBUG("after insert");
       root_->children_list->insert(std::move(info));
+      LOG_TRACE("after insert");
     }
     // 添加字符设备，这里不想重写console，就这样简单的实现下吧
     DevInodeInfo *info = new DevInodeInfo();
@@ -160,7 +160,7 @@ namespace devfs {
       off++;
     }
     fp->offset = off;
-    LOG_DEBUG("off=%d", off);
+    LOG_TRACE("off=%d", off);
     return read_dir_header.used;
   }
 
@@ -197,18 +197,18 @@ namespace devfs {
     memset(buf, 0, sizeof(buf));
     linux_dirent *de = (linux_dirent *)buf;
     memset(buf, 0, 512);
-    LOG_DEBUG("Test ReadDir");
+    LOG_TRACE("Test ReadDir");
     while (true) {
       int nread = fs->ReadDir(&f, f.inode, buf, 512, false);
       if (nread == 0)
         break;
       de = (linux_dirent *)buf;
       while (de != 0 && de->d_reclen != 0) {
-        LOG_DEBUG("dirent=%s", de->d_name);
+        LOG_TRACE("dirent=%s", de->d_name);
         de = (linux_dirent *)(de->d_off);
       }
     }
-    LOG_DEBUG("Test ReadDir success");
+    LOG_TRACE("Test ReadDir success");
     f.inode->free();
   }
 
@@ -218,7 +218,7 @@ namespace devfs {
     struct inode *ip = fs->Lookup(root, "tty");
     fs->WriteInode(ip, false, (uint64_t) "hello world~\n", 0, 14);
     root->free();
-    LOG_DEBUG("test read success");
+    LOG_TRACE("test read success");
   }
 
   void Test(DeviceFileSystem *fs)

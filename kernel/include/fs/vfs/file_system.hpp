@@ -162,7 +162,7 @@ __attribute__((used)) static int filldir(struct ReadDirHeader *direntHeader,
     either_copyout(direntHeader->user,
                    (uint64_t)(&direntHeader->last_dirent->d_off), &val,
                    sizeof(uint64_t));
-    LOG_DEBUG("readdir::filedir: reach max size");
+    LOG_TRACE("readdir::filedir: reach max size");
     return -1;
   }
   direntHeader->free -= reclen;

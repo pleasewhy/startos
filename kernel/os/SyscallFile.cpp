@@ -13,12 +13,13 @@
 #include "riscv.hpp"
 #include "types.hpp"
 #include "io.h"
+#include "poll.h"
 
 uint64_t sys_getcwd(void)
 {
   uint64_t userBuf;
   int      n;
-  LOG_DEBUG("cwd");
+  LOG_TRACE("cwd");
   if (argaddr(0, &userBuf) < 0 || argint(1, &n) < 0) {
     return -1;
   }
@@ -38,9 +39,9 @@ uint64_t sys_open(void)
   char path[MAXPATH];
   int  flag;
   int  n;
-  LOG_DEBUG("sys_open");
+  LOG_TRACE("sys_open");
   if ((n = argstr(0, path, MAXPATH)) < 0 || argint(1, &flag) < 0) {
-    LOG_DEBUG("error");
+    LOG_TRACE("error");
     return -1;
   }
   struct file *fp = vfs::VfsManager::openat(nullptr, path, flag, 0);
@@ -55,10 +56,10 @@ uint64_t sys_unlinkat()
   int  fd;
   char filepath[MAXPATH];
   int  flags;
-  LOG_DEBUG("sys_unlinkat");
+  LOG_TRACE("sys_unlinkat");
   if (argint(0, &fd) < 0 || argstr(1, filepath, MAXPATH) < 0 ||
       argint(2, &flags) < 0) {
-    LOG_DEBUG("error");
+    LOG_TRACE("error");
     return -1;
   }
   return vfs::rm(fd, filepath);
@@ -69,7 +70,7 @@ uint64_t sys_openat(void)
   char filename[MAXPATH];
   int  dirfd, mode, flags;
   int  n;
-  LOG_DEBUG("sys_openat dirfd=%d");
+  LOG_TRACE("sys_openat dirfd=%d");
   if (argint(0, &dirfd) < 0 || (n = argstr(1, filename, MAXPATH)) < 0) {
     return -1;
   }
@@ -83,7 +84,7 @@ uint64_t sys_openat(void)
     return -1;
   }
   int fd = registerFileHandle(fp);
-  LOG_DEBUG("\n\nopenat fd=%d\n\n", fd);
+  LOG_TRACE("\n\nopenat fd=%d\n\n", fd);
   return fd;
 }
 
@@ -96,14 +97,14 @@ uint64_t sys_close(void)
   if (fd < 0) {
     return -1;
   }
-  LOG_DEBUG("sys_close fd=%d", fd);
+  LOG_TRACE("sys_close fd=%d", fd);
   struct file *fp = getFileByfd(fd);
   struct Task *task = myTask();
   vfs::VfsManager::close(fp);
   task->lock.lock();
   task->openFiles[fd] = NULL;
   task->lock.unlock();
-  LOG_DEBUG("sys_close complete");
+  LOG_TRACE("sys_close complete");
   return 0;
 }
 
@@ -111,11 +112,11 @@ uint64_t sys_write(void)
 {
   int      fd, n;
   uint64_t uaddr;
-  // LOG_DEBUG("sys_write");
+  // LOG_TRACE("sys_write");
   if (argint(0, &fd) < 0 || argint(2, &n) < 0 || argaddr(1, &uaddr) < 0)
     return -1;
   if (fd >= 3) {
-    LOG_DEBUG("sys_write fd=%d n=%d", fd, n);
+    LOG_TRACE("sys_write fd=%d n=%d", fd, n);
   }
   struct file *fp = getFileByfd(fd);
   return vfs::VfsManager::write(fp, (const char *)(uaddr), n, true);
@@ -149,7 +150,7 @@ uint64_t sys_read(void)
 {
   int      fd, n;
   uint64_t uaddr;
-  // LOG_DEBUG("sys_read");
+  // LOG_TRACE("sys_read");
   if (argint(0, &fd) < 0 || argint(2, &n) < 0 || argaddr(1, &uaddr) < 0)
     return -1;
   struct file *fp = getFileByfd(fd);
@@ -161,14 +162,14 @@ uint64_t sys_readlinkat()
   int        dirfd, n;
   char       filename[MAXPATH];
   const char s[] = "/busybox";
-  LOG_DEBUG("readlinkat");
+  LOG_TRACE("readlinkat");
   uint64_t ubuf;  // 用户缓冲区
   if (argint(0, &dirfd) < 0 || argstr(1, filename, MAXPATH) < 0)
     return -1;
   if (argaddr(2, &ubuf) < 0 || argint(3, &n))
     return -1;
   copyout(myTask()->pagetable, ubuf, (char *)s, sizeof(s) + 1);
-  LOG_DEBUG("s=%s n=%d", s, sizeof(s));
+  LOG_TRACE("s=%s n=%d", s, sizeof(s));
   return sizeof(s);
 }
 
@@ -182,7 +183,7 @@ uint64_t sys_dup(void)
   if (fp == NULL) {
     return -1;
   }
-  LOG_DEBUG("dup fd=%d fp=%p fp->ref=%d\n", fd, fp, fp->ref);
+  LOG_TRACE("dup fd=%d fp=%p fp->ref=%d\n", fd, fp, fp->ref);
   fp = vfs::VfsManager::dup(fp);
   return registerFileHandle(fp);
 }
@@ -193,7 +194,7 @@ uint64_t sys_dup3(void)
   if (argint(0, &oldfd) < 0 || argint(1, &newfd) < 0) {
     return -1;
   }
-  LOG_DEBUG("old fd=%d new fd=%d", oldfd, newfd);
+  printf("old fd=%d new fd=%d\n", oldfd, newfd);
   struct file *fp = getFileByfd(oldfd);
   fp = vfs::VfsManager::dup(fp);
   ansfd = registerFileHandle(fp, newfd);
@@ -221,7 +222,7 @@ uint64_t sys_chdir(void)
   if (argstr(0, path, MAXPATH) < 0) {
     return -1;
   }
-  LOG_DEBUG("chdir path=%s", path);
+  LOG_TRACE("chdir path=%s", path);
   return vfs::chdir(path);
 }
 
@@ -229,7 +230,7 @@ uint64_t sys_pipe(void)
 {
   uint64_t fdarray;
   int      fds[2];
-  LOG_DEBUG("pipe");
+  LOG_TRACE("pipe");
   Task *task = myTask();
   if (argaddr(0, &fdarray) < 0) {
     return -1;
@@ -254,11 +255,11 @@ uint64_t sys_getdents64(void)
   if (argint(0, &fd) < 0 || argaddr(1, &addr) || argint(2, &len)) {
     return -1;
   }
-  LOG_DEBUG("getdents64 fd=%d", fd);
+  LOG_TRACE("getdents64 fd=%d", fd);
   int nread =
       vfs::VfsManager::ReadDir(getFileByfd(fd), (char *)addr, len, true);
   // int n = vfs::ls(fd, (char *)addr, len, true);
-  LOG_DEBUG("getdents64 nread=%d", nread);
+  LOG_TRACE("getdents64 nread=%d", nread);
   // printf("%d",n);
   return nread;
 }
@@ -306,6 +307,31 @@ uint64_t sys_fstat()
   kst.st_mode = fp->inode->mode;
   return copyout(myTask()->pagetable, kstAddr, reinterpret_cast<char *>(&kst),
                  sizeof(struct kstat));
+}
+
+uint64_t sys_fstatat()
+{
+  int          dirfd;
+  struct file *fp;
+  char         filepath[MAXPATH];
+  struct kstat kst;
+  uint64_t     kst_addr;
+  if (argint(0, &dirfd) < 0 || argstr(1, filepath, MAXPATH) < 0 ||
+      argaddr(2, &kst_addr) < 0) {
+    return -1;
+  }
+  fp = vfs::VfsManager::openat(nullptr, filepath, O_RDWR, 0);
+  memset(&kst, 0, sizeof(struct kstat));
+  kst.st_dev = 1;
+  kst.st_size = fp->size;
+  kst.st_nlink = 1;
+  kst.st_mode = fp->inode->mode;
+  vfs::VfsManager::close(fp);
+  if (copyout(myTask()->pagetable, kst_addr, reinterpret_cast<char *>(&kst),
+              sizeof(struct kstat)) < 0) {
+    return -1;
+  }
+  return 0;
 }
 
 uint64_t sys_mmap(void)
@@ -367,7 +393,7 @@ uint64_t sys_mmap(void)
 
 uint64_t sys_munmap(void)
 {
-  LOG_DEBUG("mummap");
+  LOG_TRACE("mummap");
   Task *      task = myTask();
   uint64_t    addr;
   struct vma *vma = 0;
@@ -402,11 +428,52 @@ uint64_t sys_munmap(void)
     vma->free();
     task->vma[index] = 0;
   }
-  LOG_DEBUG("mummap finish");
+  LOG_TRACE("mummap finish");
   return 0;
 }
 
 uint64_t sys_ioctl(void)
 {
   return 0;
+}
+
+uint64_t sys_fcntl(void)
+{
+  int fd = 0;
+  int cmd = 0;
+  if (argint(0, &fd) < 0 || argint(1, &cmd) < 0) {
+    return -1;
+  }
+  if (cmd == F_DUPFD || cmd == F_DUPFD_CLOEXEC) {
+    int new_fd;
+    if (argint(2, &new_fd) < 0)
+      return -1;
+    struct file *fp = getFileByfd(fd);
+    fp = vfs::VfsManager::dup(fp);
+    registerFileHandle(fp, new_fd);
+  }
+  return 0;
+}
+
+uint64_t sys_ppoll()
+{
+  struct pollfd fds[10];
+  int           nfd;
+  uint64_t      fds_addr;
+
+  if (argaddr(0, &fds_addr) < 0 || argint(1, &nfd) < 0) {
+    return -1;
+  }
+  if (nfd != 1) {
+    printf("%d\n", nfd);
+    panic("only support 1 pollfd");
+  }
+
+  if (copyin(myTask()->pagetable, (char *)fds, fds_addr,
+             sizeof(struct pollfd) * nfd)) {
+    return -1;
+  }
+
+  // if (fds[0].events)
+  return 1;
 }

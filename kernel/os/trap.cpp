@@ -71,7 +71,7 @@ void usertrap(void)
   if (r_scause() == 8) {
     // 系统调用
     if (task->killed) {
-      LOG_DEBUG("usertrap killed");
+      LOG_TRACE("usertrap killed");
       exit(-1);
     }
     // sepc指向了ecall指令, 但是我们希望返回到ecall的下一条指令。
@@ -90,7 +90,7 @@ void usertrap(void)
     // trap:
     //  va=1ad2a0
     //  va=1aafb0
-    LOG_DEBUG("cause=%d pc=%p eaddr=%p", r_scause(), r_sepc(), eaddr);
+    LOG_TRACE("cause=%d pc=%p eaddr=%p", r_scause(), r_sepc(), eaddr);
     bool loaded = task->LoadIfValid(eaddr);
 
     if (!loaded) {

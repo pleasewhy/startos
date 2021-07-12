@@ -3,13 +3,17 @@
 #include "common/sbi.h"
 #include "os/SpinLock.hpp"
 #include "fs/vfs/vfs.hpp"
+#include "memory/MemAllocator.hpp"
+#include "memory/BuddyAllocator.hpp"
 #include "os/TaskScheduler.hpp"
 
 #define Enter (13)
 #define BACKSPACE (0x100)
 #define CTRL(x) (x - '@')
 
-extern Console console;
+extern Console             console;
+extern MemAllocator        memAllocator;
+extern mem::BuddyAllocator buddy_alloc_;
 
 void Console::init()
 {
@@ -53,7 +57,6 @@ int Console::read(uint64_t dst, bool user, int n)
     }
   }
   this->spinLock.unlock();
-  LOG_DEBUG("console read=%d", expect - n);
   return expect - n;
 }
 
@@ -87,8 +90,14 @@ void Console::console_intr(char c)
     case CTRL('P'):
       // print_proc();
       break;
-    case '~': // 输出文件系统debug信息
+    case '~':  // 输出文件系统debug信息
       vfs::VfsManager::DebugInfo();
+      break;
+    case '$':
+      memAllocator.DebugInfo();
+      break;
+    case '#':
+      buddy_alloc_.mem_info();
       break;
     default:
 // 显示输出字符

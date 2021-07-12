@@ -17,7 +17,7 @@ SleepLock sleep_lock;  // 用于控制并发访问
 
 void Fat32FileSystem::init()
 {
-  LOG_DEBUG("fat32 init");
+  LOG_TRACE("fat32 init");
   sleep_lock.init("fat32");
   if (tf_init() != 0) {
     panic("fat32 init");
@@ -32,7 +32,7 @@ int Fat32FileSystem::open(const char *filePath, uint64_t flags, struct file *fp)
     tf = tf_fopen(filePath, "w");
   }
   else {
-    LOG_DEBUG("open flag r");
+    LOG_TRACE("open flag r");
     tf = tf_fopen(filePath, "r");
     // LOG_DEBUG("tf=%s", tf->filename);
   }
@@ -220,7 +220,7 @@ int Fat32FileSystem::ls(const char *filepath,
                         int         len,
                         bool        user)
 {
-  LOG_DEBUG("fat32 ls");
+  LOG_TRACE("fat32 ls");
   sleep_lock.lock();
   struct linux_dirent *dirent;
   struct linux_dirent  dt;
@@ -235,7 +235,7 @@ int Fat32FileSystem::ls(const char *filepath,
          sizeof(FatFileEntry)) {
     if (entry.msdos.filename[0] == 0x00 ||
         readn + NELEM(entry.msdos.filename) >= len) {  // 结束
-      LOG_DEBUG("over");
+      LOG_TRACE("over");
       sleep_lock.unlock();
       return readn;
     }
@@ -275,12 +275,12 @@ int Fat32FileSystem::ls(const char *filepath,
       // 计算lfn的数量
       lfn_entries = entry.lfn.sequence_number & ~0x40;
       if (lfn_entries * LFN_NAME_CAPACITY + readn >= len) {
-        LOG_DEBUG("over");
+        LOG_TRACE("over");
         tf_fclose(fp);
         sleep_lock.unlock();
         return readn;
       }
-      LOG_DEBUG("lfn sno=%p  lfns=%d readn=%d len=%d",
+      LOG_TRACE("lfn sno=%p  lfns=%d readn=%d len=%d",
                 entry.lfn.sequence_number, lfn_entries, readn, len);
       // LOG_DEBUG("temp lfn len=%d name1=%p", sizeof(FatFileEntry),
       // entry.lfn.name1);
@@ -292,13 +292,13 @@ int Fat32FileSystem::ls(const char *filepath,
       for (int i = 1; i < lfn_entries; i++) {
         if (tf_fread((char *)&entry, sizeof(FatFileEntry), fp) !=
             sizeof(FatFileEntry)) {
-          LOG_DEBUG("expect lfn entry, but not found");
+          LOG_TRACE("expect lfn entry, but not found");
           tf_fclose(fp);
           sleep_lock.unlock();
           return -1;
         }
         if (entry.lfn.attributes != TF_ATTR_LONG_NAME) {
-          LOG_DEBUG("expect lfn entry, but not sfn entry");
+          LOG_TRACE("expect lfn entry, but not sfn entry");
           tf_fclose(fp);
           sleep_lock.unlock();
           return -1;
@@ -310,7 +310,7 @@ int Fat32FileSystem::ls(const char *filepath,
       // 读取对应的短文件目录项
       if (tf_fread((char *)&entry, sizeof(FatFileEntry), fp) !=
           sizeof(FatFileEntry)) {
-        LOG_DEBUG("expect sfn entry, but not found");
+        LOG_TRACE("expect sfn entry, but not found");
         tf_fclose(fp);
         sleep_lock.unlock();
         return -1;
@@ -1054,7 +1054,7 @@ returns 0 on success
 */
 int Fat32FileSystem::tf_mkdir(const char *filename, int mkParents)
 {
-  LOG_DEBUG("tf_mkdir=%s", filename);
+  LOG_TRACE("tf_mkdir=%s", filename);
   // FIXME: verify that we can't create multiples of the same one.
   // FIXME: figure out how the root directory location is determined.
   if (filename[0] == '/' && filename[1] == '.' && filename[2] == '/') {
@@ -1186,10 +1186,10 @@ TFFile *Fat32FileSystem::tf_fopen(const char *filename, const char *mode)
   fp = tf_fnopen(filename, mode, strlen(filename));
   if (fp == NULL) {
     if (strchr(mode, '+') || strchr(mode, 'w') || strchr(mode, 'a')) {
-      LOG_DEBUG("fopen create");
+      LOG_TRACE("fopen create");
       tf_create(filename);
     }
-    LOG_DEBUG("fopen failed");
+    LOG_TRACE("fopen failed");
     return tf_fnopen(filename, mode, strlen(filename));
   }
   return fp;
@@ -1233,7 +1233,7 @@ Fat32FileSystem::tf_fnopen(const char *filename, const char *mode, int n)
     // LOG_DEBUG("temp filename=%s", temp_filename);
     if (fp->flags == 0xff) {
       tf_release_handle(fp);
-      LOG_DEBUG("tf_fnopen: cannot open file: fp->flags == 0xff ");
+      LOG_TRACE("tf_fnopen: cannot open file: fp->flags == 0xff ");
       return NULL;
     }
   }
@@ -1817,7 +1817,7 @@ int Fat32FileSystem::tf_remove(char *filename)
   // TODO Don't leave an orphaned LFN
   fp = tf_parent(filename, "r", false);
   rc = tf_find_file(fp, (strrchr((char *)filename, '/') + 1));
-  LOG_DEBUG("rm parent=%s sz=%d", fp->filename, fp->size);
+  LOG_TRACE("rm parent=%s sz=%d", fp->filename, fp->size);
   if (!rc) {
     while (1) {
       rc = tf_fseek(fp, sizeof(FatFileEntry), fp->pos);
@@ -1825,7 +1825,7 @@ int Fat32FileSystem::tf_remove(char *filename)
         break;
       tf_fread((char *)&entry, sizeof(FatFileEntry),
                fp);  // Read one entry ahead
-      LOG_DEBUG("attr=%x name=%s", entry.msdos.attributes,
+      LOG_TRACE("attr=%x name=%s", entry.msdos.attributes,
                 entry.msdos.filename);
       tf_fseek(fp, -((int32_t)3 * sizeof(FatFileEntry)), fp->pos);
       tf_fwrite((char *)&entry, sizeof(FatFileEntry), fp);
