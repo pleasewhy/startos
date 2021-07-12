@@ -104,5 +104,9 @@ public:
   struct context context;   // 被保存的寄存器，用于pswitch
   char           name[16];  // 进程名
   int            sz;        // 进程使用空间的大小
+
+  // 用户相关
+  int uid;
+  int gid;
 };
 #endif  // PROCESS_HPP

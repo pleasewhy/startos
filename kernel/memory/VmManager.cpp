@@ -209,7 +209,7 @@ uint64_t userAlloc(pagetable_t pagetable, uint64_t oldsz, uint64_t newsz)
     }
     memset(mem, 0, PGSIZE);
     if (mappages(pagetable, a, PGSIZE, (uint64_t)mem,
-                 PTE_W | PTE_X | PTE_R | PTE_U) != 0) {
+                 PTE_W | PTE_X | PTE_R | PTE_U | PTE_V) != 0) {
       LOG_WARN("user map page failed");
       memAllocator.free(mem);
       userDealloc(pagetable, a, oldsz);
@@ -218,8 +218,6 @@ uint64_t userAlloc(pagetable_t pagetable, uint64_t oldsz, uint64_t newsz)
   }
   return newsz;
 }
-
-
 
 void userUnmap(pagetable_t pagetable,
                uint64_t    va,
@@ -280,7 +278,8 @@ void UserVmInit(pagetable_t pagetable, uchar_t *src, uint_t sz)
     panic("inituvm: more than a page");
   mem = static_cast<char *>(memAllocator.alloc());
   memset(mem, 0, PGSIZE);
-  mappages(pagetable, 0, PGSIZE, (uint64_t)mem, PTE_W | PTE_R | PTE_X | PTE_U);
+  mappages(pagetable, 0, PGSIZE, (uint64_t)mem,
+           PTE_W | PTE_R | PTE_X | PTE_U | PTE_V);
   memmove(mem, src, sz);
 }
 
@@ -371,16 +370,18 @@ int userVmCopy(pagetable_t oldPg, pagetable_t newPg, int sz)
   uint64_t pa;
   uint_t   flags;
   char *   mem;
+  int      x = 0;
   for (int i = 0; i < sz; i += PGSIZE) {
     if ((pte = walk(oldPg, i, 0)) == 0) {
       panic("userVmCopy: pte not present");
     }
     if ((*pte & PTE_V) == 0) {
-      panic("userVmCopy: pte invalid");
+      // panic("userVmCopy: pte invalid");
+      continue;
     }
     pa = PTE2PA(*pte);
     flags = PTE_FLAGS(*pte);
-
+    printf("x=%d pa=%p\n", x++, pa);
     if ((mem = static_cast<char *>(memAllocator.alloc())) == 0) {
       panic("userVmCopy: alloc mem fail");
     }

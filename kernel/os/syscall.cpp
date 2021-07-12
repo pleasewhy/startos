@@ -125,10 +125,12 @@ extern uint64_t sys_readlinkat(void);
 extern uint64_t sys_read(void);
 extern uint64_t sys_dup(void);
 extern uint64_t sys_dup3(void);
+extern uint64_t sys_fcntl(void);
 extern uint64_t sys_ioctl(void);
 extern uint64_t sys_getpid(void);
 extern uint64_t sys_getppid(void);
 extern uint64_t sys_getuid(void);
+extern uint64_t sys_geteuid(void);
 extern uint64_t sys_fork(void);
 extern uint64_t sys_clone(void);
 extern uint64_t sys_exit(void);
@@ -147,14 +149,19 @@ extern uint64_t sys_pipe(void);
 extern uint64_t sys_getdents64(void);
 extern uint64_t sys_mount(void);
 extern uint64_t sys_umount2(void);
+extern uint64_t sys_rt_sigaction(void);
 extern uint64_t sys_times(void);
 extern uint64_t sys_gettimeofday(void);
 extern uint64_t sys_mmap(void);
 extern uint64_t sys_munmap(void);
 extern uint64_t sys_fstat(void);
+extern uint64_t sys_fstatat(void);
 extern uint64_t sys_unlinkat();
 extern uint64_t sys_nanosleep();
 extern uint64_t sys_clock_gettime();
+extern uint64_t sys_setpgid();
+extern uint64_t sys_getpgid();
+extern uint64_t sys_ppoll();
 
 static uint64_t (*syscalls[400])(void);
 
@@ -171,11 +178,15 @@ void syscall_init()
   syscalls[SYS_read] = sys_read;
   syscalls[SYS_dup] = sys_dup;
   syscalls[SYS_dup3] = sys_dup3;
+  syscalls[SYS_fcntl] = sys_fcntl;
   syscalls[SYS_ioctl] = sys_ioctl;
   syscalls[SYS_getcwd] = sys_getcwd;
+  syscalls[SYS_setpgid] = sys_setpgid;
+  syscalls[SYS_getpgid] = sys_getpgid;
   syscalls[SYS_getpid] = sys_getpid;
   syscalls[SYS_getppid] = sys_getppid;
   syscalls[SYS_getuid] = sys_getuid;
+  syscalls[SYS_geteuid] = sys_getuid;
   syscalls[SYS_fork] = sys_fork;
   syscalls[SYS_clone] = sys_clone;
   syscalls[SYS_exit] = sys_exit;
@@ -194,14 +205,17 @@ void syscall_init()
   syscalls[SYS_getdents64] = sys_getdents64;
   syscalls[SYS_mount] = sys_mount;
   syscalls[SYS_umount2] = sys_umount2;
+  syscalls[SYS_rt_sigaction] = sys_rt_sigaction;
   syscalls[SYS_times] = sys_times;
   syscalls[SYS_gettimeofday] = sys_gettimeofday;
   syscalls[SYS_mmap] = sys_mmap;
   syscalls[SYS_munmap] = sys_munmap;
   syscalls[SYS_fstat] = sys_fstat;
+  syscalls[SYS_fstatat] = sys_fstatat;
   syscalls[SYS_unlinkat] = sys_unlinkat;
   syscalls[SYS_nanosleep] = sys_nanosleep;
   syscalls[SYS_clock_gettime] = sys_clock_gettime;
+  syscalls[SYS_ppoll] = sys_ppoll;
 }
 
 void syscall(void)

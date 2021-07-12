@@ -21,7 +21,6 @@ Pipe::Pipe(struct file *f0, struct file *f1) {
 }
 
 int Pipe::read(uint64_t addr, int n) {
-  LOG_DEBUG("pipe read");
   int i;
   Task *task = myTask();
   char ch;
@@ -44,12 +43,12 @@ int Pipe::read(uint64_t addr, int n) {
   }
   wakeup(&this->nwrite);
   this->lock_.unlock();
-  LOG_DEBUG("pipe read complete i=%d write=%d read=%d", i, this->nwrite, this->nread);
+  LOG_TRACE("pipe read complete i=%d write=%d read=%d", i, this->nwrite, this->nread);
   return i;
 }
 
 int Pipe::write(uint64_t addr, int n) {
-  LOG_DEBUG("pipe write");
+  LOG_TRACE("pipe write");
   int i;
   char ch;
   Task *task = myTask();
@@ -70,7 +69,7 @@ int Pipe::write(uint64_t addr, int n) {
   }
   wakeup(&this->nread);
   this->lock_.unlock();
-  LOG_DEBUG("pipe write finish i=%d", i);
+  LOG_TRACE("pipe write finish i=%d", i);
   return i;
 }
 

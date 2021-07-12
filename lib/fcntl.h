@@ -50,4 +50,13 @@
 #define FILE 0x100000
 /**********open flags*********/
 
+/**********fcntl() second argument*********/
+#define F_DUPFD 0          /* Duplicate file descriptor.  */
+#define F_GETFD 1          /* Get file descriptor flags.  */
+#define F_SETFD 2          /* Set file descriptor flags.  */
+#define F_GETFL 3          /* Get file status flags.  */
+#define F_SETFL 4          /* Set file status flags.  */
+#define F_DUPFD_CLOEXEC 12 /* 复制文件描述符，并设置close_on_exec标志位 */
+/**********fcntl flags*********/
+
 #endif

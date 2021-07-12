@@ -2,13 +2,13 @@
 #define MEMALLOCATOR_HPP
 #include "os/SpinLock.hpp"
 
-struct Node {
+struct Node
+{
   struct Node *next;
 };
 
 class MemAllocator {
- public:
-
+public:
   /**
    * @brief 初始化内存分配器
    * @note 该函数会将系统可用内存添加至该分配器，以供内核和用户程序使用
@@ -38,8 +38,11 @@ class MemAllocator {
    */
   void freeRange(void *paStart, void *paEnd);
 
- private:
-  SpinLock spinLock;
+  void DebugInfo();
+
+private:
+  SpinLock     spinLock;
   struct Node *freeList;
+  int          npage;
 };
 #endif

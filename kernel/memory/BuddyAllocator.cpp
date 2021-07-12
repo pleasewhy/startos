@@ -74,7 +74,6 @@ void *BuddyAllocator::alloc(size_t sz)
 
   if (block == NULL) {
     block = (buddy_block_t *)(memAllocator.alloc());
-    // LOG_WARN("alloc page sz=%d",sz);
     if (block == nullptr) {
       panic("buddy alloc");
     }
@@ -106,7 +105,6 @@ void BuddyAllocator::free(void *pa)
   for (;; ++i) {
     // 如果该内存块大小为PGSIZE，则将该块归还到page分配器
     if (i == this->maxlv) {
-      // LOG_WARN("free page");
       memAllocator.free(block);
       break;
     }
