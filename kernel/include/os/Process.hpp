@@ -80,7 +80,24 @@ class Task {
   // public:
   //   bool SetFileTable();
 public:
+  /**
+   * @brief 判断虚拟内存va是否在进程中是否有效，
+   * 如果有效并且，没有分配物理地址的话，会为va
+   * 所属页分配物理页，在需要时，会读取文件。
+   *
+   * @param va 需要加载的虚拟地址
+   * @return true
+   * @return false
+   */
   bool LoadIfValid(uint64_t va);
+
+  /**
+   * @brief 申请使用一个文件描述符
+   * @param from 与to表明文件描述符的申请范围,
+   * @param to 与from表明文件描述符的申请范围
+   * @return int
+   */
+  int AllocFd(int from, int to);
 
 public:
   SpinLock          lock;       // 进程锁

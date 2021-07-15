@@ -21,7 +21,7 @@ struct inode
 {
   uint_t                dev;            // 设备号
   uint64_t              inum;           // Inode number
-  char                  test_name[10];  // 仅由于测试
+  char                  test_name[11];  // 仅由于测试
   int                   ref;            // 引用计数
   SleepLock             sleeplock;      // 用于保护inode
   short                 mode;           // inode的类型和权限

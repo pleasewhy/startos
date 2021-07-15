@@ -62,12 +62,13 @@ fs.img: $(UPROGS)
 	@sudo mount fs.img $(dst)
 	@if [ ! -d "$(dst)/bin" ]; then sudo mkdir $(dst)/bin; fi
 	@if [ ! -d "$(dst)/dev" ]; then sudo mkdir $(dst)/dev; fi
-	@if [ ! -d "$(dst)/static" ]; then sudo mkdir $(dst)/static; fi
+	# @if [ ! -d "$(dst)/static" ]; then sudo mkdir $(dst)/static; fi
 	# @if [ ! -d "$(dst)/dynamic" ]; then sudo mkdir $(dst)/dynamic; fi
 
 	sudo cp  oscmp/static/busybox $(dst)/busybox
-	sudo cp  oscmp/static/busybox $(dst)/static/busybox
-	sudo cp  this_is_long_name_file.txt $(dst)/this_is_long_name_file.txt
+	sudo cp  oscmp/scripts/busybox_cmd.txt  $(dst)/busybox_cmd.txt
+	sudo cp  oscmp/scripts/busybox_testcode.sh  $(dst)/busybox_testcode.sh
+	# sudo cp  oscmp/static/busybox $(dst)/static/busybox
 	@for file in $$( ls _* ); do \
 		sudo cp $$file $(dst)/$${file#_};\
 		sudo cp $$file $(dst)/bin/$${file#_}; \

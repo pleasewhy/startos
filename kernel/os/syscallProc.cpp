@@ -52,6 +52,7 @@ uint64_t sys_clone(void)
     return -1;
   }
   if (stackHighAddr == 0) {
+    printf("do fork");
     LOG_TRACE("do fork");
     int pid = fork();
     LOG_TRACE("do fork over");

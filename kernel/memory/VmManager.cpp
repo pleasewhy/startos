@@ -370,7 +370,6 @@ int userVmCopy(pagetable_t oldPg, pagetable_t newPg, int sz)
   uint64_t pa;
   uint_t   flags;
   char *   mem;
-  int      x = 0;
   for (int i = 0; i < sz; i += PGSIZE) {
     if ((pte = walk(oldPg, i, 0)) == 0) {
       panic("userVmCopy: pte not present");
@@ -381,7 +380,6 @@ int userVmCopy(pagetable_t oldPg, pagetable_t newPg, int sz)
     }
     pa = PTE2PA(*pte);
     flags = PTE_FLAGS(*pte);
-    printf("x=%d pa=%p\n", x++, pa);
     if ((mem = static_cast<char *>(memAllocator.alloc())) == 0) {
       panic("userVmCopy: alloc mem fail");
     }

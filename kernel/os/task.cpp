@@ -32,8 +32,23 @@ bool Task::LoadIfValid(uint64_t va)
     // perm |= PTE_X;
     // LOG_DEBUG("map page va=%p", vma->addr);
     mappages(pagetable, va, PGSIZE, (uint64_t)mem, perm);
-    printf("load\n");
     return true;
   }
   return false;
+}
+
+int Task::AllocFd(int from, int to)
+{
+  lock.lock();
+  from = from < 0 ? 0 : from;
+  to = to < 0 ? NOFILE : to;
+  for (int i = from; i < to; i++) {
+    if (this->openFiles[i] == NULL) {
+      lock.unlock();
+      return i;
+    }
+  }
+  lock.unlock();
+  panic("alloc fd");
+  return 0;
 }

@@ -41,8 +41,9 @@ VfsManager::openat(struct file *dir, char *filepath, size_t flags, mode_t mode)
     LOG_WARN("cwd");
     dp = myTask()->cwd->dup();
   }
-
+  LOG_TRACE("%p",flags);
   if (O_CREATE & flags) {
+    LOG_TRACE("create dp=%s",dp->test_name);
     char name[kMaxFileName];
     nameiparent(dp, filepath, name);
     if (dp->file_system->Create(dp, name, mode) < 0) {
@@ -353,7 +354,6 @@ VfsManager::namex(struct inode *ip, char *path, bool nameiparent, char *name)
     if (nameiparent && *path == '\0') {
       // Stop one level early.
       ip->unlock();
-      LOG_TRACE("error1");
       return ip;
     }
     if ((next = fs->Lookup(ip, name)) == 0) {

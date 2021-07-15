@@ -90,7 +90,6 @@ void usertrap(void)
     // trap:
     //  va=1ad2a0
     //  va=1aafb0
-    LOG_TRACE("cause=%d pc=%p eaddr=%p", r_scause(), r_sepc(), eaddr);
     bool loaded = task->LoadIfValid(eaddr);
 
     if (!loaded) {

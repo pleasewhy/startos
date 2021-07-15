@@ -84,7 +84,7 @@ uint64_t sys_openat(void)
     return -1;
   }
   int fd = registerFileHandle(fp);
-  LOG_TRACE("\n\nopenat fd=%d\n\n", fd);
+  LOG_TRACE("openat fd=%d", fd);
   return fd;
 }
 
@@ -197,6 +197,10 @@ uint64_t sys_dup3(void)
   printf("old fd=%d new fd=%d\n", oldfd, newfd);
   struct file *fp = getFileByfd(oldfd);
   fp = vfs::VfsManager::dup(fp);
+  if (myTask()->openFiles[newfd] != nullptr) {
+    vfs::VfsManager::close(myTask()->openFiles[newfd]);
+    myTask()->openFiles[newfd] = nullptr;
+  }
   ansfd = registerFileHandle(fp, newfd);
   if (ansfd < 0) {
     vfs::VfsManager::close(fp);
@@ -300,6 +304,7 @@ uint64_t sys_fstat()
   if (argfd(0, &fd, &fp) < 0 || argaddr(1, &kstAddr) < 0) {
     return -1;
   }
+  LOG_TRACE("sys_fstat");
   memset(&kst, 0, sizeof(struct kstat));
   kst.st_dev = 1;
   kst.st_size = fp->size;
@@ -320,7 +325,10 @@ uint64_t sys_fstatat()
       argaddr(2, &kst_addr) < 0) {
     return -1;
   }
+  LOG_TRACE("sys_fstatat");
   fp = vfs::VfsManager::openat(nullptr, filepath, O_RDWR, 0);
+  if (fp == nullptr)
+    return -1;
   memset(&kst, 0, sizeof(struct kstat));
   kst.st_dev = 1;
   kst.st_size = fp->size;
@@ -441,18 +449,24 @@ uint64_t sys_fcntl(void)
 {
   int fd = 0;
   int cmd = 0;
+  LOG_TRACE("fcntl");
   if (argint(0, &fd) < 0 || argint(1, &cmd) < 0) {
     return -1;
   }
-  if (cmd == F_DUPFD || cmd == F_DUPFD_CLOEXEC) {
-    int new_fd;
-    if (argint(2, &new_fd) < 0)
-      return -1;
-    struct file *fp = getFileByfd(fd);
-    fp = vfs::VfsManager::dup(fp);
-    registerFileHandle(fp, new_fd);
-  }
-  return 0;
+  LOG_TRACE("fd=%d cmd=%d", fd, cmd);
+  // if (cmd == F_DUPFD || cmd == F_DUPFD_CLOEXEC) {
+  LOG_TRACE("F_DUPFD, F_DUPFD_CLOEXEC");
+  int new_fd;
+  if (argint(2, &new_fd) < 0)
+    return -1;
+  struct file *fp = getFileByfd(fd);
+  fp = vfs::VfsManager::dup(fp);
+  new_fd = myTask()->AllocFd(new_fd, -1);
+  int dupfd = registerFileHandle(fp, new_fd);
+  LOG_TRACE("fd=%d", dupfd);
+  return dupfd;
+  // }
+  // return 0;
 }
 
 uint64_t sys_ppoll()
