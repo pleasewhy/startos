@@ -253,12 +253,17 @@ namespace fat32 {
     // 获取短文件目录项的写入位置
     uint32_t off = FindFreeEntry(dir, lfn_num + 1) + lfn_num * kMsdosEntrySize;
     LOG_TRACE("off=%d", off);
+
     // 填充短文件目录项
     FillShortFile(&short_entry, name, AllocCluster(), mode);
 
     // 写入短文件目录项
-    WriteInode(dir, false, reinterpret_cast<uint64_t>(&short_entry), off,
-               sizeof(short_entry));
+    int n = WriteInode(dir, false, reinterpret_cast<uint64_t>(&short_entry),
+                       off, sizeof(short_entry));
+    printf("n=%d before name=%s\n", n, short_entry.name);
+    ReadInode(dir, false, reinterpret_cast<uint64_t>(&short_entry), off,
+              sizeof(short_entry));
+    printf("name=%s\n", short_entry.name);
     off -= sizeof(short_entry);
 
     // 写入长文件目录名
@@ -369,27 +374,35 @@ namespace fat32 {
 
   uint32_t Fat32FileSystem::AllocCluster()
   {
-    char *fat_sector = new char[kSectorSize];
+    // char *fat_sector = new char[kSectorSize];
     // 遍历全部fat表，获取一个空闲的cluster
     // TODO 是否可以将fat表全部缓存到内存中？
-    uint_t enteies_of_sector = kSectorSize / kFatEntryBytes;
-    for (size_t sector = info_.reserve_sectors_;
-         sector < info_.fat_num_ * info_.sectors_per_fat_; sector++) {
-      ReadSector(sector, fat_sector);
-      for (size_t i = 0; i < enteies_of_sector; i++) {
-        if (reinterpret_cast<uint32_t *>(fat_sector)[i] == 0x00) {
-          reinterpret_cast<uint32_t *>(fat_sector)[i] = kEndOfCluster32;
-          WriteSector(sector, fat_sector);
-          uint32_t cluster =
-              enteies_of_sector * (sector - info_.reserve_sectors_) + i;
-          ZeroCluster(cluster);
-          LOG_TRACE("alloc cluster=%d", cluster);
-          delete fat_sector;
-          return cluster;
-        }
+    // uint_t enteies_of_sector = kSectorSize / kFatEntryBytes;
+
+    for (int cluster = 2;; cluster++) {
+      if (GetFatEntry(cluster) == 0x00) {
+        SetFatEntey(cluster, kEndOfCluster32);
+        ZeroCluster(cluster);
+        return cluster;
       }
     }
-    delete fat_sector;
+    // for (size_t sector = info_.reserve_sectors_;
+    //      sector < info_.fat_num_ * info_.sectors_per_fat_; sector++) {
+    //   ReadSector(sector, fat_sector);
+    //   for (size_t i = 0; i < enteies_of_sector; i++) {
+    //     if (reinterpret_cast<uint32_t *>(fat_sector)[i] == 0x00) {
+    //       reinterpret_cast<uint32_t *>(fat_sector)[i] = kEndOfCluster32;
+    //       WriteSector(sector, fat_sector);
+    //       uint32_t cluster =
+    //           enteies_of_sector * (sector - info_.reserve_sectors_) + i;
+    //       ZeroCluster(cluster);
+    //       LOG_TRACE("alloc cluster=%d", cluster);
+    //       delete fat_sector;
+    //       return cluster;
+    //     }
+    //   }
+    // }
+    // delete fat_sector;
     panic("alloc cluster");
     return 0;
   }
@@ -440,25 +453,25 @@ namespace fat32 {
     if (off > ip->sz || off + n < off) {
       return -1;
     }
-    char *data = new char[info_.bytes_per_cluster_];
     for (total = 0, nwrite = 0; total < n;
          total += nwrite, off += nwrite, buf += nwrite) {
       uint32_t cluster = bmap(ip, (off / info_.bytes_per_cluster_));
-      ReadCluster(cluster, data);
+      int         sector = FirstSectorOfCluster(cluster);
+      struct buf *b = buffer_layer.read(dev_, sector);
       mod = off % info_.bytes_per_cluster_;
       nwrite = min(n - total, info_.bytes_per_cluster_ - mod);
-      if (either_copyin(user, (data + mod), buf, nwrite) < 0) {
+      if (either_copyin(user, (b->data + mod), buf, nwrite) < 0) {
         total = -1;
         break;
       }
-      WriteCluster(cluster, data);
+      buffer_layer.write(b);
+      buffer_layer.freeBuffer(b);
     }
 
     if (off > ip->sz) {
       ip->sz = off;
     }
     UpdateInode(ip);
-    delete data;
     return total;
   }
 
@@ -525,6 +538,7 @@ namespace fat32 {
                      sizeof(entry)) == sizeof(entry)) {
       off += sizeof(entry);
       if (entry.sfn.name[0] == 0x00) {
+        LOG_TRACE("name[0]=0");
         goto bad;
       }
 
@@ -552,6 +566,7 @@ namespace fat32 {
         }
         off += sizeof(entry);
       }
+      printf("name=%s\n", tmp_name);
       if (strncmp(name, tmp_name, name_len) != 0) {
         continue;
       }
@@ -789,6 +804,7 @@ namespace fat32 {
       uint32_t now = GetFatEntry(cur);
       // printf("now=%d\n", now);
       if (now == kEndOfCluster32) {
+        LOG_TRACE("alloc");
         now = AllocCluster();
         SetFatEntey(cur, now);
       }
@@ -857,16 +873,25 @@ namespace fat32 {
 
   inline int Fat32FileSystem::SetFatEntey(uint32_t cluster, uint32_t value)
   {
+    LOG_TRACE("set fat entry");
     if (cluster > info_.cluster_count_) {
       return -1;
     }
 
-    uint32_t    fat_sector = FatSectorOfCluster(cluster);
-    uint32_t    fat_offset = FatOffsetOfCluster(cluster);
-    struct buf *b = buffer_layer.read(dev_, fat_sector);
-    *reinterpret_cast<uint32_t *>(b->data + fat_offset) = value;
-    buffer_layer.write(b);
-    buffer_layer.freeBuffer(b);
+    uint32_t fat_sector = FatSectorOfCluster(cluster);
+    uint32_t fat_offset = FatOffsetOfCluster(cluster);
+    if (fat_sector < 1024) {
+      char *data = fat_cache_ + (fat_sector - info_.reserve_sectors_) * 512;
+      *reinterpret_cast<uint32_t *>(data + fat_offset) = value;
+      LOG_TRACE("set fat cached");
+    }
+    else {
+      struct buf *b = buffer_layer.read(dev_, fat_sector);
+      *reinterpret_cast<uint32_t *>(b->data + fat_offset) = value;
+      buffer_layer.write(b);
+      buffer_layer.freeBuffer(b);
+      LOG_TRACE("set fat");
+    }
     return 0;
   }
 

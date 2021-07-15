@@ -64,7 +64,7 @@ void BufferLayer::freeBuffer(struct buf *b)
   this->spinlock.lock();
   b->refcnt--;
   this->spinlock.unlock();
-  this->write(b);
+  // this->write(b);
   b->sleeplock.unlock();
 }
 
@@ -81,5 +81,5 @@ struct buf *BufferLayer::read(int dev, int sector)
 
 // 将缓冲区写入磁盘
 void BufferLayer::write(struct buf *b){
-    // dev::RwDevWrite(b->dev, b->data, b->blockno * BSIZE, BSIZE);
+    dev::RwDevWrite(b->dev, b->data, b->blockno * BSIZE, BSIZE);
 };

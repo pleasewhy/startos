@@ -253,7 +253,7 @@ void VfsManager::MountRoot()
   root_mp->fs = new fat32::Fat32FileSystem(0);
   strncpy(root_mp->mp_path, "/", 1);
   root_ = root_mp->fs->GetRootInode();
-  LOG_WARN("root=%s", root_);
+  LOG_WARN("root=%s", root_->test_name);
   // 不需要设置设备路径
 }
 
@@ -266,8 +266,13 @@ void VfsManager::MountDev()
   strncpy(dev_mp->mp_path, "/dev", 4);
   struct inode *dev = root_->file_system->Lookup(root_, "dev");
   if (dev == nullptr) {
-    panic("expect dev directory");
+    root_->file_system->Mkdir(root_, "dev", O_DIRECTORY);
+    dev = root_->file_system->Lookup(root_, "dev");
+    if(dev == nullptr)
+      panic("expect dev directory");
   }
+  
+
   dev_mp->origin = dev;
   dev_mp->target = dev_mp->fs->GetRootInode();
   dev->is_mp_target = true;
