@@ -74,7 +74,9 @@ void BufferLayer::freeBuffer(struct buf *b)
 struct buf *BufferLayer::read(int dev, int sector)
 {
   struct buf *b = allocBuffer(dev, sector);
+  printf("alloc buf=%d\n", sector);
   if (!b->valid) {
+    printf("read buf=%d\n", sector);
     dev::RwDevRead(dev, b->data, sector * BSIZE, BSIZE);
   }
   b->valid = 1;
