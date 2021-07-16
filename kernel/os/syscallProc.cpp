@@ -67,7 +67,6 @@ uint64_t sys_clone(void)
 //   uint64_t sys_clone(void){
 
 // }
-
 uint64_t sys_exec(void)
 {
   char path[MAXPATH], *argv[MAXARG];
@@ -282,7 +281,6 @@ uint64_t sys_nanosleep(void)
              sizeof(TimeVal)) < 0) {
     return -1;
   }
-
   sleepTime((tv.sec * 1000 + tv.usec / 1000) / INTERVAL);
   return 0;
 }
@@ -297,11 +295,11 @@ uint64_t sys_clock_gettime(void)
     return -1;
   }
 
-  if (clock_id != CLOCK_REALTIME_COARSE) {
+  if (clock_id != CLOCK_REALTIME_COARSE && clock_id != CLOCK_REALTIME) {
     printf("clockid=%d\n", clock_id);
     panic("clock only support CLOCK_REALTIME_COARSE");
   }
-  
+
   time::CurrentTimeSpec(&ts);
   copyout(myTask()->pagetable, addr, (char *)&ts, sizeof(ts));
   return 0;
