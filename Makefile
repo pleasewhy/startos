@@ -72,7 +72,7 @@ oscmp:
 	sudo cp -r submit/riscv64/* /mnt/
 	@sudo umount /mnt
 
-
+// huiyu.w@foxmail.com
 sd = /dev/sdb
 
 sd: fs.img
