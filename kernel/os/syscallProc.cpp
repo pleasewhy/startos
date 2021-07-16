@@ -297,9 +297,11 @@ uint64_t sys_clock_gettime(void)
     return -1;
   }
 
-  // if (clock_id != CLOCK_REALTIME_COARSE) {
-  //   panic("clock only support CLOCK_REALTIME_COARSE");
-  // }
+  if (clock_id != CLOCK_REALTIME_COARSE) {
+    printf("clockid=%d\n", clock_id);
+    panic("clock only support CLOCK_REALTIME_COARSE");
+  }
+  
   time::CurrentTimeSpec(&ts);
   copyout(myTask()->pagetable, addr, (char *)&ts, sizeof(ts));
   return 0;
