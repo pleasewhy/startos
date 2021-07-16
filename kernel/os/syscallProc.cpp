@@ -308,3 +308,9 @@ uint64_t sys_rt_sigaction(void)
   printf("rt_sigaction\n");
   return 0;
 }
+
+uint64_t sys_set_tid_address(void)
+{
+  LOG_TRACE("set_tid_address");
+  return 0;
+}

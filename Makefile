@@ -73,7 +73,7 @@ oscmp:
 	@sudo umount /mnt
 
 # huiyu.w@foxmail.com
-sd = /dev/sdb
+sd = /dev/sdc
 
 sd: fs.img
 	@if [ "$(sd)" != "" ]; then \
