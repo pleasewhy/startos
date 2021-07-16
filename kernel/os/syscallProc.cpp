@@ -296,9 +296,10 @@ uint64_t sys_clock_gettime(void)
   if (argint(0, &clock_id) < 0 && argaddr(1, &addr) < 0) {
     return -1;
   }
-  if (clock_id != CLOCK_REALTIME_COARSE) {
-    panic("clock only support CLOCK_REALTIME_COARSE");
-  }
+
+  // if (clock_id != CLOCK_REALTIME_COARSE) {
+  //   panic("clock only support CLOCK_REALTIME_COARSE");
+  // }
   time::CurrentTimeSpec(&ts);
   copyout(myTask()->pagetable, addr, (char *)&ts, sizeof(ts));
   return 0;

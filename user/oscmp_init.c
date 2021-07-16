@@ -92,7 +92,7 @@ void main()
   open("dev/tty", O_RDWR);
   dup(0);
   dup(0);
-  char *echo_args[] = {"echo", "\"#### independent command test\"", 0};
+  char *echo_args[] = {"echo", "#### independent command test", 0};
   char *basename_args[] = {"basename", "/aaa/bbb", 0};
   char *cal_args[] = {"cal", 0};
   // clear
