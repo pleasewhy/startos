@@ -5,6 +5,7 @@
 #include "common/printk.hpp"
 #include "os/SleepLock.hpp"
 #include "device/DeviceManager.hpp"
+#include "common/string.hpp"
 #include "fs/buf/BufferLayer.hpp"
 #include "os/TaskScheduler.hpp"
 #include "os/Timer.hpp"
@@ -18,6 +19,7 @@
 void BufferLayer::init()
 {
   this->spinlock.init("cache buffer");
+  memset(bufCache, 0, sizeof(struct buf) * BUFFER_NUM);
   for (int i = 0; i < BUFFER_NUM; i++) {
     this->bufCache->sleeplock.init("buf");
   }
@@ -80,6 +82,7 @@ struct buf *BufferLayer::read(int dev, int sector)
 }
 
 // 将缓冲区写入磁盘
-void BufferLayer::write(struct buf *b){
-    dev::RwDevWrite(b->dev, b->data, b->blockno * BSIZE, BSIZE);
+void BufferLayer::write(struct buf *b)
+{
+  dev::RwDevWrite(b->dev, b->data, b->blockno * BSIZE, BSIZE);
 };
