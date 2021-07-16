@@ -63,6 +63,7 @@ void usertrap(void)
   // 由于现在处于内核空间, 所以需要更改中断向量为kerneltrap()
   w_stvec((uint64_t)kernelvec);
   //    printf("usertrap: sp=%p\n",r_sp());
+  LOG_TRACE("scause=%d eaddr=%p epc=%p", r_scause(), r_stval(), r_sepc());
 
   Task *   task = myTask();
   uint64_t scause = r_scause();

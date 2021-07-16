@@ -150,8 +150,8 @@ kernel: $(link) $(OBJ_LINK_LIST)
 	$(LD) $(LDFLAGS) -T $(link) -o $T/kernel $(OBJ_LINK_LIST)
 	$(OBJDUMP) -S $T/kernel > $T/kernel.asm
 	@$(OBJDUMP) -t $T/kernel | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $T/kernel.sym
+	
 # just for oscomp competition
-
 ifeq ($(platform), K210)
 	$(OBJCOPY) $T/kernel --strip-all -O binary $(kernelImg)
 	$(OBJCOPY) $(RUSTSBI) --strip-all -O binary $(k210)
