@@ -67,6 +67,8 @@ namespace fat32 {
     inode_cache_map_ = new std::map<uint64_t, struct inode *>(5);
     max_inode_num_ = 1 << 5;
     this->Init();
+    buffer_layer.first_data_sector = info_.first_data_sector_;
+    buffer_layer.sectors_per_cluster = info_.sectors_per_cluster;
     for (int i = info_.reserve_sectors_; i < 1024; i++) {
       // printf("%d ", i);
       ReadSector(i, fat_cache_ + (i - info_.reserve_sectors_) * 512);
@@ -420,9 +422,9 @@ namespace fat32 {
 
     uint_t nread, total, mod;
     for (total = 0; total < n; total += nread, buf += nread, offset += nread) {
-      uint32_t    cluster = bmap(ip, (offset / info_.bytes_per_cluster_));
-      int         sector = FirstSectorOfCluster(cluster);
-      struct buf *b = buffer_layer.read(dev_, sector);
+      uint32_t cluster = bmap(ip, (offset / info_.bytes_per_cluster_));
+      // int         sector = FirstSectorOfCluster(cluster);
+      struct buf *b = buffer_layer.read(dev_, cluster);
       mod = offset % info_.bytes_per_cluster_;
       nread = min(n - total, info_.bytes_per_cluster_ - mod);
       if (either_copyout(user, buf, b->data + mod, nread) < 0) {
@@ -456,9 +458,9 @@ namespace fat32 {
     }
     for (total = 0, nwrite = 0; total < n;
          total += nwrite, off += nwrite, buf += nwrite) {
-      uint32_t    cluster = bmap(ip, (off / info_.bytes_per_cluster_));
-      int         sector = FirstSectorOfCluster(cluster);
-      struct buf *b = buffer_layer.read(dev_, sector);
+      uint32_t cluster = bmap(ip, (off / info_.bytes_per_cluster_));
+      // int         sector = FirstSectorOfCluster(cluster);
+      struct buf *b = buffer_layer.read(dev_, cluster);
       mod = off % info_.bytes_per_cluster_;
       nwrite = min(n - total, info_.bytes_per_cluster_ - mod);
       if (either_copyin(user, (b->data + mod), buf, nwrite) < 0) {
@@ -921,18 +923,36 @@ namespace fat32 {
     return val;
   }
 
-  inline int Fat32FileSystem::WriteCluster(uint32_t cluster, char *data)
+  inline int Fat32FileSystem::WriteCluster(uint32_t cluster,
+                                           bool     user,
+                                           uint64_t buf,
+                                           int      n)
   {
-    for (size_t i = 0; i < info_.sectors_per_cluster; i++) {
-      WriteSector(FirstSectorOfCluster(cluster) + i, data + kSectorSize * i);
+    struct buf *b;
+    int         sector = FirstSectorOfCluster(cluster);
+    int         total = 0;
+    for (size_t i = 0; total < n && i < info_.sectors_per_cluster;
+         i++, sector++) {
+      b = buffer_layer.read(dev_, sector);
+      int nwrite = min(n - total, kSectorSize);
+      either_copyin(user, b->data, buf, nwrite);
+      buf += nwrite;
+      total += nwrite;
+      buffer_layer.freeBuffer(b);
     }
     return 0;
   };
 
-  inline int Fat32FileSystem::ReadCluster(uint32_t cluster, char *data)
+  inline int
+  Fat32FileSystem::ReadCluster(uint32_t cluster, bool user, uint64_t buf, int n)
   {
-    for (size_t i = 0; i < info_.sectors_per_cluster; i++) {
-      ReadSector(FirstSectorOfCluster(cluster) + i, data + kSectorSize * i);
+    struct buf *b;
+    int         sector = FirstSectorOfCluster(cluster);
+    for (size_t i = 0; i < info_.sectors_per_cluster; i++, sector++) {
+      b = buffer_layer.read(dev_, sector);
+      either_copyout(user, buf, b->data, kSectorSize);
+      buf += kSectorSize;
+      buffer_layer.freeBuffer(b);
     }
     return 0;
   };

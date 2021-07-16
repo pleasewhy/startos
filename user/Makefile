@@ -58,7 +58,7 @@ fs.img: $(UPROGS)
 	@if [ ! -f "fs.img" ]; then \
 		echo "making fs image..."; \
 		dd if=/dev/zero of=fs.img bs=512k count=512; \
-		mkfs.vfat -F 32 fs.img; fi
+		mkfs.vfat -s 8 -F 32 fs.img; fi
 	@sudo mount fs.img $(dst)
 	@if [ ! -d "$(dst)/bin" ]; then sudo mkdir $(dst)/bin; fi
 	# @if [ ! -d "$(dst)/dev" ]; then sudo mkdir $(dst)/dev; fi

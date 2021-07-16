@@ -3,23 +3,23 @@
 #include "os/SpinLock.hpp"
 #include "os/SleepLock.hpp"
 
+#define BUFFER_NUM 20
+#define BSIZE 4096
 
-#define BUFFER_NUM 100
-#define BSIZE 512
-
-struct buf {
-  int valid;  // has data been read from disk?
-  int disk;   // does disk "own" buf?
-  int dev;
-  int blockno;
-  uint64_t last_use_tick;
+struct buf
+{
+  int       valid;  // has data been read from disk?
+  int       disk;   // does disk "own" buf?
+  int       dev;
+  int       blockno;
+  uint64_t  last_use_tick;
   SleepLock sleeplock;
-  uint_t refcnt;
-  char data[BSIZE];
+  uint_t    refcnt;
+  char      data[BSIZE];
 };
 
 class BufferLayer {
- public:
+public:
   /**
    * @brief 初始化Buffer层
    *
@@ -33,7 +33,7 @@ class BufferLayer {
    * @note 一个buffer只能同时被一个线程所持有
    *
    */
-  struct buf* allocBuffer(int dev, int blockno);
+  struct buf *allocBuffer(int dev, int blockno);
 
   /**
    * @brief 释放一个buffer，该buffer暂时不会保存
@@ -50,12 +50,16 @@ class BufferLayer {
 
   /**
    * @brief 将缓冲区写入磁盘
-   * 
+   *
    */
   void write(struct buf *b);
 
- public:
+  uint32_t FirstSectorOfCluster(uint32_t cluster);
+
+public:
   struct buf bufCache[BUFFER_NUM];
-  SpinLock spinlock;
+  SpinLock   spinlock;
+  int        first_data_sector;
+  int        sectors_per_cluster;
 };
 #endif

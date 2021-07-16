@@ -47,7 +47,7 @@ bool vma::LoadIfContain(pagetable_t pagetable, uint64_t va)
 
   char *mem = (char *)memAllocator.alloc();
   memset(mem, 0, PGSIZE);
-  uint64_t va0 = va;
+  // uint64_t va0 = va;
   va = PGROUNDDOWN(va);
 
   // 设置权限
@@ -74,13 +74,11 @@ bool vma::LoadIfContain(pagetable_t pagetable, uint64_t va)
   uint64_t pa = (uint64_t)mem + va - PGROUNDDOWN(va);
   LOG_TRACE("cal va=%p len=%d nread=%d file_off=%d", va, this->length, nread,
             file_off);
-  int n = this->ip->read((char *)pa, file_off, nread, false);
-  LOG_TRACE("n=%d", n);
-  int off0 = va0 - va;
-  printf("va0=%p va=%p", va0, va);
-  for (int i = off0 - 10; i < off0 + 10; i++) {
-    printf("0x%x ", mem[i]);
-  }
+  this->ip->read((char *)pa, file_off, nread, false);
+  // int off0 = va0 - va;
+  // for (int i = off0 - 10; i < off0 + 10; i++) {
+  //   printf("0x%x ", mem[i]);
+  // }
   return true;
 }
 

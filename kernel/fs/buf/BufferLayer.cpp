@@ -13,8 +13,7 @@
 #include "riscv.hpp"
 #include "types.hpp"
 #include "StartOS.hpp"
-
-#define BUFFER_NUM 100
+#include "fs/fat/fat.hpp"
 
 void BufferLayer::init()
 {
@@ -71,13 +70,12 @@ void BufferLayer::freeBuffer(struct buf *b)
 }
 
 // 读取给定块的内容，返回一个包含该内容的buf
-struct buf *BufferLayer::read(int dev, int sector)
+struct buf *BufferLayer::read(int dev, int cluster)
 {
-  struct buf *b = allocBuffer(dev, sector);
-  printf("alloc buf=%d\n", sector);
+  struct buf *b = allocBuffer(dev, cluster);
   if (!b->valid) {
-    printf("read buf=%d\n", sector);
-    dev::RwDevRead(dev, b->data, sector * BSIZE, BSIZE);
+    uint64_t sector = FirstSectorOfCluster(cluster);
+    dev::RwDevRead(dev, b->data, sector * 512, BSIZE);
   }
   b->valid = 1;
   return b;
@@ -86,5 +84,11 @@ struct buf *BufferLayer::read(int dev, int sector)
 // 将缓冲区写入磁盘
 void BufferLayer::write(struct buf *b)
 {
-  dev::RwDevWrite(b->dev, b->data, b->blockno * BSIZE, BSIZE);
+  uint64_t sector = FirstSectorOfCluster(b->blockno);
+  dev::RwDevWrite(b->dev, b->data, sector * 512, BSIZE);
 };
+
+uint32_t BufferLayer::FirstSectorOfCluster(uint32_t cluster)
+{
+  return first_data_sector + ((cluster - 2) * sectors_per_cluster);
+}

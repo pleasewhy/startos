@@ -10,7 +10,7 @@ extern MemAllocator memAllocator;
 
 bool Task::LoadIfValid(uint64_t va)
 {
-  printf("load va=%p\n", va);
+  // printf("load va=%p\n", va);
   if (walkAddr(pagetable, va) != 0)
     return false;
   for (int i = 0; i < NOMMAPFILE; i++) {

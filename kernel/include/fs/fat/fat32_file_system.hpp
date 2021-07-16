@@ -283,14 +283,14 @@ namespace fat32 {
     /**
      * @brief 写指定簇
      */
-    inline int WriteCluster(uint32_t cluster, char *data);
+    inline int WriteCluster(uint32_t cluster, bool user, uint64_t buf, int n);
 
     /**
      * @brief 读指定簇
      * @note 这会调用FirstSectorOfCluster得到cluster的第一个
      * 扇区，并向后读取k个扇区，k为每簇扇区数。
      */
-    inline int ReadCluster(uint32_t cluster, char *data);
+    inline int ReadCluster(uint32_t cluster, bool user, uint64_t buf, int n);
 
     /**
      * @brief 读指定扇区

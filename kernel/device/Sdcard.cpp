@@ -487,21 +487,25 @@ void SdCard::sdcard_write_sector(char *buf, int sectorno)
 
 int SdCard::read(char *buf, int offset, int n)
 {
-  if (512 != n || 0 != offset % 512) {
+  if (0 != n % 512 || 0 != offset % 512) {
     return -1;
   }
   int sector = offset / 512;
-  this->sdcard_read_sector(buf, sector);
-  return 512;
+  int end = (offset + n) / 512;
+  for (; sector < end; sector++, buf += 512)
+    sdcard_read_sector(buf, sector);
+  return n;
 }
 
 int SdCard::write(char *buf, int offset, int n)
 {
-  if (512 != n || 0 != offset % 512) {
+  if (0 != n % 512 || 0 != offset % 512) {
     return -1;
   }
   int sector = offset / 512;
-  this->sdcard_write_sector(buf, sector);
-  return 512;
+  int end = (offset + n) / 512;
+  for (; sector < end; sector++, buf += 512)
+    sdcard_write_sector(buf, sector);
+  return n;
 }
 }  // namespace dev

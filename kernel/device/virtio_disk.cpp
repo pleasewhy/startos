@@ -17,21 +17,25 @@ void VirtioDisk::init()
 
 int VirtioDisk::read(char *buf, int offset, int n)
 {
-  if (512 != n || 0 != offset % 512) {
+  if (0 != n % 512 || 0 != offset % 512) {
     return -1;
   }
   int sector = offset / 512;
-  VirtioRead(buf, sector);
-  return 512;
+  int end = (offset + n) / 512;
+  for (; sector < end; sector++, buf += 512)
+    VirtioRead(buf, sector);
+  return n;
 }
 
 int VirtioDisk::write(char *buf, int offset, int n)
 {
-  if (512 != n || 0 != offset % 512) {
+  if (0 != n % 512 || 0 != offset % 512) {
     return -1;
   }
   int sector = offset / 512;
-  VirtioWrite(buf, sector);
-  return 512;
+  int end = (offset + n) / 512;
+  for (; sector < end; sector++, buf += 512)
+    VirtioWrite(buf, sector);
+  return n;
 }
 }  // namespace dev
