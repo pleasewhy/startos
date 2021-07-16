@@ -271,7 +271,6 @@ void VfsManager::MountDev()
     if(dev == nullptr)
       panic("expect dev directory");
   }
-  
 
   dev_mp->origin = dev;
   dev_mp->target = dev_mp->fs->GetRootInode();

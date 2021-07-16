@@ -258,9 +258,10 @@ namespace fat32 {
     FillShortFile(&short_entry, name, AllocCluster(), mode);
 
     // 写入短文件目录项
-    int n = WriteInode(dir, false, reinterpret_cast<uint64_t>(&short_entry),
-                       off, sizeof(short_entry));
-    printf("n=%d before name=%s\n", n, short_entry.name);
+    WriteInode(dir, false, reinterpret_cast<uint64_t>(&short_entry), off,
+               sizeof(short_entry));
+    // printf("n=%d before name=%s\n", n, short_entry.name);
+    memset(&short_entry, 0, sizeof(short_entry));
     ReadInode(dir, false, reinterpret_cast<uint64_t>(&short_entry), off,
               sizeof(short_entry));
     printf("name=%s\n", short_entry.name);
@@ -282,7 +283,7 @@ namespace fat32 {
       long_entry.checksum = checksum;
       long_entry.attrib = kFatAttrLongEntry;
       WriteInode(dir, false, reinterpret_cast<uint64_t>(&long_entry), off,
-                 kMsdosEntrySize);
+                 sizeof(long_entry));
       off -= kMsdosEntrySize;
     }
     return 0;
@@ -455,7 +456,7 @@ namespace fat32 {
     }
     for (total = 0, nwrite = 0; total < n;
          total += nwrite, off += nwrite, buf += nwrite) {
-      uint32_t cluster = bmap(ip, (off / info_.bytes_per_cluster_));
+      uint32_t    cluster = bmap(ip, (off / info_.bytes_per_cluster_));
       int         sector = FirstSectorOfCluster(cluster);
       struct buf *b = buffer_layer.read(dev_, sector);
       mod = off % info_.bytes_per_cluster_;
@@ -546,6 +547,7 @@ namespace fat32 {
         // 不应该进入该分支
         // panic("not short name");
         name_len = copysfn(entry.sfn.name, tmp_name);
+        LOG_TRACE("short name=%s", entry.sfn.name);
       }
       else if ((entry.lfn.sequence_number & 0xc0) == 0x40) {
         int nlfn = entry.lfn.sequence_number & ~0x40;  // 长文件目录项的数量
@@ -564,8 +566,10 @@ namespace fat32 {
                       sizeof(entry)) != sizeof(entry)) {
           panic("except sfn");
         }
+        LOG_TRACE("shortname=%s", entry.sfn.name);
         off += sizeof(entry);
       }
+      LOG_TRACE("name=%s", tmp_name);
       if (strncmp(name, tmp_name, name_len) != 0) {
         continue;
       }
@@ -683,7 +687,9 @@ namespace fat32 {
       return -1;
     }
     struct inode *ip = Lookup(dir, name);
-    ShortEntry    short_entries[2];
+    if (ip == nullptr)
+      panic("mkdir");
+    ShortEntry short_entries[2];
     FillShortFile(short_entries, "", MSDOS_I(ip)->i_start, mode);
     FillShortFile(short_entries + 1, "", MSDOS_I(dir)->i_start, dir->mode);
 

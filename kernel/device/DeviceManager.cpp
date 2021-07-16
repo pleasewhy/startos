@@ -39,7 +39,7 @@ void Init()
 
 int FindDevByName(const char *dev_name)
 {
-  printf("dev name=%s\n", dev_name);
+  // printf("dev name=%s\n", dev_name);
   for (int i = 0; i < NDEV; i++) {
     if (rw_devs[i] != nullptr && strcmp(rw_devs[i]->name, dev_name) == 0) {
       return i;

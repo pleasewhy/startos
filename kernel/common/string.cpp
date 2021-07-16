@@ -149,13 +149,16 @@ char *strrchr(const char *s, char c)
 // 将char字符串转换为wchar字符串
 void CopyCharToWchar(uint16_t *dst, char const *src, int len)
 {
-  int i;
+  int   i;
+  char *dst0 = (char *)dst;
   for (i = 0; i < len; i++) {
-    *dst = *src++;
-    dst++;
+    dst0[i * 2 + 1] = 0;
+    dst0[i * 2] = *src++;
+    // dst0 += 2;
   }
   for (; i < len; i++) {
-    *dst++ = 0;
+    *dst0++ = 0;
+    *dst0++ = 0;
   }
 }
 
