@@ -107,50 +107,8 @@ void main()
   test("busybox", basename_args);
   // test("busybox", cal_args);
   // test("busybox", date_args);
-  test("busybox", dirname_args);
-  test("busybox", expr_args);
+  // test("busybox", dirname_args);
+  // test("busybox", expr_args);
+
   while (1) {}
 }
-
-// void test
-
-// void main() {
-//   open("dev/tty", O_RDWR);
-//   dup(0);
-//   dup(0);
-//   test("/getpid", NULL);
-//   test("/getppid", NULL);
-//   test("/getcwd", NULL);
-//   test("/fork", NULL);
-//   test("/exit", NULL);
-//   test("/mkdir_", NULL);
-//   test("/dup", NULL);
-//   test("/write", NULL);
-//   test("/read", NULL);
-//   test("/open", NULL);
-//   test("/wait", NULL);
-//   test("/waitpid", NULL);
-//   test("/yield", NULL);
-//   test("/openat", NULL);
-//   test("/close", NULL);
-//   // test("/clone", NULL);
-//   test("/chdir", NULL);
-//   test("/execve", NULL);
-//   test("/dup2", NULL);
-//   test("/brk", NULL);
-//   test("/uname", NULL);
-//   test("/pipe", NULL);
-//   test("/getdents", NULL);
-//   test("/mount", NULL);
-//   test("/umount", NULL);
-//   test("/times", NULL);
-//   test("/gettimeofday", NULL);
-//   test("/mmap", NULL);
-//   test("/munmap", NULL);
-//   test("/fstat", NULL);
-//   test("/unlink", NULL);
-//   test("/clone", NULL);
-//   test("/sleep", NULL);
-//   while (1) {
-//   };
-// }
