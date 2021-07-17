@@ -24,3 +24,5 @@ submit/*
 kernel/memory/tmp.cpp
 .vscode/c_cpp_properties.json
 .vscode/settings.json
+user/oscmp/submit.txt
+user/oscmp/oscmp_init.asm
