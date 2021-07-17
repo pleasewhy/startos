@@ -308,6 +308,31 @@ uint64_t sys_clock_gettime(void)
   return 0;
 }
 
+uint64_t sys_clock_nanosleep(void)
+{
+  time::timespec request;
+  request.tv_nsec = 0;
+  request.tv_sec = 0;
+  LOG_TRACE("clock gettime");
+  uint64_t request_addr;
+  uint64_t remain_addr;
+  int      clock_id;
+  int      flags;
+  if (argint(0, &clock_id) < 0 || argint(1, &flags) < 0)
+    return -1;
+  if (argaddr(2, &request_addr) < 0 || argaddr(3, &remain_addr) < 0)
+    return -1;
+  LOG_TRACE("addr=%p %p\n", request_addr, remain_addr);
+  if (copyin(myTask()->pagetable, (char *)&request, request_addr,
+             sizeof(request)) < 0)
+    return -1;
+  LOG_TRACE("clock id=%d flag=%p sec=%p nsec=%d\n", clock_id, flags,
+         request.tv_sec, request.tv_nsec);
+  request.tv_sec = 1;
+  sleepTime((request.tv_sec * 1000 + request.tv_nsec / 1000000) / INTERVAL);
+  return 1;
+}
+
 uint64_t sys_rt_sigaction(void)
 {
   LOG_TRACE("rt_sigaction");

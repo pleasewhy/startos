@@ -162,6 +162,7 @@ extern uint64_t sys_fstatat(void);
 extern uint64_t sys_unlinkat();
 extern uint64_t sys_nanosleep();
 extern uint64_t sys_clock_gettime();
+extern uint64_t sys_clock_nanosleep();
 extern uint64_t sys_setpgid();
 extern uint64_t sys_getpgid();
 extern uint64_t sys_ppoll();
@@ -222,6 +223,7 @@ void syscall_init()
   syscalls[SYS_fstatat] = sys_fstatat;
   syscalls[SYS_unlinkat] = sys_unlinkat;
   syscalls[SYS_nanosleep] = sys_nanosleep;
+  syscalls[SYS_clock_nanosleep] = sys_clock_nanosleep;
   syscalls[SYS_clock_gettime] = sys_clock_gettime;
   syscalls[SYS_ppoll] = sys_ppoll;
   syscalls[SYS_set_tid_address] = sys_set_tid_address;

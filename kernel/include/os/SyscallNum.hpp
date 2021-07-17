@@ -33,6 +33,7 @@
 #define SYS_set_tid_address 96
 #define SYS_nanosleep     101
 #define SYS_clock_gettime 113
+#define SYS_clock_nanosleep 115
 #define SYS_sched_yield   124
 #define SYS_kill          129
 #define SYS_rt_sigaction  134
