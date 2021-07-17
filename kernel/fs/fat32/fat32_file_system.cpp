@@ -568,10 +568,10 @@ namespace fat32 {
                       sizeof(entry)) != sizeof(entry)) {
           panic("except sfn");
         }
-        LOG_TRACE("shortname=%s", entry.sfn.name);
+        // LOG_TRACE("shortname=%s", entry.sfn.name);
         off += sizeof(entry);
       }
-      LOG_TRACE("name=%s", tmp_name);
+      // LOG_TRACE("name=%s", tmp_name);
       if (strncmp(name, tmp_name, name_len) != 0) {
         continue;
       }

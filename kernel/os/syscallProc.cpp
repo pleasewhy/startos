@@ -196,7 +196,9 @@ uint64_t sys_brk(void)
   Task *task = myTask();
   if (addr == 0)
     return task->sz;
-  growtask(addr - task->sz);
+  LOG_TRACE("before=%p", task->sz);
+  int x = growtask(addr - task->sz);
+  LOG_TRACE("after=%p, grow=%d", task->sz, x);
   return task->sz;
 }
 
