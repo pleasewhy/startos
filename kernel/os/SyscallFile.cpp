@@ -385,7 +385,7 @@ uint64_t sys_mmap(void)
       vmasz += task->vma[i]->length;
   }
   a->addr = PGROUNDDOWN(MAXVA - PGSIZE * 5 - vmasz - length);
-  a->prot = prot;
+  a->prot = prot | PROT_READ | PROT_WRITE;
   a->flag = flags;
 
   for (int i = 0; i < NOMMAPFILE; i++) {
@@ -523,14 +523,15 @@ uint64_t sys_ppoll()
 
 uint64_t sys_mprotect()
 {
-  uint64_t addr;
-  int      length, prot;
+  // uint64_t addr;
+  // int      length, prot;
   LOG_TRACE("sys_mprotect");
-  if (argaddr(0, &addr) < 0)
-    return -1;
-  if (argint(1, &length) < 0)
-    return -1;
-  if (argint(2, &prot) < 0)
-    return -1;
-  return myTask()->ModifyMemProt(addr, length, prot);
+  return 0;
+  // if (argaddr(0, &addr) < 0)
+  //   return -1;
+  // if (argint(1, &length) < 0)
+  //   return -1;
+  // if (argint(2, &prot) < 0)
+  //   return -1;
+  // return myTask()->ModifyMemProt(addr, length, prot);
 }
