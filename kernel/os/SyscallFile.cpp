@@ -366,13 +366,14 @@ uint64_t sys_mmap(void)
 
   if (argint(5, &offset) < 0)
     return -1;
+
   LOG_TRACE("lenth=%d pro=%p flags=%d fd=%d offset=%d", length, prot, flags, fd,
             offset);
   f = getFileByfd(fd);
 
   if (f != nullptr)
     panic("sys_mmap");
-  if (f == nullptr && !(PROT_NONE & prot))
+  if (f == nullptr && prot != 0)
     return -1;
 
   a = allocVma();
