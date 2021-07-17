@@ -372,7 +372,7 @@ found:
 
   memset(&task->context, 0, sizeof(task->context));
   memset(task->trapframe, 0, sizeof(*task->trapframe));
-
+  memset(task->vma, 0, sizeof(task->vma));
   task->context.sp = task->kstack + KSTACK_SIZE;
   task->context.ra = (uint64_t)forkret;
   task->lock.unlock();
@@ -831,9 +831,7 @@ void exit(int status)
       }
       userUnmap(task->pagetable, PGROUNDDOWN(vma->addr),
                 PGROUNDUP(vma->length) / PGSIZE, 1);
-
       // TODO FIXBUG
-
       vma->free();
       // vfs::close(vma->f);
       task->vma[i] = 0;

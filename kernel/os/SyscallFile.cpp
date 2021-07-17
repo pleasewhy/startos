@@ -390,12 +390,13 @@ uint64_t sys_mmap(void)
 
   for (int i = 0; i < NOMMAPFILE; i++) {
     if (task->vma[i] == 0) {
+      LOG_TRACE("mmap addr=%p", a->addr);
       task->vma[i] = a;
-      break;
+      return a->addr;
     }
   }
   LOG_TRACE("mmap addr=%p", a->addr);
-  return a->addr;
+  panic("mmap: not enough vma im task");
 
   // if (!f->readable && (prot & PROT_READ))
   //   return -1;
