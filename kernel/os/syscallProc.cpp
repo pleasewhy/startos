@@ -199,7 +199,7 @@ uint64_t sys_brk(void)
   LOG_TRACE("before=%p", task->sz);
   int x = growtask(addr - task->sz);
   LOG_TRACE("after=%p, grow=%d", task->sz, x);
-  return task->sz;
+  return x;
 }
 
 #define OFFSET(structure, member) ((uint64_t)(&((structure *)0)->member));
