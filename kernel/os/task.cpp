@@ -3,6 +3,7 @@
 #include "fs/vfs_file.h"
 #include "common/string.hpp"
 #include "common/logger.h"
+#include "fcntl.h"
 #include "memory/MemAllocator.hpp"
 #include "riscv.hpp"
 
@@ -51,5 +52,36 @@ int Task::AllocFd(int from, int to)
   }
   lock.unlock();
   panic("alloc fd");
+  return 0;
+}
+
+static int MkPtePerm(int prot)
+{
+  int perm = 0;
+  if (prot & PROT_READ)
+    perm |= PTE_R;
+  if (prot & PROT_WRITE)
+    perm |= PTE_W;
+  if (prot & PROT_EXEC)
+    perm |= PTE_X;
+  return perm;
+}
+
+int Task::ModifyMemProt(uint64_t va, int len, int prot)
+{
+  for (int i = 0; i < NOMMAPFILE; i++) {
+    if (vma[i] == nullptr)
+      continue;
+    struct vma *a = vma[i];
+    if (va >= a->addr && va < a->addr + len) {
+      a->prot |= prot;
+      pte_t *pte;
+      if ((pte = walk(pagetable, PGROUNDDOWN(va), 0)) == 0)
+        continue;
+      LOG_TRACE("ModifyMemProt: walk va");
+      int perm = MkPtePerm(prot);
+      *pte |= perm;
+    }
+  }
   return 0;
 }

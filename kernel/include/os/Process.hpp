@@ -99,6 +99,14 @@ public:
    */
   int AllocFd(int from, int to);
 
+  /**
+   * @brief 修改该进程地址空间中的某个地址区间
+   * 的权限
+   * 
+   * @return int 
+   */
+  int ModifyMemProt(uint64_t va, int len, int prot);
+
 public:
   SpinLock          lock;       // 进程锁
   enum procstate    state;      // 进程的状态

@@ -163,6 +163,7 @@ extern uint64_t sys_setpgid();
 extern uint64_t sys_getpgid();
 extern uint64_t sys_ppoll();
 extern uint64_t sys_set_tid_address();
+extern uint64_t sys_mprotect();
 
 static uint64_t (*syscalls[400])(void);
 
@@ -218,6 +219,7 @@ void syscall_init()
   syscalls[SYS_clock_gettime] = sys_clock_gettime;
   syscalls[SYS_ppoll] = sys_ppoll;
   syscalls[SYS_set_tid_address] = sys_set_tid_address;
+  syscalls[SYS_mprotect] = sys_mprotect;
 }
 
 void syscall(void)

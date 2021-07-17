@@ -520,3 +520,17 @@ uint64_t sys_ppoll()
   // if (fds[0].events)
   return 1;
 }
+
+uint64_t sys_mprotect()
+{
+  uint64_t addr;
+  int      length, prot;
+  
+  if (argaddr(0, &addr) < 0)
+    return -1;
+  if (argint(1, &length) < 0)
+    return -1;
+  if (argint(2, &prot) < 0)
+    return -1;
+  return myTask()->ModifyMemProt(addr, length, prot);
+}
