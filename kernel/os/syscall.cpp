@@ -229,10 +229,11 @@ void syscall(void)
   num = task->trapframe->a7;
   if (num > 0 && static_cast<uint64_t>(num) < NELEM(syscalls) &&
       syscalls[num]) {
-    printf("syscall=%d\n", num);
+    // printf("syscall=%d\n", num);
     task->trapframe->a0 = syscalls[num]();
   }
   else {
+    printf("\n\n");
     printf("%d %s: pc=%p unknown sys call %d\n", task->pid, task->name,
            task->trapframe->epc, num);
     char buf[100];
