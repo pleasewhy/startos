@@ -369,77 +369,102 @@ uint64_t sys_mmap(void)
   LOG_TRACE("lenth=%d pro=%p flags=%d fd=%d offset=%d", length, prot, flags, fd,
             offset);
   f = getFileByfd(fd);
-  if (f == nullptr)
-    return -1;
-  if (!f->readable && (prot & PROT_READ))
-    return -1;
 
-  if (!f->writable && (prot & PROT_WRITE) && (flags & MAP_SHARED))
+  if (f != nullptr)
+    panic("sys_mmap");
+  if (f == nullptr && !(PROT_NONE & prot))
     return -1;
 
   a = allocVma();
-
-  vfs::VfsManager::dup(f);
-  f->offset = 0;
-  vfs::rewind(f);
-
-  a->f = f;
+  a->f = nullptr;
+  a->ip = nullptr;
   a->length = length;
   for (int i = 0; i < NOMMAPFILE; i++) {
     if (task->vma[i] != 0)
       vmasz += task->vma[i]->length;
   }
   a->addr = PGROUNDDOWN(MAXVA - PGSIZE * 5 - vmasz - length);
-  // 设置权限
   a->prot = prot;
   a->flag = flags;
+
   for (int i = 0; i < NOMMAPFILE; i++) {
     if (task->vma[i] == 0) {
       task->vma[i] = a;
       break;
     }
   }
+  LOG_TRACE("mmap addr=%p", a->addr);
   return a->addr;
+
+  // if (!f->readable && (prot & PROT_READ))
+  //   return -1;
+
+  // if (!f->writable && (prot & PROT_WRITE) && (flags & MAP_SHARED))
+  //   return -1;
+
+  // // a = allocVma();
+
+  // vfs::VfsManager::dup(f);
+  // f->offset = 0;
+  // vfs::rewind(f);
+
+  // a->f = f;
+  // a->length = length;
+  // for (int i = 0; i < NOMMAPFILE; i++) {
+  //   if (task->vma[i] != 0)
+  //     vmasz += task->vma[i]->length;
+  // }
+  // a->addr = PGROUNDDOWN(MAXVA - PGSIZE * 5 - vmasz - length);
+  // // 设置权限
+  // a->prot = prot;
+  // a->flag = flags;
+  // for (int i = 0; i < NOMMAPFILE; i++) {
+  //   if (task->vma[i] == 0) {
+  //     task->vma[i] = a;
+  //     break;
+  //   }
+  // }
+  // return a->addr;
 }
 
 uint64_t sys_munmap(void)
 {
   LOG_TRACE("mummap");
-  Task *      task = myTask();
-  uint64_t    addr;
-  struct vma *vma = 0;
-  int         index = 0;
-  int         sz;
-  if (task->vma == 0)
-    return -1;
+  // Task *      task = myTask();
+  // uint64_t    addr;
+  // struct vma *vma = 0;
+  // int         index = 0;
+  // int         sz;
+  // if (task->vma == 0)
+  //   return -1;
 
-  if (argaddr(0, &addr) < 0)
-    return -1;
-  if (argint(1, &sz) < 0)
-    return -1;
+  // if (argaddr(0, &addr) < 0)
+  //   return -1;
+  // if (argint(1, &sz) < 0)
+  //   return -1;
 
-  for (int i = 0; i < NOMMAPFILE; i++) {
-    if (task->vma[i] != 0 && addr >= task->vma[i]->addr &&
-        addr < task->vma[i]->addr + task->vma[i]->length) {
-      vma = task->vma[i];
-      index = i;
-      break;
-    }
-  }
-  if (vma == 0)
-    return -1;
-  if (vma->flag & MAP_SHARED) {
-    vfs::rewind(vma->f);
-    vfs::write(vma->f, true, (const char *)(vma->addr), sz, 0);
-  }
-  userUnmap(task->pagetable, addr, PGROUNDUP(sz) / PGSIZE, 0);
-  vma->length -= sz;
-  if (vma->length == 0) {
-    vfs::VfsManager::close(vma->f);
-    vma->free();
-    task->vma[index] = 0;
-  }
-  LOG_TRACE("mummap finish");
+  // for (int i = 0; i < NOMMAPFILE; i++) {
+  //   if (task->vma[i] != 0 && addr >= task->vma[i]->addr &&
+  //       addr < task->vma[i]->addr + task->vma[i]->length) {
+  //     vma = task->vma[i];
+  //     index = i;
+  //     break;
+  //   }
+  // }
+  // if (vma == 0)
+  //   return -1;
+  // if (vma->flag & MAP_SHARED) {
+  //   vfs::rewind(vma->f);
+  //   vfs::write(vma->f, true, (const char *)(vma->addr), sz, 0);
+  // }
+  // userUnmap(task->pagetable, addr, PGROUNDUP(sz) / PGSIZE, 0);
+  // vma->length -= sz;
+  // if (vma->length == 0) {
+  //   vfs::VfsManager::close(vma->f);
+  //   vma->free();
+  //   task->vma[index] = 0;
+  // }
+  // LOG_TRACE("mummap finish");
   return 0;
 }
 
