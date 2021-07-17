@@ -170,3 +170,8 @@ wait4:
  li a7, SYS_wait4
  ecall
  ret
+.global kernel_panic
+kernel_panic:
+ li a7, SYS_kernel_panic
+ ecall
+ ret

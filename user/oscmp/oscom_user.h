@@ -8,5 +8,6 @@ int wait(int *status);
 int execve(const char *path, char *argv[], char *envp[]);
 int open(const char *filename, int flags);
 int dup(int fd);
+int kernel_panic();
 
 void printf(const char *fmt, ...);

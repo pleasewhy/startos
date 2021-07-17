@@ -47,6 +47,7 @@ entry("clone");
 entry("execve");
 entry("mmap");
 entry("wait4");
+entry("kernel_panic");
 
 
 

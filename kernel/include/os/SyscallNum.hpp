@@ -49,5 +49,5 @@
 #define SYS_execve        221
 #define SYS_mmap          222
 #define SYS_wait4         260
-
+#define SYS_kernel_panic  399
 #endif
