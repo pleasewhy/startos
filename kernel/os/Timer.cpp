@@ -42,7 +42,7 @@ void handleIntr()
 {
   spinLock.lock();
   ticks++;
-  if (ticks == 100)
+  if (ticks == 60)
     panic("run out of time");
   wakeup(&ticks);
   spinLock.unlock();
