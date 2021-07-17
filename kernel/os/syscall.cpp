@@ -137,6 +137,7 @@ extern uint64_t sys_exit(void);
 extern uint64_t sys_exit_group(void);
 extern uint64_t sys_wait(void);
 extern uint64_t sys_wait4(void);
+extern uint64_t sys_faccessat(void);
 extern uint64_t sys_chdir(void);
 extern uint64_t sys_close(void);
 extern uint64_t sys_mkdirat(void);
@@ -196,6 +197,7 @@ void syscall_init()
   syscalls[SYS_exit_group] = sys_exit_group;
   syscalls[SYS_wait] = sys_wait;
   syscalls[SYS_wait4] = sys_wait4;
+  syscalls[SYS_faccessat] = sys_faccessat;
   syscalls[SYS_chdir] = sys_chdir;
   syscalls[SYS_close] = sys_close;
   syscalls[SYS_mkdirat] = sys_mkdirat;

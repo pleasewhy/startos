@@ -539,3 +539,25 @@ uint64_t sys_mprotect()
   //   return -1;
   // return myTask()->ModifyMemProt(addr, length, prot);
 }
+
+uint64_t sys_faccessat()
+{
+  char filename[MAXPATH];
+  int  dirfd, mode, flags;
+  int  n;
+  if (argint(0, &dirfd) < 0 || (n = argstr(1, filename, MAXPATH)) < 0) {
+    return -1;
+  }
+  LOG_TRACE("sys_faccessat dirfd=%d");
+
+  if (argint(2, &flags) || argint(3, &mode)) {
+    return -1;
+  }
+  struct file *dirfp = getFileByfd(dirfd);
+  struct file *fp = vfs::VfsManager::openat(dirfp, filename, flags, mode);
+  if (fp == nullptr) {
+    return -1;
+  }
+  vfs::VfsManager::close(fp);
+  return 0;
+}

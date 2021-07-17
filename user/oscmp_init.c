@@ -106,7 +106,10 @@ void main()
   char *expr_args[] = {"expr", "1", "+", "1", 0};
   char *true_args[] = {"true", 0};
   char *false_args[] = {"false", 0};
+  char *which_args[] = {"which", "ls", 0};
   char *uname_args[] = {"uname", 0};
+  // uptime
+  char *printf_args[] = {"abc\n", 0};
 
   test("busybox", echo_args);
   test("busybox", ash_args);
@@ -119,7 +122,9 @@ void main()
   test("busybox", expr_args);
   test("busybox", true_args);
   test("busybox", false_args);
+  test("busybox", which_args);
   test("busybox", uname_args);
+  test("busybox", printf_args);
   kernel_panic();
   while (1) {}
 }
