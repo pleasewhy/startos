@@ -384,6 +384,7 @@ uint64_t sys_mmap(void)
     if (task->vma[i] != 0)
       vmasz += task->vma[i]->length;
   }
+  LOG_TRACE("vmasz=%d", vmasz);
   a->addr = PGROUNDDOWN(MAXVA - PGSIZE * 5 - vmasz - length);
   a->prot = prot | PROT_READ | PROT_WRITE | PROT_EXEC;
   a->flag = flags;
