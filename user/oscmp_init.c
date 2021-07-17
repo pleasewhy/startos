@@ -104,6 +104,9 @@ void main()
   // dmesg
   // du
   char *expr_args[] = {"expr", "1", "+", "1", 0};
+  char *true_args[] = {"true", 0};
+  char *false_args[] = {"false", 0};
+  char *uname_args[] = {"uname", 0};
 
   test("busybox", echo_args);
   test("busybox", ash_args);
@@ -114,6 +117,9 @@ void main()
   test("busybox", date_args);
   test("busybox", dirname_args);
   test("busybox", expr_args);
+  test("busybox", true_args);
+  test("busybox", false_args);
+  test("busybox", uname_args);
   kernel_panic();
   while (1) {}
 }
