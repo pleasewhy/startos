@@ -143,7 +143,7 @@ uint64_t sys_writev()
     nwrite += vfs::VfsManager::write(fp, (const char *)(vec[i].iov_base),
                                      vec[i].iov_len, true);
   }
-  return 0;
+  return nwrite;
 }
 
 uint64_t sys_read(void)
