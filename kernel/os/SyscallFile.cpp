@@ -352,7 +352,6 @@ uint64_t sys_mmap(void)
   Task *       task = myTask();
   if (argaddr(0, &addr) < 0)
     return -1;
-
   if (argint(1, &length) < 0)
     return -1;
 
@@ -362,12 +361,16 @@ uint64_t sys_mmap(void)
   if (argint(3, &flags) < 0)
     return -1;
 
-  if (argfd(4, &fd, &f) < 0)
+  if (argint(4, &fd) < 0)
     return -1;
 
   if (argint(5, &offset) < 0)
     return -1;
-
+  LOG_TRACE("lenth=%d pro=%p flags=%d fd=%d offset=%d", length, prot, flags, fd,
+            offset);
+  f = getFileByfd(fd);
+  if (f == nullptr)
+    return -1;
   if (!f->readable && (prot & PROT_READ))
     return -1;
 
