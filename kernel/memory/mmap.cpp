@@ -72,8 +72,8 @@ bool vma::LoadIfContain(pagetable_t pagetable, uint64_t va)
   nread = nread > PGSIZE ? PGSIZE : nread;
   uint32_t file_off = this->offset + (va - this->addr);
   uint64_t pa = (uint64_t)mem + va - PGROUNDDOWN(va);
-  LOG_TRACE("cal va=%p len=%d nread=%d file_off=%d", va, this->length, nread,
-            file_off);
+  // LOG_TRACE("cal va=%p len=%d nread=%d file_off=%d", va, this->length, nread,
+  //           file_off);
   this->ip->read((char *)pa, file_off, nread, false);
   // int off0 = va0 - va;
   // for (int i = off0 - 10; i < off0 + 10; i++) {

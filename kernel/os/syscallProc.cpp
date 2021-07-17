@@ -188,6 +188,7 @@ uint64_t sys_sbrk(void)
 uint64_t sys_brk(void)
 {
   uint64_t addr;
+  LOG_DEBUG("sys_brk");
   if (argaddr(0, &addr) < 0) {
     return -1;
   }
