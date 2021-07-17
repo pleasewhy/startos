@@ -34,6 +34,7 @@
 #define SYS_nanosleep     101
 #define SYS_clock_gettime 113
 #define SYS_sched_yield   124
+#define SYS_kill          129
 #define SYS_rt_sigaction  134
 #define SYS_rt_sigprocmask 135
 #define SYS_times         153

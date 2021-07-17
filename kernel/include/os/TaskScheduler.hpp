@@ -197,6 +197,15 @@ int exec(char *path, char **argv);
 int taskTimes(struct tms *tm);
 
 /**
+ * @brief 设置pid对应的进程的信号
+ *
+ * @param pid
+ * @param sig
+ * @return int
+ */
+int kill(int pid, int sig);
+
+/**
  * @brief 释放进程的页表
  * @note ummap进程的trapframe和trampoline，并释放
  * 递归的释放该页表所拥有的全部物理内存

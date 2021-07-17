@@ -150,6 +150,7 @@ extern uint64_t sys_pipe(void);
 extern uint64_t sys_getdents64(void);
 extern uint64_t sys_mount(void);
 extern uint64_t sys_umount2(void);
+extern uint64_t sys_kill(void);
 extern uint64_t sys_rt_sigaction(void);
 extern uint64_t sys_rt_sigprocmask(void);
 extern uint64_t sys_times(void);
@@ -210,6 +211,7 @@ void syscall_init()
   syscalls[SYS_getdents64] = sys_getdents64;
   syscalls[SYS_mount] = sys_mount;
   syscalls[SYS_umount2] = sys_umount2;
+  syscalls[SYS_kill] = sys_kill;
   syscalls[SYS_rt_sigaction] = sys_rt_sigaction;
   syscalls[SYS_rt_sigprocmask] = sys_rt_sigprocmask;
   syscalls[SYS_times] = sys_times;

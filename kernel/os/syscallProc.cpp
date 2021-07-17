@@ -197,9 +197,9 @@ uint64_t sys_brk(void)
   if (addr == 0)
     return task->sz;
   LOG_TRACE("before=%p", task->sz);
-  int x = growtask(addr - task->sz);
-  LOG_TRACE("after=%p, grow=%d", task->sz, x);
-  return x;
+  growtask(addr - task->sz);
+  LOG_TRACE("after=%p, grow=%d", task->sz);
+  return task->sz;
 }
 
 #define OFFSET(structure, member) ((uint64_t)(&((structure *)0)->member));
@@ -324,4 +324,13 @@ uint64_t sys_set_tid_address(void)
 {
   LOG_TRACE("set_tid_address");
   return 0;
+}
+
+uint64_t sys_kill()
+{
+  int pid, sig;
+  if (argint(0, &pid) < 0 || argint(1, &sig) < 0) {
+    return -1;
+  }
+  return kill(pid, sig);
 }

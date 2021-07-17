@@ -110,6 +110,10 @@ void main()
   char *uname_args[] = {"uname", 0};
   // uptime
   char *printf_args[] = {"abc\\n", 0};
+  // ps
+  char *pwd_args[] = {"pwd", 0};
+  // free
+  char *kill_args[] = {"kill", "10", 0};
 
   test("busybox", echo_args);
   test("busybox", ash_args);
@@ -125,6 +129,8 @@ void main()
   test("busybox", which_args);
   test("busybox", uname_args);
   test("busybox", printf_args);
+  test("busybox", pwd_args);
+  test("busybox", kill_args);
   kernel_panic();
   while (1) {}
 }
