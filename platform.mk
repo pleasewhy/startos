@@ -1,2 +1,2 @@
-platform = QEMU
-# platform = K210
+# platform = QEMU
+platform = K210
