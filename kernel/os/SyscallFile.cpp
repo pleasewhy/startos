@@ -381,8 +381,10 @@ uint64_t sys_mmap(void)
   a->ip = nullptr;
   a->length = length;
   for (int i = 0; i < NOMMAPFILE; i++) {
-    if (task->vma[i] != 0)
+    if (task->vma[i] != 0) {
+      LOG_TRACE("len=%d", task->vma[i]->length);
       vmasz += task->vma[i]->length;
+    }
   }
   LOG_TRACE("vmasz=%d", vmasz);
   a->addr = PGROUNDDOWN(MAXVA - PGSIZE * 5 - vmasz - PGROUNDUP(length + 10));
