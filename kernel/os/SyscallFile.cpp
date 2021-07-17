@@ -373,8 +373,8 @@ uint64_t sys_mmap(void)
 
   if (f != nullptr)
     panic("sys_mmap");
-  if (f == nullptr && prot != 0)
-    return -1;
+  // if (f == nullptr && prot != 0)
+  //   return -1;
 
   a = allocVma();
   a->f = nullptr;
@@ -385,7 +385,7 @@ uint64_t sys_mmap(void)
       vmasz += task->vma[i]->length;
   }
   a->addr = PGROUNDDOWN(MAXVA - PGSIZE * 5 - vmasz - length);
-  a->prot = prot | PROT_READ | PROT_WRITE;
+  a->prot = prot | PROT_READ | PROT_WRITE | PROT_EXEC;
   a->flag = flags;
 
   for (int i = 0; i < NOMMAPFILE; i++) {
