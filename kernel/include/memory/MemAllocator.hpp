@@ -38,11 +38,22 @@ public:
    */
   void freeRange(void *paStart, void *paEnd);
 
+  /**
+   * @brief 获取空闲的内存(bytes)
+   */
+  uint64_t FreeMemOfBytes();
+
+  /**
+   * @brief 获取全部内存
+   */
+  uint64_t TotalMemOfBytes();
+
   void DebugInfo();
 
 private:
   SpinLock     spinLock;
   struct Node *freeList;
   int          npage;
+  int          total_page_;
 };
 #endif

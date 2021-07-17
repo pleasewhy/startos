@@ -112,7 +112,7 @@ void main()
   char *printf_args[] = {"abc\\n", 0};
   // ps
   char *pwd_args[] = {"pwd", 0};
-  // free
+  char *free_args[] = {"free", 0};
   char *kill_args[] = {"kill", "10", 0};
   char *ls_args[] = {"ls", 0};
   char *sleep_args[] = {"sleep", "1", 0};
@@ -134,7 +134,8 @@ void main()
   test("busybox", pwd_args);
   test("busybox", kill_args);
   test("busybox", ls_args);
-  test("busybox", sleep_args);
+  // test("busybox", sleep_args);
+  test("busybox", free_args);
   kernel_panic();
   while (1) {}
 }

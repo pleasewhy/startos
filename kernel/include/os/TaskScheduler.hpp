@@ -213,4 +213,10 @@ int kill(int pid, int sig);
  */
 void FreeTaskPagetable(pagetable_t pagetable, uint64_t sz);
 
+/**
+ * @brief 获取当前运行进程(RUNABLE, SLEEPING, RUNNING)的数量
+ *
+ */
+int CountOfTask();
+
 #endif  // TASK_SCHEDULER_HPP

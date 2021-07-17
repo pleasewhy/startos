@@ -155,6 +155,7 @@ extern uint64_t sys_rt_sigaction(void);
 extern uint64_t sys_rt_sigprocmask(void);
 extern uint64_t sys_times(void);
 extern uint64_t sys_gettimeofday(void);
+extern uint64_t sys_sysinfo(void);
 extern uint64_t sys_mmap(void);
 extern uint64_t sys_munmap(void);
 extern uint64_t sys_fstat(void);
@@ -217,6 +218,7 @@ void syscall_init()
   syscalls[SYS_rt_sigprocmask] = sys_rt_sigprocmask;
   syscalls[SYS_times] = sys_times;
   syscalls[SYS_gettimeofday] = sys_gettimeofday;
+  syscalls[SYS_sysinfo] = sys_sysinfo;
   syscalls[SYS_mmap] = sys_mmap;
   syscalls[SYS_munmap] = sys_munmap;
   syscalls[SYS_fstat] = sys_fstat;

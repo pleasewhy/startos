@@ -43,6 +43,7 @@
 #define SYS_getpgid       155
 #define SYS_uname         160
 #define SYS_gettimeofday  169
+#define SYS_sysinfo       179
 #define SYS_brk           214
 #define SYS_munmap        215
 #define SYS_getpid        172

@@ -16,6 +16,8 @@
 #include "time.h"
 #include "types.hpp"
 #include "utsname.h"
+#include "memory/MemAllocator.hpp"
+#include "sysinfo.h"
 
 extern MemAllocator memAllocator;
 
@@ -327,7 +329,7 @@ uint64_t sys_clock_nanosleep(void)
              sizeof(request)) < 0)
     return -1;
   LOG_TRACE("clock id=%d flag=%p sec=%p nsec=%d\n", clock_id, flags,
-         request.tv_sec, request.tv_nsec);
+            request.tv_sec, request.tv_nsec);
   request.tv_sec = 1;
   sleepTime((request.tv_sec * 1000 + request.tv_nsec / 1000000) / INTERVAL);
   return 1;
@@ -358,4 +360,26 @@ uint64_t sys_kill()
     return -1;
   }
   return kill(pid, sig);
+}
+
+extern MemAllocator memAllocator;
+
+uint64_t sys_sysinfo(void)
+{
+  struct sysinfo info;
+  uint64_t       uaddr;
+  if (argaddr(0, &uaddr) < 0) {
+    return -1;
+  }
+  info.uptime = timer::ticks * INTERVAL / 1000;
+  info.freeram = memAllocator.FreeMemOfBytes();
+  info.totalram = memAllocator.TotalMemOfBytes();
+  info.sharedram = 0;
+  info.freeswap = 0;
+  info.bufferram = 0;
+  info.procs = CountOfTask();
+  if (either_copyout(myTask()->pagetable, uaddr, &info, sizeof(info)) < 0) {
+    return -1;
+  }
+  return 0;
 }

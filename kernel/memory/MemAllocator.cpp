@@ -19,8 +19,10 @@ void MemAllocator::freeRange(void *paStart, void *paEnd)
 {
   char *p;
   p = (char *)PGROUNDUP((uint64_t)paStart);
-  for (; p + PGSIZE <= (char *)paEnd; p += PGSIZE)
+  for (; p + PGSIZE <= (char *)paEnd; p += PGSIZE) {
+    total_page_++;
     free(p);
+  }
 }
 
 void *MemAllocator::alloc()
@@ -57,6 +59,16 @@ void MemAllocator::free(void *pa)
   this->freeList = r;
   npage++;
   spinLock.unlock();
+}
+
+uint64_t MemAllocator::FreeMemOfBytes()
+{
+  return npage * PGSIZE;
+}
+
+uint64_t MemAllocator::TotalMemOfBytes()
+{
+  return total_page_ * PGSIZE;
 }
 
 void MemAllocator::DebugInfo()
