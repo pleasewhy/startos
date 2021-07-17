@@ -89,7 +89,7 @@ struct vma *allocVma()
 {
   struct vma *a;
   for (a = vma_table_; a < vma_table_ + NVMA; a++) {
-    if (a->ip == 0) {
+    if (a->ip == 0 && a->addr == 0 && a->length == 0) {
       return a;
     }
   }
