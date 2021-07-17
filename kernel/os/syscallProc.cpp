@@ -310,7 +310,7 @@ uint64_t sys_clock_gettime(void)
 
 uint64_t sys_rt_sigaction(void)
 {
-  printf("rt_sigaction\n");
+  LOG_TRACE("rt_sigaction");
   return 0;
 }
 

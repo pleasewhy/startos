@@ -93,6 +93,8 @@ void main()
   dup(0);
   dup(0);
   char *echo_args[] = {"echo", "#### independent command test", 0};
+  char *ash_args[] = {"ash", "-c", "exit", 0};
+  char *sh_args[] = {"sh", "-c", "exit", 0};
   char *basename_args[] = {"basename", "/aaa/bbb", 0};
   char *cal_args[] = {"cal", 0};
   // clear
@@ -104,11 +106,13 @@ void main()
   char *expr_args[] = {"expr", "1", "+", "1", 0};
 
   test("busybox", echo_args);
+  test("busybox", ash_args);
+  test("busybox", sh_args);
   test("busybox", basename_args);
   test("busybox", cal_args);
   test("busybox", date_args);
-  // test("busybox", dirname_args);
-  // test("busybox", expr_args);
+  test("busybox", dirname_args);
+  test("busybox", expr_args);
   kernel_panic();
   while (1) {}
 }
