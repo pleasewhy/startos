@@ -61,6 +61,8 @@ bool vma::LoadIfContain(pagetable_t pagetable, uint64_t va)
   // LOG_TRACE("map page va=%p", this->addr);
   mappages(pagetable, va, PGSIZE, (uint64_t)mem, perm);
 
+  if (ip == nullptr)
+    return true;
   // eaddr不能小于this->addr，即vma的起始地址，因为
   // 不能保证this->addr对齐PGSIZE。
   va = this->addr > va ? this->addr : va;
@@ -72,13 +74,7 @@ bool vma::LoadIfContain(pagetable_t pagetable, uint64_t va)
   nread = nread > PGSIZE ? PGSIZE : nread;
   uint32_t file_off = this->offset + (va - this->addr);
   uint64_t pa = (uint64_t)mem + va - PGROUNDDOWN(va);
-  // LOG_TRACE("cal va=%p len=%d nread=%d file_off=%d", va, this->length, nread,
-  //           file_off);
   this->ip->read((char *)pa, file_off, nread, false);
-  // int off0 = va0 - va;
-  // for (int i = off0 - 10; i < off0 + 10; i++) {
-  //   printf("0x%x ", mem[i]);
-  // }
   return true;
 }
 
