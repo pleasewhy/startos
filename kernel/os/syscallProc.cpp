@@ -314,6 +314,12 @@ uint64_t sys_rt_sigaction(void)
   return 0;
 }
 
+uint64_t sys_rt_sigprocmask(void)
+{
+  LOG_TRACE("rt_sigprocmask");
+  return 0;
+}
+
 uint64_t sys_set_tid_address(void)
 {
   LOG_TRACE("set_tid_address");

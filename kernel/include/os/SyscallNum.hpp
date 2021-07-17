@@ -34,6 +34,7 @@
 #define SYS_clock_gettime 113
 #define SYS_sched_yield   124
 #define SYS_rt_sigaction  134
+#define SYS_rt_sigprocmask 135
 #define SYS_times         153
 #define SYS_setpgid       154
 #define SYS_getpgid       155
