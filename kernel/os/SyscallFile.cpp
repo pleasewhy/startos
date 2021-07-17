@@ -397,7 +397,7 @@ uint64_t sys_mmap(void)
   }
   LOG_TRACE("mmap addr=%p", a->addr);
   panic("mmap: not enough vma im task");
-
+  return 0;
   // if (!f->readable && (prot & PROT_READ))
   //   return -1;
 
