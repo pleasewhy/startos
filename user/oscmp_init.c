@@ -97,7 +97,7 @@ void main()
   char *sh_args[] = {"sh", "-c", "exit", 0};
   char *basename_args[] = {"basename", "/aaa/bbb", 0};
   char *cal_args[] = {"cal", 0};
-  // clear
+  char *clear_args[] = {"clear", 0};
   char *date_args[] = {"date", 0};
   // df
   char *dirname_args[] = {"dirname", "/aaa/bbb", 0};
@@ -110,6 +110,7 @@ void main()
   test("busybox", sh_args);
   test("busybox", basename_args);
   test("busybox", cal_args);
+  test("busybox", clear_args);
   test("busybox", date_args);
   test("busybox", dirname_args);
   test("busybox", expr_args);

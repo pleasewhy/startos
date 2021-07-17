@@ -1,0 +1,19 @@
+40858 execve("/usr/bin/busybox", ["busybox", "clear"], 0x7fff89c28290 /* 34 vars */) = 0
+40858 arch_prctl(0x3001 /* ARCH_??? */, 0x7fff16d10c10) = -1 EINVAL (Invalid argument)
+40858 brk(NULL)                         = 0xf75000
+40858 brk(0xf76200)                     = 0xf76200
+40858 arch_prctl(ARCH_SET_FS, 0xf758c0) = 0
+40858 uname({sysname="Linux", nodename="ubuntu", ...}) = 0
+40858 readlink("/proc/self/exe", "/usr/bin/busybox", 4096) = 16
+40858 brk(0xf97200)                     = 0xf97200
+40858 brk(0xf98000)                     = 0xf98000
+40858 mprotect(0x608000, 28672, PROT_READ) = 0
+40858 prctl(PR_SET_NAME, "busybox")     = 0
+40858 getuid()                          = 1000
+40858 stat("/etc/busybox.conf", 0x7fff16d109b8) = -1 ENOENT (No such file or directory)
+40858 getgid()                          = 1000
+40858 setgid(1000)                      = 0
+40858 setuid(1000)                      = 0
+40858 write(1, "\33[H\33[J", 6)         = 6
+40858 exit_group(0)                     = ?
+40858 +++ exited with 0 +++
