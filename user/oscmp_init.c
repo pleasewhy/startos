@@ -105,8 +105,8 @@ void main()
 
   test("busybox", echo_args);
   test("busybox", basename_args);
-  // test("busybox", cal_args);
-  // test("busybox", date_args);
+  test("busybox", cal_args);
+  test("busybox", date_args);
   // test("busybox", dirname_args);
   // test("busybox", expr_args);
 
