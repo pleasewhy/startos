@@ -109,7 +109,7 @@ void main()
   char *which_args[] = {"which", "ls", 0};
   char *uname_args[] = {"uname", 0};
   // uptime
-  char *printf_args[] = {"abc\n", 0};
+  char *printf_args[] = {"abc\\n", 0};
 
   test("busybox", echo_args);
   test("busybox", ash_args);
