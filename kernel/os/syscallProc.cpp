@@ -60,7 +60,7 @@ uint64_t sys_clone(void)
     return pid;
   }
   else {
-    LOG_TRACE("do clone");
+    printf("do clone");
     return clone(stackHighAddr, flags);
   }
 }
@@ -165,7 +165,7 @@ uint64_t sys_getppid()
 
 uint64_t sys_gettid()
 {
-  return myTask()->pid;
+  return (uint64_t)myTask();
 }
 
 uint64_t sys_sched_yield()
