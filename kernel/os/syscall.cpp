@@ -131,6 +131,7 @@ extern uint64_t sys_getpid(void);
 extern uint64_t sys_getppid(void);
 extern uint64_t sys_getuid(void);
 extern uint64_t sys_geteuid(void);
+extern uint64_t sys_gettid(void);
 extern uint64_t sys_fork(void);
 extern uint64_t sys_clone(void);
 extern uint64_t sys_exit(void);
@@ -196,7 +197,8 @@ void syscall_init()
   syscalls[SYS_getpid] = sys_getpid;
   syscalls[SYS_getppid] = sys_getppid;
   syscalls[SYS_getuid] = sys_getuid;
-  syscalls[SYS_geteuid] = sys_getuid;
+  syscalls[SYS_geteuid] = sys_geteuid;
+  syscalls[SYS_gettid] = sys_gettid;
   syscalls[SYS_fork] = sys_fork;
   syscalls[SYS_clone] = sys_clone;
   syscalls[SYS_exit] = sys_exit;

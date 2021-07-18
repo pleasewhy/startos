@@ -163,6 +163,11 @@ uint64_t sys_getppid()
   return myTask()->parent->pid;
 }
 
+uint64_t sys_gettid()
+{
+  return myTask()->pid;
+}
+
 uint64_t sys_sched_yield()
 {
   yield();

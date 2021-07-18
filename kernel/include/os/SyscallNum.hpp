@@ -53,6 +53,7 @@
 #define SYS_getppid       173
 #define SYS_getuid        174
 #define SYS_geteuid       175
+#define SYS_gettid        176
 #define SYS_clone         220
 #define SYS_execve        221
 #define SYS_mmap          222
