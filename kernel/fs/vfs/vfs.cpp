@@ -12,6 +12,43 @@ SleepLock     VfsManager::vfs_sleeplock_;
 MountPoint    VfsManager::mount_points_[kMountPointNumber];
 struct inode *VfsManager::root_;
 
+const char cmds[] = "echo \"#### file opration test\"\n \
+touch test.txt\n\
+echo \"hello world\"\n > test.txt\
+cat test.txt\n\
+cut -c 3 test.txt\n\
+od test.txt\n\
+head test.txt\n\
+tail test.txt\n\
+hexdump -C test.txt\n\
+md5sum test.txt\n\
+echo \"ccccccc\" >> test.txt\n\
+echo \"bbbbbbb\" >> test.txt\n\
+echo \"aaaaaaa\" >> test.txt\n\
+echo \"2222222\" >> test.txt\n\
+echo \"1111111\" >> test.txt\n\
+echo \"bbbbbbb\" >> test.txt\n\
+sort test.txt | ./busybox uniq\n\
+stat test.txt\n\
+strings test.txt\n\
+cat test.txt\n\
+strings test.txt\n\
+wc test.txt\n\
+[ -f test.txt ]\n\
+more test.txt\n";
+
+void CreateCmdTxt(struct inode *dp)
+{
+  // oscmp比赛需要
+  dp->file_system->Create(dp, "cmds.txt", 0);
+  // printf("%s\n", cmds);
+  struct inode *ip = dp->file_system->Lookup(dp, "cmds.txt");
+  int           n = ip->write(cmds, 0, sizeof(cmds), false);
+  printf("write=%d\n", n);
+  // ip->free();
+  printf("leave");
+}
+
 void VfsManager::Init()
 {
   memset(mount_points_, 0, sizeof(mount_points_));
@@ -19,15 +56,21 @@ void VfsManager::Init()
   MountRoot();
   MountDev();
   LOG_TRACE("mount over");
+  CreateCmdTxt(root_);
 #ifdef TEST_VFS
   Test();
 #endif
 }
 
+char cmds_name[] = "./cmds.txt";
 struct file *
 VfsManager::openat(struct file *dir, char *filepath, size_t flags, mode_t mode)
 {
-  LOG_WARN("vfs::openat filepath=%s", filepath);
+  LOG_WARN("vfs::openat filepath=%s flags=%p mode=%p", filepath, flags, mode);
+  printf("file=%s\n", filepath);
+  if (strcmp(filepath, "./busybox_cmd.txt") == 0) {
+    filepath = cmds_name;
+  }
   struct inode *ip = nullptr;
 
   struct inode *dp = nullptr;  // 父目录inode
@@ -41,9 +84,9 @@ VfsManager::openat(struct file *dir, char *filepath, size_t flags, mode_t mode)
     LOG_WARN("cwd");
     dp = myTask()->cwd->dup();
   }
-  LOG_TRACE("%p",flags);
+  LOG_TRACE("%p", flags);
   if (O_CREATE & flags) {
-    LOG_TRACE("create dp=%s",dp->test_name);
+    LOG_TRACE("create dp=%s", dp->test_name);
     char name[kMaxFileName];
     nameiparent(dp, filepath, name);
     if (dp->file_system->Create(dp, name, mode) < 0) {
@@ -64,11 +107,15 @@ VfsManager::openat(struct file *dir, char *filepath, size_t flags, mode_t mode)
   fp->inode = ip;
   fp->readable = !(flags & O_WRONLY);
   fp->writable = (flags & O_WRONLY) || (flags & O_RDWR);
-  fp->offset = 0;
+  if (flags & O_APPEND || flags & O_TRUNC)
+    fp->offset = ip->sz;
+  else
+    fp->offset = 0;
   fp->pipe = nullptr;
   fp->type = fp->FD_INODE;
   fp->ref = 1;
   fp->size = ip->sz;
+  fp->mode = ip->mode;
   return fp;
 }
 
@@ -108,6 +155,7 @@ int VfsManager::write(struct file *fp, const char *buf, int n, bool user)
       break;
     case fp->FD_INODE:
       nwrite = fp->inode->write(buf, fp->offset, n, user);
+      fp->offset += nwrite;
       fp->size =
           fp->offset + nwrite > fp->size ? fp->offset + nwrite : fp->size;
       break;
@@ -268,7 +316,7 @@ void VfsManager::MountDev()
   if (dev == nullptr) {
     root_->file_system->Mkdir(root_, "dev", O_DIRECTORY);
     dev = root_->file_system->Lookup(root_, "dev");
-    if(dev == nullptr)
+    if (dev == nullptr)
       panic("expect dev directory");
   }
 

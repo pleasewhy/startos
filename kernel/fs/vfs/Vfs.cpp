@@ -102,12 +102,12 @@ void getAbsolutePath(const char *path, char *newPath)
   }
 
   if (oldpath[0] == '/') {
-    memcpy(newPath, oldpath, strlen(oldpath));
+    memmove(newPath, oldpath, strlen(oldpath));
   }
   else {
     myTask()->lock.lock();
-    memcpy(newPath, curdir, strlen(curdir));
-    memcpy(newPath + strlen(curdir), oldpath, strlen(oldpath));
+    memmove(newPath, curdir, strlen(curdir));
+    memmove(newPath + strlen(curdir), oldpath, strlen(oldpath));
     myTask()->lock.unlock();
   }
 }
@@ -129,15 +129,15 @@ void calAbsolute(char *path)
   }
 
   if (oldpath[0] == '/') {
-    memcpy(newPath, oldpath, strlen(oldpath));
+    memmove(newPath, oldpath, strlen(oldpath));
   }
   else {
     myTask()->lock.lock();
-    memcpy(newPath, curdir, strlen(curdir));
-    memcpy(newPath + strlen(curdir), oldpath, strlen(oldpath));
+    memmove(newPath, curdir, strlen(curdir));
+    memmove(newPath + strlen(curdir), oldpath, strlen(oldpath));
     myTask()->lock.unlock();
   }
-  memcpy(path, newPath, sizeof(newPath));
+  memmove(path, newPath, sizeof(newPath));
 }
 
 /**
@@ -201,7 +201,7 @@ int openat(int dirfd, const char *filename, size_t flags, mode_t mode)
   memset(path, 0, MAXPATH);
   strncpy(path, dir_fp->filepath, strlen(dir_fp->filepath));
   path[strlen(dir_fp->filepath)] = '/';
-  memcpy(path + strlen(dir_fp->filepath) + 1, filename, strlen(filename));
+  memmove(path + strlen(dir_fp->filepath) + 1, filename, strlen(filename));
 
   auto fs = getFs(path);
   LOG_DEBUG("openat dir path=%s, fs mount point=%s", path, fs->mountPoint);
@@ -335,12 +335,12 @@ int mkdirat(int dirfd, const char *filepath)
   }
   else {
     if (filepath[0] == '/') {
-      memcpy(path, filepath, strlen(filepath));
+      memmove(path, filepath, strlen(filepath));
     }
     else {
       fp = getFileByfd(dirfd);
-      memcpy(path, fp->filepath, strlen(fp->filepath));
-      memcpy(path + strlen(fp->filepath), filepath, strlen(filepath));
+      memmove(path, fp->filepath, strlen(fp->filepath));
+      memmove(path + strlen(fp->filepath), filepath, strlen(filepath));
     }
   }
   LOG_DEBUG("mkdir=%s\n", path);
@@ -359,12 +359,12 @@ int openat(int dirfd, const char *filepath, int flags)
   }
   else {
     if (filepath[0] == '/') {
-      memcpy(path, filepath, strlen(filepath));
+      memmove(path, filepath, strlen(filepath));
     }
     else {
       fp = getFileByfd(dirfd);
-      memcpy(path, fp->filepath, strlen(fp->filepath));
-      memcpy(path + strlen(fp->filepath), filepath, strlen(filepath));
+      memmove(path, fp->filepath, strlen(fp->filepath));
+      memmove(path + strlen(fp->filepath), filepath, strlen(filepath));
     }
   }
   LOG_DEBUG("openat dir=%s", path);
@@ -381,12 +381,12 @@ int rm(int dirfd, char *filepath)
   }
   else {
     if (filepath[0] == '/') {
-      memcpy(path, filepath, strlen(filepath));
+      memmove(path, filepath, strlen(filepath));
     }
     else {
       fp = getFileByfd(dirfd);
-      memcpy(path, fp->filepath, strlen(fp->filepath));
-      memcpy(path + strlen(fp->filepath), filepath, strlen(filepath));
+      memmove(path, fp->filepath, strlen(fp->filepath));
+      memmove(path + strlen(fp->filepath), filepath, strlen(filepath));
     }
   }
   // TODO 判断是否被打开

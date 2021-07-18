@@ -87,6 +87,7 @@ void test(char *name, char *argv[])
   }
 }
 
+void test_file_operation();
 void main()
 {
   open("dev/tty", O_RDWR);
@@ -115,7 +116,7 @@ void main()
   char *free_args[] = {"free", 0};
   char *kill_args[] = {"kill", "10", 0};
   char *ls_args[] = {"ls", 0};
-  char *sleep_args[] = {"sleep", "1", 0};
+  char *sleep_args[] = {"sleep", 0};
 
   test("busybox", echo_args);
   test("busybox", ash_args);
@@ -134,8 +135,20 @@ void main()
   test("busybox", pwd_args);
   test("busybox", kill_args);
   test("busybox", ls_args);
-  // test("busybox", sleep_args);
+  test("busybox", sleep_args);
   test("busybox", free_args);
+
+  char *shell_args[] = {"sh", "busybox_testcode.sh", 0};
+  int   pid = fork();
+  if (pid == 0) {
+    printf("test file\n");
+    execve("busybox", shell_args, NULL);
+  }
+  else {
+    int status;
+    wait(&status);
+  }
+
   kernel_panic();
   while (1) {}
 }

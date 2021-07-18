@@ -126,7 +126,7 @@ uint64_t CreateUserStack(struct BinProgram *bin_program, struct elfhdr *elf)
 
 int exec(char *path, char **argv)
 {
-  // printf("exec\n");
+  // printf("exec =%s\n", path);
   int            i, off, oldsz;
   uint64_t       sz = 0, stackbase, sp, a0 = 0;
   uint64_t       ustack[MAXARG + 1];  // 最后一项为0，用于标记结束

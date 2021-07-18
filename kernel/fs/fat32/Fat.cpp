@@ -718,7 +718,7 @@ void Fat32FileSystem::tf_choose_sfn(char *dest, char *src, TFFile *fp)
   int    results, num = 1;
   TFFile xfile;
   // throwaway fp that doesn't muck with the original
-  memcpy(&xfile, fp, sizeof(TFFile));
+  memmove(&xfile, fp, sizeof(TFFile));
 
   dbg_printf("\r\n[DEBUG-tf_choose_sfn] Trialing SFN's:  ");
   while (1) {
@@ -727,8 +727,8 @@ void Fat32FileSystem::tf_choose_sfn(char *dest, char *src, TFFile *fp)
       case 0:  // ok
         // does the file collide with the current directory?
         // tf_fseek(xfile, 0, 0);
-        memcpy(temp, dest, 8);
-        memcpy(temp + 9, dest + 8, 3);
+        memmove(temp, dest, 8);
+        memmove(temp + 9, dest + 8, 3);
         temp[8] = '.';
         temp[12] = 0;
 
@@ -1152,13 +1152,13 @@ int Fat32FileSystem::tf_mkdir(const char *filename, int mkParents)
   fp = tf_fopen(orig_fn, "w");
 
   // set up .
-  memcpy(entry.msdos.filename, ".          ", 11);
+  memmove(entry.msdos.filename, ".          ", 11);
   // entry.msdos.attributes = TF_ATTR_DIRECTORY;
   // entry.msdos.firstCluster = cluster & 0xffff
   tf_fwrite((char *)&entry, sizeof(FatFileEntry), fp);
 
   // set up ..
-  memcpy(entry.msdos.filename, "..         ", 11);
+  memmove(entry.msdos.filename, "..         ", 11);
   // entry.msdos.attributes = TF_ATTR_DIRECTORY;
   // entry.msdos.firstCluster = cluster & 0xffff
   tf_fwrite((char *)&entry, sizeof(FatFileEntry), fp);
@@ -1664,7 +1664,7 @@ int Fat32FileSystem::tf_fwrite(const char *src, int sz, TFFile *fp, bool user)
       x = sz;
     }
 
-    // memcpy(&tf_info.buffer[tracking], src, x);
+    // memmove(&tf_info.buffer[tracking], src, x);
     either_copyin(user, &tf_info.buffer[tracking], (uint64_t)src, x);
     tf_info.sectorFlags |= TF_FLAG_DIRTY;  // Mark this sector as dirty
 

@@ -6,7 +6,7 @@
 extern "C" void  memset(void *dst, int c, uint_t n);
 int   memcmp(const void *v1, const void *v2, uint_t n);
 void *memmove(void *dst, const void *src, uint_t n);
-void *memcpy(void *dst, const void *src, uint_t n);
+extern "C" void *memcpy(void *dst, const void *src, uint_t n);
 char *strncpy(char *s, const char *t, int n);
 char *safestrcpy(char *s, const char *t, int n);
 int   strlen(const char *s);

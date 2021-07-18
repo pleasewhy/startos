@@ -61,6 +61,7 @@ namespace fat32 {
     printf("\n");
   }
 
+
   Fat32FileSystem::Fat32FileSystem(int dev) : dev_(dev)
   {
     // 创建一个长度为32=2^5的hash表
@@ -70,9 +71,9 @@ namespace fat32 {
     buffer_layer.first_data_sector = info_.first_data_sector_;
     buffer_layer.sectors_per_cluster = info_.sectors_per_cluster;
     for (int i = info_.reserve_sectors_; i < 1024; i++) {
-      // printf("%d ", i);
       ReadSector(i, fat_cache_ + (i - info_.reserve_sectors_) * 512);
     }
+
     // inode_cache_map_->put(info_.root_.i_pos, &info_.root_.vfs_inode);
   }
 
@@ -266,7 +267,6 @@ namespace fat32 {
     memset(&short_entry, 0, sizeof(short_entry));
     ReadInode(dir, false, reinterpret_cast<uint64_t>(&short_entry), off,
               sizeof(short_entry));
-    printf("name=%s\n", short_entry.name);
     off -= sizeof(short_entry);
 
     // 写入长文件目录名
@@ -436,15 +436,23 @@ namespace fat32 {
     return total;
   }
 
+  void BuildEntry(ShortEntry entry) {}
+
   int Fat32FileSystem::UpdateInode(struct inode *ip)
   {
     ShortEntry entry;
+
+    FillShortFile(&entry, "pad", MSDOS_I(ip)->i_start, ip->mode);
     entry.file_size = ip->sz;
+    memmove(&entry.name, ip->test_name, kShortNameLength);
+    LOG_TRACE("update inode pos=%d sz=%d testname=%s", MSDOS_I(ip)->i_pos,
+              ip->sz, ip->test_name);
     int   sector = MSDOS_I(ip)->i_pos / info_.bytes_per_sector_;
-    int   off = MSDOS_I(ip)->i_pos / info_.bytes_per_sector_;
-    char *data = new char[info_.bytes_per_sector_];
+    int   off = MSDOS_I(ip)->i_pos % info_.bytes_per_sector_;
+    char *data = new char[kSectorSize];
     ReadSector(sector, data);
     memmove(data + off, &entry, sizeof(entry));
+    WriteSector(sector, data);
     delete data;
     return 0;
   }
@@ -571,15 +579,16 @@ namespace fat32 {
         // LOG_TRACE("shortname=%s", entry.sfn.name);
         off += sizeof(entry);
       }
-      // LOG_TRACE("name=%s", tmp_name);
+      // printf("name=%s\n", tmp_name);
       if (strncmp(name, tmp_name, name_len) != 0) {
         continue;
       }
-      LOG_TRACE("found\n");
+      LOG_TRACE("found sz=%d\n", entry.sfn.file_size);
       uint64_t cluster =
           (off - sizeof(entry)) / info_.bytes_per_cluster_;  // 获取当前逻辑簇
       uint64_t pos = FirstSectorOfCluster(bmap(dir, cluster)) * kSectorSize;
       pos += (off - sizeof(entry)) % info_.bytes_per_cluster_;
+      // printf("pos=%d sz=%d\n", pos, entry.sfn.file_size);
       return BuildInode(entry, pos, dir);
     }
 
@@ -893,6 +902,7 @@ namespace fat32 {
       LOG_TRACE("set fat cached");
     }
     else {
+      panic("set fat entry");
       struct buf *b = buffer_layer.read(dev_, fat_sector);
       *reinterpret_cast<uint32_t *>(b->data + fat_offset) = value;
       buffer_layer.write(b);
@@ -916,6 +926,7 @@ namespace fat32 {
       val = *reinterpret_cast<uint32_t *>(data + fat_offset);
     }
     else {
+      panic("get fat entry");
       struct buf *b = buffer_layer.read(dev_, fat_sector);
       val = *reinterpret_cast<uint32_t *>(b->data + fat_offset);
       buffer_layer.freeBuffer(b);
@@ -972,9 +983,7 @@ namespace fat32 {
    */
   int Fat32FileSystem::WriteSector(int sector, char *data)
   {
-    return dev::RwDevWrite(this->dev_, data,
-                           sector * this->fat_bpb_.bytes_per_sector,
-                           this->fat_bpb_.bytes_per_sector);
+    return dev::RwDevWrite(this->dev_, data, sector * kSectorSize, kSectorSize);
   }
 
   /******************Test Function Start****************************/

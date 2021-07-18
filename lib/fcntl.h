@@ -44,6 +44,8 @@
 #define O_RDWR 0x002
 #define O_CREATE 0x40
 #define O_TRUNC 0x400
+#define	O_APPEND	0x0008	/* Writes append to the file.  */
+#define	O_NONBLOCK	0x0004	/* Non-blocking I/O.  */
 #define O_DIRECTORY 0x0200000
 
 #define DIR 0x040000
@@ -59,4 +61,9 @@
 #define F_DUPFD_CLOEXEC 12 /* 复制文件描述符，并设置close_on_exec标志位 */
 /**********fcntl flags*********/
 
+/**********lssek whence*********/
+# define SEEK_SET	0	/* Seek from beginning of file.  */
+# define SEEK_CUR	1	/* Seek from current position.  */
+# define SEEK_END	2	/* Seek from end of file.  */
+/**********lssek whence*********/
 #endif

@@ -13,6 +13,7 @@
 #include "riscv.hpp"
 #include "types.hpp"
 #include "io.h"
+#include "errorno.h"
 #include "poll.h"
 
 uint64_t sys_getcwd(void)
@@ -67,6 +68,9 @@ uint64_t sys_unlinkat()
 
 uint64_t sys_openat(void)
 {
+  LOG_TRACE("sys_openat");
+  myTask()->lock.lock();
+  myTask()->lock.unlock();
   char filename[MAXPATH];
   int  dirfd, mode, flags;
   int  n;
@@ -79,12 +83,13 @@ uint64_t sys_openat(void)
     return -1;
   }
   struct file *dirfp = getFileByfd(dirfd);
+  LOG_TRACE("flag=%p mode=%p", flags, mode);
   struct file *fp = vfs::VfsManager::openat(dirfp, filename, flags, mode);
   if (fp == nullptr) {
     return -1;
   }
   int fd = registerFileHandle(fp);
-  LOG_TRACE("openat fd=%d", fd);
+  LOG_TRACE("openat fd=%d sz=%d off=%d", fd, fp->size, fp->offset);
   return fd;
 }
 
@@ -115,10 +120,14 @@ uint64_t sys_write(void)
   // LOG_TRACE("sys_write");
   if (argint(0, &fd) < 0 || argint(2, &n) < 0 || argaddr(1, &uaddr) < 0)
     return -1;
-  if (fd >= 3) {
-    LOG_TRACE("sys_write fd=%d n=%d", fd, n);
-  }
+  // if (fd >= 3) {
+  //   LOG_TRACE("sys_write fd=%d n=%d", fd, n);
+  // }
   struct file *fp = getFileByfd(fd);
+  // if (fp != nullptr && fp->inode->dev == 5) {
+  //   LOG_TRACE("sys_write fd=%d n=%d", fd, n);
+  // }
+
   return vfs::VfsManager::write(fp, (const char *)(uaddr), n, true);
   // return vfs::write(fd, true, reinterpret_cast<char *>(uaddr), n, 0);
 }
@@ -194,7 +203,7 @@ uint64_t sys_dup3(void)
   if (argint(0, &oldfd) < 0 || argint(1, &newfd) < 0) {
     return -1;
   }
-  printf("old fd=%d new fd=%d\n", oldfd, newfd);
+  LOG_TRACE("sys_dup3 old fd=%d new fd=%d\n", oldfd, newfd);
   struct file *fp = getFileByfd(oldfd);
   fp = vfs::VfsManager::dup(fp);
   if (myTask()->openFiles[newfd] != nullptr) {
@@ -309,7 +318,7 @@ uint64_t sys_fstat()
   kst.st_dev = 1;
   kst.st_size = fp->size;
   kst.st_nlink = 1;
-  kst.st_mode = fp->inode->mode;
+  kst.st_mode = fp->mode;
   return copyout(myTask()->pagetable, kstAddr, reinterpret_cast<char *>(&kst),
                  sizeof(struct kstat));
 }
@@ -560,4 +569,94 @@ uint64_t sys_faccessat()
   }
   vfs::VfsManager::close(fp);
   return 0;
+}
+
+uint64_t sys_utimensat()
+{
+  char filename[MAXPATH];
+  int  dirfd, flags;
+  int  n;
+  if (argint(0, &dirfd) < 0 || (n = argstr(1, filename, MAXPATH)) < 0) {
+    return -1;
+  }
+  LOG_TRACE("sys_utimensat dirfd=%d");
+
+  if (argint(3, &flags)) {
+    return -1;
+  }
+  struct file *dirfp = getFileByfd(dirfd);
+  struct file *fp = vfs::VfsManager::openat(dirfp, filename, flags, 0);
+  if (fp == nullptr) {
+    LOG_TRACE("file not exsit");
+    fp = vfs::VfsManager::openat(dirfp, filename, flags | O_CREATE, 0);
+    if (fp == nullptr)
+      panic("create fp error");
+    // return ENOENT;
+  }
+  vfs::VfsManager::close(fp);
+  return 0;
+}
+
+uint64_t sys_sendfile()
+{
+  LOG_TRACE("sys_sendfile");
+  // int      out_fd, in_fd, count;
+  // uint64_t off_addr;
+  // if (argint(0, &out_fd) < 0 || argint(1, &in_fd) < 0)
+  //   return -1;
+  // if (argaddr(2, &off_addr) < 0 || argint(3, &count) < 0)
+  //   return -1;
+  // printf("sys_sendfile in fd=%d out fd=%d offaddr=%p count=%d\n", in_fd,
+  // out_fd,
+  //        off_addr, count);
+  // struct file *in_file, *out_file;
+  // in_file = getFileByfd(in_fd);
+  // out_file = getFileByfd(out_fd);
+  // if (in_file == nullptr || out_file == nullptr)
+  //   return -1;
+  // char buf[512];
+  // memset(buf, 0, sizeof(buf));
+  // int n = in_file->inode->read(buf, 0, count, false);
+  // printf("read=%d sz=%d\n", n, in_file->size);
+  // out_file->inode->write(buf, 0, n, false);
+  // panic("error");
+  return -1;
+}
+
+uint64_t sys_lseek()
+{
+  LOG_TRACE("sys_lseek");
+  int fd, whence;
+  int offset;
+  if (argint(0, &fd) < 0 && argint(1, &offset) < 0) {
+    return -1;
+  }
+
+  if (argint(2, &whence) < 0) {
+    return -1;
+  }
+
+  LOG_TRACE("whence=%d offset=%d\n", whence, offset);
+  struct file *fp = getFileByfd(fd);
+  if (fp == nullptr)
+    return -1;
+  int now_off = 0;
+  switch (whence) {
+    case SEEK_END:
+      now_off = fp->size + offset;
+      break;
+    case SEEK_SET:
+      now_off = offset;
+      break;
+    case SEEK_CUR:
+      now_off = fp->offset + offset;
+      break;
+    default:
+      panic("only handler SEEK END");
+      break;
+  }
+  if (now_off < 0)  // offset 允许大于文件sz
+    return -1;
+  fp->offset = now_off;
+  return now_off;
 }

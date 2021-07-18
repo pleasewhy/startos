@@ -107,6 +107,7 @@ struct file
   Pipe *        pipe;
   struct inode *inode;
   size_t        offset;
+  short         mode;
 
   file()
   {

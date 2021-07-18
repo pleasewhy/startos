@@ -54,7 +54,6 @@ uint64_t sys_clone(void)
     return -1;
   }
   if (stackHighAddr == 0) {
-    printf("do fork");
     LOG_TRACE("do fork");
     int pid = fork();
     LOG_TRACE("do fork over");
@@ -190,7 +189,7 @@ uint64_t sys_sbrk(void)
 uint64_t sys_brk(void)
 {
   uint64_t addr;
-  LOG_DEBUG("sys_brk");
+  LOG_TRACE("sys_brk");
   if (argaddr(0, &addr) < 0) {
     return -1;
   }

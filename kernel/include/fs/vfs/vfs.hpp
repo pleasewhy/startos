@@ -63,7 +63,7 @@ public:
   static void Init();
 
   /**
-   * @brief 更新文件的偏移量，系统调用lleek调用它
+   * @brief 更新文件的偏移量，系统调用lseek调用它
    *
    * @param fp 文件指针
    * @param new_off 移动距离

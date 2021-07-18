@@ -11,7 +11,7 @@ extern "C" void memset(void *dst, int c, uint_t n)
   }
 }
 
-int memcmp(const void *v1, const void *v2, uint_t n)
+ int memcmp(const void *v1, const void *v2, uint_t n)
 {
   const uchar_t *s1, *s2;
 
@@ -47,7 +47,7 @@ void *memmove(void *dst, const void *src, uint_t n)
 }
 
 // memcpy exists to placate GCC.  Use memmove.
-void *memcpy(void *dst, const void *src, uint_t n)
+extern "C" void *memcpy(void *dst, const void *src, uint_t n)
 {
   return memmove(dst, src, n);
 }

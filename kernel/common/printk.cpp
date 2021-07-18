@@ -17,16 +17,18 @@ volatile int panicked = 0;
 
 extern "C" Console console;
 // lock to avoid interleaving concurrent printf's.
-static struct {
+static struct
+{
   SpinLock lock;
-  bool locking;
+  bool     locking;
 } pr;
 
 static char digits[] = "0123456789abcdef";
 
-static void printint(int xx, int base, int sign) {
-  char buf[16];
-  int i;
+static void printint(int xx, int base, int sign)
+{
+  char   buf[16];
+  int    i;
   uint_t x;
 
   if (sign && (sign = xx < 0))
@@ -39,33 +41,41 @@ static void printint(int xx, int base, int sign) {
     buf[i++] = digits[x % base];
   } while ((x /= base) != 0);
 
-  if (sign) buf[i++] = '-';
+  if (sign)
+    buf[i++] = '-';
 
-  while (--i >= 0) console.putc(buf[i]);
+  while (--i >= 0)
+    console.putc(buf[i]);
 }
 
-static void printptr(uint64_t x) {
+static void printptr(uint64_t x)
+{
   uint64_t i;
   console.putc('0');
   console.putc('x');
-  for (i = 0; i < (sizeof(uint64_t) * 2); i++, x <<= 4) console.putc(digits[x >> (sizeof(uint64_t) * 8 - 4)]);
+  for (i = 0; i < (sizeof(uint64_t) * 2); i++, x <<= 4)
+    console.putc(digits[x >> (sizeof(uint64_t) * 8 - 4)]);
 }
 
-void printstr(const char *s) {
+void printstr(const char *s)
+{
   for (int i = 0; s[i] != 0; i++) {
     console.putc(s[i]);
   }
 }
 // Print to the console. only understands %d, %x, %p, %s.
-void printf(const char *fmt, ...) {
-  va_list ap;
-  int i, c, locking;
+void printf(const char *fmt, ...)
+{
+  va_list     ap;
+  int         i, c, locking;
   const char *s;
 
   locking = pr.locking;
 
-  if (locking) pr.lock.lock();
-  if (fmt == 0) panic("null fmt");
+  if (locking)
+    pr.lock.lock();
+  if (fmt == 0)
+    panic("null fmt");
 
   va_start(ap, fmt);
   for (i = 0; (c = fmt[i] & 0xff) != 0; i++) {
@@ -74,7 +84,8 @@ void printf(const char *fmt, ...) {
       continue;
     }
     c = fmt[++i] & 0xff;
-    if (c == 0) break;
+    if (c == 0)
+      break;
     switch (c) {
       case 'd':
         printint(va_arg(ap, int), 10, 1);
@@ -86,8 +97,10 @@ void printf(const char *fmt, ...) {
         printptr(va_arg(ap, uint64_t));
         break;
       case 's':
-        if ((s = va_arg(ap, char *)) == 0) s = "(null)";
-        for (; *s; s++) console.putc(*s);
+        if ((s = va_arg(ap, char *)) == 0)
+          s = "(null)";
+        for (; *s; s++)
+          console.putc(*s);
         break;
       case '%':
         console.putc('%');
@@ -100,9 +113,11 @@ void printf(const char *fmt, ...) {
     }
   }
 
-  if (locking) pr.lock.unlock();
+  if (locking)
+    pr.lock.unlock();
 }
-void backtrace() {
+void backtrace()
+{
   uint64_t s0 = r_fp();
   uint64_t stack_top = PGROUNDUP(s0);
   uint64_t stack_bottom = PGROUNDDOWN(s0);
@@ -152,20 +167,26 @@ extern Cpu cpus[2];
 //   printf("epc: %p\n", tf->epc);
 // }
 
-static void contextdump(struct context *ctx) { printf("ra=%p sp=%p\n", ctx->ra, ctx->sp); }
+static void contextdump(struct context *ctx)
+{
+  printf("ra=%p sp=%p\n", ctx->ra, ctx->sp);
+}
 
-void cpudump(int cpuid) {
+void cpudump(int cpuid)
+{
   Cpu *cpu = cpus + cpuid;
   printf("cpu id=%d, task=%p\n", cpuid, cpu->task);
   contextdump(&cpu->context);
-  // if (cpu->task != reinterpret_cast<Task *>( -1)) trapframedump(cpu->task->trapframe);
+  // if (cpu->task != reinterpret_cast<Task *>( -1))
+  // trapframedump(cpu->task->trapframe);
 }
 
 extern int inkerneltrap;
-void panic(const char *s) {
+void       panic(const char *s)
+{
   pr.locking = false;
   backtrace();
-  printf("error cpuid=%d task=%p\n", Cpu::cpuid(), Cpu::mycpu()->task);
+  printf("taskid=%d\n", Cpu::mycpu()->task->pid);
   // cpudump(0);
   // cpudump(1);
   printf("panic: ");
@@ -176,7 +197,8 @@ void panic(const char *s) {
     ;
 }
 
-void printfinit(void) {
+void printfinit(void)
+{
   pr.lock.init("pr");
   pr.locking = true;
 }

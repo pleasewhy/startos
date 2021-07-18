@@ -43,7 +43,7 @@ int Pipe::read(uint64_t addr, int n) {
   }
   wakeup(&this->nwrite);
   this->lock_.unlock();
-  LOG_TRACE("pipe read complete i=%d write=%d read=%d", i, this->nwrite, this->nread);
+  // LOG_TRACE("pipe read complete i=%d write=%d read=%d", i, this->nwrite, this->nread);
   return i;
 }
 

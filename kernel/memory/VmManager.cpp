@@ -231,8 +231,10 @@ void userUnmap(pagetable_t pagetable,
     panic("uvmunmap: not aligned");
 
   for (a = va; a < va + npages * PGSIZE; a += PGSIZE) {
-    if ((pte = walk(pagetable, a, 0)) == 0)
-      panic("uvmunmap: walk");
+    if ((pte = walk(pagetable, a, 0)) == 0) {
+      // panic("uvmunmap: walk");
+      continue;
+    }
     if ((*pte & PTE_V) == 0) {
       // LOG_WARN("uvmunmap: not mapped");
       continue;
