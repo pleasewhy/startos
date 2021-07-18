@@ -9,8 +9,7 @@ union __sigval
 typedef union __sigval __sigval_t;
 
 typedef unsigned long int __sigset_t;
-typedef __sigset_t sigset_t;
-
+typedef __sigset_t        sigset_t;
 
 typedef struct
 {
@@ -26,12 +25,18 @@ typedef struct
   __sigval_t si_value;  /* Signal value.  */
 } siginfo_t;
 
+typedef void (*__sighandler_t) (int);
+
 struct sigaction
 {
-  void (*sa_handler)(int);
-  void (*sa_sigaction)(int, siginfo_t *, void *);
-  sigset_t sa_mask;
-  int      sa_flags;
-  void (*sa_restorer)(void);
+  /* Signal handler.  */
+  __sighandler_t sa_handler;
+
+  /* Additional set of signals to be blocked.  */
+  __sigset_t sa_mask;
+
+  /* Special flags.  */
+  int sa_flags;
+  void     (*sa_restorer)(void);
 };
 #endif
