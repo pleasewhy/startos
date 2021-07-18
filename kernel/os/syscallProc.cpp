@@ -357,21 +357,16 @@ uint64_t sys_rt_sigaction(void)
     either_copyin(true, &myTask()->sig_table[signum], act_addr,
                   sizeof(act_tmp));
     auto p = &myTask()->sig_table[signum];
-    printf("%p %p %p %p\n", p->sa_handler, p->sa_mask, p->sa_flags,
-           p->sa_restorer);
+    printf("pid=%d task=%d %p %p %p %p\n", myTask()->pid, p->sa_handler,
+           p->sa_mask, p->sa_flags, p->sa_restorer);
   }
 
   if (old_act_addr != 0) {
     auto p = &myTask()->sig_table[signum];
-    if (p->sa_mask == 0 && p->sa_handler == 0) {
-      p->sa_handler = (__sighandler_t)0;
-      p->sa_flags = 0;
-      p->sa_mask = 0;
-    }
     either_copyout(true, old_act_addr, &myTask()->sig_table[signum],
                    sizeof(act_tmp));
-    printf("old=handler=%p mask=%p flags%p rest=%p\n", p->sa_handler,
-           p->sa_mask, p->sa_flags, p->sa_restorer);
+    printf("pid=%d old=handler=%p mask=%p flags%p rest=%p\n", myTask()->pid,
+           p->sa_handler, p->sa_mask, p->sa_flags, p->sa_restorer);
   }
 
   LOG_DEBUG("signum=%d, act=%p old act=%p\n", signum, act_addr, old_act_addr);
