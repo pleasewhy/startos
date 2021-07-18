@@ -142,7 +142,6 @@ int exec(char *path, char **argv)
   if ((pagetable = taskPagetable(task)) == 0) {
     return 0;
   }
-  
   if ((ip = vfs::VfsManager::namei(nullptr, path)) == nullptr) {
     return 0;
   }
