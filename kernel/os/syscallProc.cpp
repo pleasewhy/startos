@@ -364,9 +364,9 @@ uint64_t sys_rt_sigaction(void)
   if (old_act_addr != 0) {
     auto p = &myTask()->sig_table[signum];
     if (p->sa_mask == 0 && p->sa_handler == 0) {
-      p->sa_handler = (__sighandler_t)1;
+      p->sa_handler = (__sighandler_t)0;
       p->sa_flags = 0;
-      p->sa_mask = ~SIGRTMIN;
+      p->sa_mask = 0;
     }
     either_copyout(true, old_act_addr, &myTask()->sig_table[signum],
                    sizeof(act_tmp));
