@@ -63,7 +63,9 @@ uint64_t sys_unlinkat()
     LOG_TRACE("error");
     return -1;
   }
-  return vfs::rm(fd, filepath);
+  panic("unlink");
+  return 0;
+  // return vfs::VfsManager::
 }
 
 uint64_t sys_openat(void)
