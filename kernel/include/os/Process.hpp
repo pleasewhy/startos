@@ -6,6 +6,7 @@
 #include "riscv.hpp"
 #include "types.hpp"
 #include "memory/mmap.hpp"
+#include "signal.h"
 
 // 内核切换进程需要保存的寄存器
 struct context
@@ -102,13 +103,14 @@ public:
   /**
    * @brief 修改该进程地址空间中的某个地址区间
    * 的权限
-   * 
-   * @return int 
+   *
+   * @return int
    */
   int ModifyMemProt(uint64_t va, int len, int prot);
 
 public:
-  SpinLock          lock;       // 进程锁
+  SpinLock          lock;  // 进程锁
+  struct sigaction  sig_table[20];
   enum procstate    state;      // 进程的状态
   Task *            parent;     // 父进程
   void *            chan;       // 如果非空，将在chan睡眠

@@ -345,19 +345,20 @@ uint64_t sys_clock_nanosleep(void)
 
 extern struct sigaction act_tmp;
 
-uint64_t         sys_rt_sigaction(void)
+uint64_t sys_rt_sigaction(void)
 {
-  int              signum;
-  uint64_t         act_addr, old_act_addr;
+  int      signum;
+  uint64_t act_addr, old_act_addr;
   // struct sigaction act;
   if (argint(0, &signum) < 0 || argaddr(1, &act_addr) < 0 ||
       argaddr(2, &old_act_addr) < 0)
     return -1;
   if (act_addr != 0)
-    either_copyin(true, &act_tmp, act_addr, sizeof(act_tmp));
+    either_copyin(true, &myTask()->sig_table[signum], act_addr,
+                  sizeof(act_tmp));
 
-  if(old_act_addr != 0)
-    either_copyout(true, old_act_addr, &act_tmp, sizeof(act_tmp));
+  if (old_act_addr != 0)
+    either_copyout(true, old_act_addr, &myTask()->sig_table[signum], sizeof(act_tmp));
   LOG_DEBUG("signum=%d, act=%p old act=%p\n", signum, act_addr, old_act_addr);
   LOG_TRACE("rt_sigaction");
   return 0;
