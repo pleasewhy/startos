@@ -54,7 +54,7 @@ uint64_t sys_clone(void)
     return -1;
   }
   auto trapframe = myTask()->trapframe;
-  printf("%p %p %p %p", trapframe->a0, trapframe->a1, trapframe->a2,
+  printf("%p %p %p %p\n", trapframe->a0, trapframe->a1, trapframe->a2,
          trapframe->a3);
   if (stackHighAddr == 0) {
     printf("do fork");
