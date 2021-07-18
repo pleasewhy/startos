@@ -347,7 +347,7 @@ uint64_t sys_rt_sigaction(void)
 {
   int              signum;
   uint64_t         act_addr, old_act_addr;
-  struct sigaction act;
+  // struct sigaction act;
   if (argint(0, &signum) < 0 || argaddr(1, &act_addr) < 0 ||
       argaddr(2, &old_act_addr) < 0)
     return -1;
