@@ -80,7 +80,7 @@ Disassembly of section .text:
   c0:	00000097          	auipc	ra,0x0
   c4:	08a080e7          	jalr	138(ra) # 14a <dup>
   c8:	00000797          	auipc	a5,0x0
-  cc:	7c878793          	addi	a5,a5,1992 # 890 <malloc+0xfc>
+  cc:	7b078793          	addi	a5,a5,1968 # 878 <malloc+0xe4>
   d0:	e43e                	sd	a5,8(sp)
   d2:	00001797          	auipc	a5,0x1
   d6:	81678793          	addi	a5,a5,-2026 # 8e8 <malloc+0x154>
