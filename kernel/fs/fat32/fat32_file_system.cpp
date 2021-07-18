@@ -579,7 +579,7 @@ namespace fat32 {
         off += sizeof(entry);
       }
       printf("name=%s\n", tmp_name);
-      if (strncmp(name, tmp_name, name_len) != 0) {
+      if (strncasecmp(name, tmp_name, strlen(name)) != 0) {
         continue;
       }
       LOG_TRACE("found sz=%d\n", entry.sfn.file_size);
