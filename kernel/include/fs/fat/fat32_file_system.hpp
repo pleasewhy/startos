@@ -22,6 +22,7 @@ namespace fat32 {
     uint8_t               fat_num_;
     uint_t                sectors_per_cluster;
     uint16_t              reserve_sectors_;
+    uint32_t              root_directory_cluster_start;
     struct MsdosInodeInfo root_;
   };
 

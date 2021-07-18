@@ -61,7 +61,6 @@ namespace fat32 {
     printf("\n");
   }
 
-
   Fat32FileSystem::Fat32FileSystem(int dev) : dev_(dev)
   {
     // 创建一个长度为32=2^5的hash表
@@ -113,7 +112,7 @@ namespace fat32 {
     info_.bytes_per_sector_ = fat_bpb_.bytes_per_sector;
 
     // 设置根目录信息
-
+    info_.root_directory_cluster_start = fat_bpb_.root_directory_cluster_start;
     info_.root_.i_start = fat_bpb_.root_directory_cluster_start;
     info_.root_.i_pos =
         FirstSectorOfCluster(info_.root_.i_start) * fat_bpb_.bytes_per_sector;
@@ -810,7 +809,9 @@ namespace fat32 {
     MsdosInodeInfo *msdos_info = MSDOS_I(ip);
 
     uint32_t cur = msdos_info->i_start;
-    size_t   i = 0;
+    if (ip == &info_.root_.vfs_inode)
+      cur = info_.root_directory_cluster_start;
+    size_t i = 0;
     if (logi_cluster >= msdos_info->i_logi) {
       cur = msdos_info->i_clus;
       i = msdos_info->i_logi;
