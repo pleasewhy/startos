@@ -353,12 +353,22 @@ uint64_t sys_rt_sigaction(void)
   if (argint(0, &signum) < 0 || argaddr(1, &act_addr) < 0 ||
       argaddr(2, &old_act_addr) < 0)
     return -1;
-  if (act_addr != 0)
+  if (act_addr != 0) {
     either_copyin(true, &myTask()->sig_table[signum], act_addr,
                   sizeof(act_tmp));
+    auto p = &myTask()->sig_table[signum];
+    printf("%p %p %p %p\n", p->sa_handler, p->sa_mask, p->sa_flags,
+           p->sa_restorer);
+  }
 
-  if (old_act_addr != 0)
-    either_copyout(true, old_act_addr, &myTask()->sig_table[signum], sizeof(act_tmp));
+  if (old_act_addr != 0) {
+    either_copyout(true, old_act_addr, &myTask()->sig_table[signum],
+                   sizeof(act_tmp));
+    auto p = &myTask()->sig_table[signum];
+    printf("%p %p %p %p\n", p->sa_handler, p->sa_mask, p->sa_flags,
+           p->sa_restorer);
+  }
+
   LOG_DEBUG("signum=%d, act=%p old act=%p\n", signum, act_addr, old_act_addr);
   LOG_TRACE("rt_sigaction");
   return 0;
