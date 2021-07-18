@@ -18,6 +18,7 @@
 #include "utsname.h"
 #include "memory/MemAllocator.hpp"
 #include "sysinfo.h"
+#include "signal.h"
 
 extern MemAllocator memAllocator;
 
@@ -344,12 +345,27 @@ uint64_t sys_clock_nanosleep(void)
 
 uint64_t sys_rt_sigaction(void)
 {
+  int              signum;
+  uint64_t         act_addr, old_act_addr;
+  struct sigaction act;
+  if (argint(0, &signum) < 0 || argaddr(1, &act_addr) < 0 ||
+      argaddr(2, &old_act_addr) < 0)
+    return -1;
+  LOG_DEBUG("signum=%d, act=%p old act=%p\n", signum, act_addr, old_act_addr);
   LOG_TRACE("rt_sigaction");
   return 0;
 }
 
 uint64_t sys_rt_sigprocmask(void)
 {
+  int      how, sigsetsize;
+  uint64_t set_addr, old_set_addr;
+  if (argint(0, &how) < 0 || argaddr(1, &set_addr) < 0)
+    return -1;
+  if (argaddr(2, &old_set_addr) < 0 || argint(3, &sigsetsize))
+    return -1;
+  LOG_DEBUG("how=%d set=%p old set=%p sigsetsz=%d", how, set_addr, old_set_addr,
+            sigsetsize);
   LOG_TRACE("rt_sigprocmask");
   return 0;
 }
