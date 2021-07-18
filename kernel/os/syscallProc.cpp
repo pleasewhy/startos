@@ -53,8 +53,11 @@ uint64_t sys_clone(void)
   if (argint(0, &flags) < 0 || argaddr(1, &stackHighAddr) < 0) {
     return -1;
   }
+  auto trapframe = myTask()->trapframe;
+  printf("%p %p %p %p", trapframe->a0, trapframe->a1, trapframe->a2,
+         trapframe->a3);
   if (stackHighAddr == 0) {
-    LOG_TRACE("do fork");
+    printf("do fork");
     int pid = fork();
     LOG_TRACE("do fork over");
     return pid;
