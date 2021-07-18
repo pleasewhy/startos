@@ -20,16 +20,26 @@
 #include "os/Timer.hpp"
 #include "os/trap.hpp"
 #include "types.hpp"
+#include "signal.h"
 
 Console             console;
 Cpu                 cpus[2];
 MemAllocator        memAllocator;  // 用于分配页
 mem::BuddyAllocator buddy_alloc_;  // 用于通用内存内配
 BufferLayer         buffer_layer;
+struct sigaction    act_tmp;
 
 static inline void inithartid(unsigned long hartid)
 {
   asm volatile("mv tp, %0" : : "r"(hartid & 0x1));
+}
+
+void init_sig()
+{
+  act_tmp.sa_handler = 0;
+  act_tmp.sa_flags = 0;
+  act_tmp.sa_mask = 0;
+  act_tmp.sa_restorer = 0;
 }
 
 volatile static int started = 0;
@@ -75,10 +85,12 @@ extern "C" void main(unsigned long hartid, unsigned long dtb_pa)
     timer::init();
     buffer_layer.init();  // 初始化缓存区
     // InitVmaTable();       // 初始化全部vma
-    trapinithart();       // 初始化trap
-    syscall_init();       // 初始化系统调用
-    plic::init();         // 初始化plic
+    trapinithart();  // 初始化trap
+    syscall_init();  // 初始化系统调用
+    plic::init();    // 初始化plic
     plic::initHart();
+
+    init_sig();
 
     dev::Init();  // 初始化已有设备
 
@@ -102,8 +114,7 @@ extern "C" void main(unsigned long hartid, unsigned long dtb_pa)
     trapinithart();    // 初始化trap
     plic::initHart();  // ask PLIC for device interrupts
     printf("hart %d finish init\n", r_tp());
-    while (1) {
-    }
+    while (1) {}
   }
   // busybox sh busybox_testcode.sh
   scheduler();

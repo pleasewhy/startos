@@ -343,7 +343,7 @@ uint64_t sys_clock_nanosleep(void)
   return 1;
 }
 
-struct sigaction act_tmp;
+extern struct sigaction act_tmp;
 
 uint64_t         sys_rt_sigaction(void)
 {
