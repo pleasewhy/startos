@@ -578,7 +578,7 @@ namespace fat32 {
         // LOG_TRACE("shortname=%s", entry.sfn.name);
         off += sizeof(entry);
       }
-      printf("name=%s\n", tmp_name);
+      // printf("name=%s\n", tmp_name);
       if (strncasecmp(name, tmp_name, strlen(name)) != 0) {
         continue;
       }
