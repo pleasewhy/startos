@@ -38,9 +38,8 @@ wc test.txt\n\
 more test.txt\n";
 
 const char testcode[] = "#!/bin/bash\n\
-echo \"hello world\"\n";
-
-/* busybox cat /cmds.txt | while read line\n\
+echo \"hello world\"\n\
+./busybox cat /cmds.txt | while read line\n\
 // do\n\
 //   echo $line\n\
 // 	eval \"./busybox $line\"\n\
@@ -51,7 +50,7 @@ echo \"hello world\"\n";
 // 		echo \"testcase busybox $line success\"\n\
 // 	fi\n\
 // done\n\
-// echo \"TEST END\" >> $RST";*/
+// echo \"TEST END\" >> $RST";
 
 void CreateCmdTxt(struct inode *dp)
 {
