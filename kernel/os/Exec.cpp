@@ -124,12 +124,12 @@ uint64_t CreateUserStack(struct BinProgram *bin_program, struct elfhdr *elf)
 
 int exec(char *path, char **argv)
 {
-  // printf("exec =%s\n", path);
+  printf("exec =%s\n", path);
   LOG_TRACE("exec path=%s", path);
-  // for (int a = 0; argv[a] != 0; a++) {
-    // char *s = argv[a];
-    // LOG_TRACE("argv=%s", s);
-  // }
+  for (int a = 0; argv[a] != 0; a++) {
+    char *s = argv[a];
+    printf("argv=%s\n", s);
+  }
   int            i, off, oldsz;
   uint64_t       sz = 0, stackbase, sp, a0 = 0;
   uint64_t       ustack[MAXARG + 1];  // 最后一项为0，用于标记结束
