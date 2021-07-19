@@ -100,6 +100,8 @@ void usertrap(void)
   else if ((which_dev = device_intr()) != 0) {
     // ok
   }
+  else if (r_scause() == 3) {
+  }
   else {
     printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), task->pid);
     printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());
