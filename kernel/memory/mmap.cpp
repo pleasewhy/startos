@@ -9,7 +9,7 @@
 
 extern MemAllocator memAllocator;
 
-#define NVMA 30
+#define NVMA 60
 struct vma vma_table_[NVMA];
 
 /**
