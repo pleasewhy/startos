@@ -87,7 +87,6 @@ void test(char *name, char *argv[])
   }
 }
 
-
 void test_file_operation();
 void main()
 {
@@ -150,7 +149,11 @@ void main()
   test("busybox", fecho_args);
   test("busybox", touch_args);
   int fd = open("test.txt", O_RDWR);
-  write(fd, "hello world\n", 13);
+  if (fd < 0)
+    kernel_panic();
+  int n = write(fd, "hello world\n", 13);
+  if (n < 0)
+    kernel_panic();
   close(fd);
   test("busybox", cat_args);
   test("busybox", cut_args);
