@@ -60,5 +60,6 @@
 #define SYS_mmap          222
 #define SYS_mprotect      226
 #define SYS_wait4         260
+#define SYS_prlimit64     261
 #define SYS_kernel_panic  399
 #endif

@@ -57,15 +57,13 @@ uint64_t sys_unlinkat()
   int  fd;
   char filepath[MAXPATH];
   int  flags;
-  LOG_TRACE("sys_unlinkat");
   if (argint(0, &fd) < 0 || argstr(1, filepath, MAXPATH) < 0 ||
       argint(2, &flags) < 0) {
-    LOG_TRACE("error");
     return -1;
   }
-  panic("unlink");
+  LOG_TRACE("sys_unlinkat");
+  myTask()->cwd->file_system->Unlink(myTask()->cwd, filepath);
   return 0;
-  // return vfs::VfsManager::
 }
 
 uint64_t sys_openat(void)
@@ -471,42 +469,37 @@ uint64_t sys_mmap(void)
 
 uint64_t sys_munmap(void)
 {
-  LOG_TRACE("mummap");
-  // Task *      task = myTask();
-  // uint64_t    addr;
-  // struct vma *vma = 0;
-  // int         index = 0;
-  // int         sz;
-  // if (task->vma == 0)
-  //   return -1;
+  // LOG_TRACE("mummap");
+  Task *      task = myTask();
+  uint64_t    addr;
+  struct vma *vma = 0;
+  int         index = 0;
+  int         sz;
+  if (task->vma == 0)
+    return -1;
 
-  // if (argaddr(0, &addr) < 0)
-  //   return -1;
-  // if (argint(1, &sz) < 0)
-  //   return -1;
+  if (argaddr(0, &addr) < 0)
+    return -1;
+  if (argint(1, &sz) < 0)
+    return -1;
 
-  // for (int i = 0; i < NOMMAPFILE; i++) {
-  //   if (task->vma[i] != 0 && addr >= task->vma[i]->addr &&
-  //       addr < task->vma[i]->addr + task->vma[i]->length) {
-  //     vma = task->vma[i];
-  //     index = i;
-  //     break;
-  //   }
-  // }
-  // if (vma == 0)
-  //   return -1;
-  // if (vma->flag & MAP_SHARED) {
-  //   vfs::rewind(vma->f);
-  //   vfs::write(vma->f, true, (const char *)(vma->addr), sz, 0);
-  // }
-  // userUnmap(task->pagetable, addr, PGROUNDUP(sz) / PGSIZE, 0);
-  // vma->length -= sz;
-  // if (vma->length == 0) {
-  //   vfs::VfsManager::close(vma->f);
-  //   vma->free();
-  //   task->vma[index] = 0;
-  // }
-  // LOG_TRACE("mummap finish");
+  for (int i = 0; i < NOMMAPFILE; i++) {
+    if (task->vma[i] != 0 && addr >= task->vma[i]->addr &&
+        addr < task->vma[i]->addr + task->vma[i]->length) {
+      vma = task->vma[i];
+      index = i;
+      break;
+    }
+  }
+
+  if (vma->ip != nullptr)
+    return -1;
+  printf("free vma\n");
+  userUnmap(task->pagetable, vma->addr, PGROUNDUP(vma->length) / PGSIZE, 1);
+  // vfs::VfsManager::close(vma->f);
+  vma->free();
+  task->vma[index] = 0;
+  LOG_TRACE("mummap finish");
   return 0;
 }
 
@@ -692,4 +685,21 @@ uint64_t sys_lseek()
     return -1;
   fp->offset = now_off;
   return now_off;
+}
+
+uint64_t sys_prlimit64(void)
+{
+  int           pid, resource;
+  uint64_t      new_limit, old_limit;
+  struct rlimit limit;
+  limit.rlim_cur = 1000;
+  limit.rlim_max = 10000;
+  if (argint(0, &pid) < 0 || argint(1, &resource) < 0)
+    return -1;
+  if (argaddr(2, &new_limit) < 0 || argaddr(3, &old_limit) < 0)
+    return -1;
+  if (old_limit != 0)
+    return either_copyout(myTask()->pagetable, old_limit, &limit,
+                          sizeof(limit));
+  return 0;
 }

@@ -109,7 +109,7 @@ void main()
   char *false_args[] = {"false", 0};
   char *which_args[] = {"which", "ls", 0};
   char *uname_args[] = {"uname", 0};
-  // uptime
+  char *uptime_args[] = {"uptime", 0};
   char *printf_args[] = {"abc\\n", 0};
   // ps
   char *pwd_args[] = {"pwd", 0};
@@ -132,6 +132,14 @@ void main()
   char *wc_args[] = {"wc", "test.txt", 0};
   char *cond_args[] = {"[", "-f", "test.txt", "]", 0};
   char *more_args[] = {"more", "test.txt", 0};
+  char *rm_args[] = {"rm", "test.txt", 0};
+  char *mkdir_args[] = {"mkdir", "test_dir", 0};
+  char *mv_args[] = {"mv", "test_dir", "test", 0};
+  char *rmdir_args[] = {"rmdir", "test", 0};
+  char *grep_args[] = {"grep", "hello", "busybox_cmd.txt", 0};
+  char *cp_args[] = {"cp", "busybox_cmd.txt", "busybox_cmd.bak", 0};
+  // rm busybox_cmd.bak
+  char *find_args[] = {"find", "-name", "busybox_cmd.txt", 0};
 
   test("busybox", echo_args);
   test("busybox", ash_args);
@@ -146,6 +154,7 @@ void main()
   test("busybox", false_args);
   test("busybox", which_args);
   test("busybox", uname_args);
+  test("busybox", uptime_args);
   test("busybox", printf_args);
   test("busybox", pwd_args);
   test("busybox", kill_args);
@@ -174,6 +183,13 @@ void main()
   test("busybox", wc_args);
   test("busybox", cond_args);
   test("busybox", more_args);
+  test("busybox", rm_args);
+  test("busybox", mkdir_args);
+  // test("busybox", mv_args);
+  test("busybox", rmdir_args);
+  test("busybox", grep_args);
+  // test("busybox", cp_args);
+  test("busybox", find_args);
 
   // kernel_panic();
   while (1) {}

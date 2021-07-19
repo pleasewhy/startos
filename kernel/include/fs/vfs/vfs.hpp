@@ -171,6 +171,8 @@ public:
 
   static void DebugInfo();
 
+  static int unlinkat(struct file *dir, const char *name);
+
 private:
   /**
    * @brief 挂载"/"目录，该函数只会被VfsManager::Init()调用

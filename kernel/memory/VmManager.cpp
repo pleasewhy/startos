@@ -276,13 +276,19 @@ void UserVmInit(pagetable_t pagetable, uchar_t *src, uint_t sz)
 {
   char *mem;
 
-  if (sz >= PGSIZE)
-    panic("inituvm: more than a page");
+  // if (sz >= PGSIZE)
+  //   panic("inituvm: more than a page");
   mem = static_cast<char *>(memAllocator.alloc());
   memset(mem, 0, PGSIZE);
   mappages(pagetable, 0, PGSIZE, (uint64_t)mem,
            PTE_W | PTE_R | PTE_X | PTE_U | PTE_V);
   memmove(mem, src, sz);
+
+  mem = static_cast<char *>(memAllocator.alloc());
+  memset(mem, 0, PGSIZE);
+  mappages(pagetable, 4096, PGSIZE, (uint64_t)mem,
+           PTE_W | PTE_R | PTE_X | PTE_U | PTE_V);
+  memmove(mem, src + 4096, sz - 4096);
 }
 
 int copyin(pagetable_t pagetable, char *dst, uint64_t vsrc, uint64_t len)

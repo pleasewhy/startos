@@ -140,6 +140,11 @@ VfsManager::openat(struct file *dir, char *filepath, size_t flags, mode_t mode)
   return fp;
 }
 
+int VfsManager::unlinkat(struct file *dir, const char *name)
+{
+  return dir->inode->file_system->Unlink(dir->inode, name);
+}
+
 int VfsManager::read(struct file *fp, char *buf, int n, bool user)
 {
   if (fp == nullptr) {

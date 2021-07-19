@@ -66,7 +66,7 @@ fs.img: $(UPROGS)
 	# @if [ ! -d "$(dst)/dynamic" ]; then sudo mkdir $(dst)/dynamic; fi
 
 	sudo cp  oscmp/static/busybox $(dst)/busybox
-	# sudo cp  oscmp/scripts/busybox_cmd.txt  $(dst)/busybox_cmd.txt
+	sudo cp  oscmp/scripts/busybox_cmd.txt  $(dst)/busybox_cmd.txt
 	sudo cp  oscmp/scripts/busybox_testcode.sh  $(dst)/busybox_testcode.sh
 	# sudo cp  oscmp/static/busybox $(dst)/static/busybox
 	@for file in $$( ls _* ); do \

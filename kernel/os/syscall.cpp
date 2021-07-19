@@ -174,6 +174,7 @@ extern uint64_t sys_ppoll();
 extern uint64_t sys_sendfile();
 extern uint64_t sys_set_tid_address();
 extern uint64_t sys_mprotect();
+extern uint64_t sys_prlimit64();
 
 static uint64_t (*syscalls[400])(void);
 
@@ -240,6 +241,7 @@ void syscall_init()
   syscalls[SYS_ppoll] = sys_ppoll;
   syscalls[SYS_set_tid_address] = sys_set_tid_address;
   syscalls[SYS_mprotect] = sys_mprotect;
+  syscalls[SYS_prlimit64] = sys_prlimit64;
 }
 
 void syscall(void)

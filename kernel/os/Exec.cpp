@@ -42,10 +42,10 @@ static int LazyLoadSeg(struct Task *task, struct inode *ip, struct proghdr *ph)
 {
   struct vma *vma = allocVma();
   // LOG_TRACE("\nfilesz=%d, vaddr=%d mmsize=%d\n", ph->filesz, ph->vaddr);
-  // unsigned long size = ph->filesz + ELF_PAGEOFFSET(ph->vaddr);
-  // unsigned long off = ph->off - ELF_PAGEOFFSET(ph->vaddr);
+  unsigned long size = ph->filesz + ELF_PAGEOFFSET(ph->vaddr);
+  unsigned long off = ph->off - ELF_PAGEOFFSET(ph->vaddr);
 
-  // uint64_t addr = ELF_PAGESTART(ph->vaddr);
+  uint64_t addr = ELF_PAGESTART(ph->vaddr);
   // size = ELF_PAGEALIGN(size);
   LOG_TRACE("vaddr=%p paddr=%p filesz=%d memsz=%d align=%d off=%p", ph->vaddr,
             ph->paddr, ph->filesz, ph->memsz, ph->align, ph->off);
@@ -59,12 +59,12 @@ static int LazyLoadSeg(struct Task *task, struct inode *ip, struct proghdr *ph)
   if (ph->flags & ELF_PROG_FLAG_WRITE)
     vma->prot |= PROT_WRITE;
 
-  vma->offset = ph->off;
+  vma->offset = off;
   // vma->offset = off;
   vma->type = vma->PROG;
-  vma->length = ph->filesz;
+  vma->length = size;
   // vma->length = size;
-  vma->addr = ph->vaddr;
+  vma->addr = addr;
   // vma->addr = addr;
   for (int i = 0; i < NOMMAPFILE; i++) {
     if (task->vma[i] == 0) {
