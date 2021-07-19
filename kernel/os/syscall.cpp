@@ -249,6 +249,7 @@ void syscall(void)
       syscalls[num]) {
     // printf("syscall=%d\n", num);
     task->trapframe->a0 = syscalls[num]();
+    // printf("syscall=%d ret=%d\n", num, task->trapframe->a0);
   }
   else {
     printf("\n\n");

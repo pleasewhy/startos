@@ -166,7 +166,7 @@ uint64_t sys_read(void)
     return -1;
   struct file *fp = getFileByfd(fd);
   n = vfs::VfsManager::read(fp, reinterpret_cast<char *>(uaddr), n, true);
-  LOG_TRACE("fd=%d nread=%d", fd, n);
+  // printf("fd=%d nread=%d\n", fd, n);
   return n;
 }
 
@@ -248,7 +248,6 @@ uint64_t sys_pipe(void)
 {
   uint64_t fdarray;
   int      fds[2];
-  LOG_TRACE("pipe");
   Task *task = myTask();
   if (argaddr(0, &fdarray) < 0) {
     return -1;
@@ -262,6 +261,7 @@ uint64_t sys_pipe(void)
     vfs::VfsManager::close(getFileByfd(fds[1]));
     return -1;
   }
+  LOG_TRACE("fd[0]=%d fd[1]=%d", fds[0], fds[1]);
   return 0;
 }
 
@@ -401,7 +401,7 @@ uint64_t sys_mmap(void)
     }
   }
   LOG_TRACE("vmasz=%d", vmasz);
-  a->addr = PGROUNDDOWN(MAXVA - PGSIZE * 5 - vmasz - PGROUNDUP(length + 10));
+  a->addr = PGROUNDDOWN(MAXVA - PGSIZE * 1024 - vmasz - PGROUNDUP(length));
   a->prot = prot | PROT_READ | PROT_WRITE | PROT_EXEC;
   a->flag = flags;
 
@@ -501,6 +501,10 @@ uint64_t sys_fcntl(void)
     return -1;
   }
   LOG_TRACE("fd=%d cmd=%d", fd, cmd);
+  if (cmd == 2 || cmd == 4) {
+    return 0;
+  }
+
   // if (cmd == F_DUPFD || cmd == F_DUPFD_CLOEXEC) {
   LOG_TRACE("F_DUPFD, F_DUPFD_CLOEXEC");
   int new_fd;
@@ -522,6 +526,7 @@ uint64_t sys_ppoll()
   int           nfd;
   uint64_t      fds_addr;
 
+  LOG_TRACE("sys_ppoll");
   if (argaddr(0, &fds_addr) < 0 || argint(1, &nfd) < 0) {
     return -1;
   }

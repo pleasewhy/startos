@@ -1,25 +1,11 @@
 #!/bin/bash
-
-RST=result.txt
-if [ -f $RST ];then
-	busybox rm $RST
-fi
-busybox touch $RST
-echo "start test"
-echo "If the CMD runs incorrectly, return value will put in $RST" >> $RST
-# busybox cat $RST
-busybox echo -e "Else nothing will put in $RST\n" >> $RST
-busybox echo "TEST START" >> $RST
-
-busybox cat ./cmds.txt | while read line
+for line in `./busybox_cmd.txt`
 do
 	eval "busybox $line"
 	RTN=$?
-	if [[ $RTN -ne 0 && $line != "false" ]] ;then
+	if [[ $RTN -ne 0 && $line != "false" ]];then
 		echo "testcase busybox $line fail"
 	else
 		echo "testcase busybox $line success"
 	fi
 done
-
-echo "TEST END" >> $RST

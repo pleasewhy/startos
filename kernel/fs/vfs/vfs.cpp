@@ -12,7 +12,7 @@ SleepLock     VfsManager::vfs_sleeplock_;
 MountPoint    VfsManager::mount_points_[kMountPointNumber];
 struct inode *VfsManager::root_;
 
-const char cmds[] = "echo \"#### file opration test\"\n\
+const char cmds[] = "echo \"####fileoprationtest\"\n\
 touch test.txt\n\
 echo \"hello world\" > test.txt\n\
 cat test.txt\n\
@@ -38,19 +38,19 @@ wc test.txt\n\
 more test.txt\n";
 
 const char testcode[] = "#!/bin/bash\n\
-echo \"hello world\"\n\
-busybox cat /cmds.txt | while read line\n\
+busybox echo \"hello world\" >> aa.txt\n\
+busybox cat aa.txt\n\
+while read line\n\
 do\n\
-  echo $line\n\
-	eval \"./busybox $line\"\n\
-	RTN=$?\n\
-	if [[ $RTN -ne 0 && $line != \"false\" ]] ;then\n\
-		echo \"testcase busybox $line fail\"\n\
-	else\n\
-		echo \"testcase busybox $line success\"\n\
-	fi\n\
-done\n\
-echo \"TEST END\" >> $RST";
+ echo $line\n\
+ eval \"./busybox $line\"\n\
+ RTN=$?\n\
+ if [[ $RTN -ne 0 && $line != \"false\" ]]; then\n\
+  echo \"testcase busybox $line fail\"\n\
+ else\n\
+  echo \"testcase busybox $line success\"\n\
+ fi\n\
+done < cmds.txt\n";
 
 void CreateCmdTxt(struct inode *dp)
 {
@@ -60,10 +60,11 @@ void CreateCmdTxt(struct inode *dp)
   struct inode *ip = dp->file_system->Lookup(dp, "cmds.txt");
   int           n = ip->write(cmds, 0, sizeof(cmds), false);
   printf("write=%d\n", n);
-
   dp->file_system->Create(dp, "testcode.sh", 0);
   ip = dp->file_system->Lookup(dp, "testcode.sh");
   n = ip->write(testcode, 0, sizeof(testcode), false);
+  printf("%s\n", testcode);
+  // panic("aa");
   printf("write=%d\n", n);
   // ip->free();
   printf("leave");

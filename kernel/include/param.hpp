@@ -5,7 +5,7 @@
 #define NTASK        50  // maximum number of processes
 #define NCPU          2  // maximum number of CPUs
 #define NOFILE       120 // open files per process
-#define NOMMAPFILE   16  // memory map files per process
+#define NOMMAPFILE   30  // memory map files per process
 #define NFILE       100  // open files per system
 #define NINODE       50  // maximum number of active i-nodes
 #define NDEV         10  // maximum major device number
@@ -16,6 +16,6 @@
 #define NBUF         (MAXOPBLOCKS*3)  // size of disk block cache
 #define FSSIZE       1000  // size of file system in blocks
 #define MAXPATH      64   // maximum file path name
-#define INTERVAL     50 // ms.  timer interrupt interval
+#define INTERVAL     100 // ms.  timer interrupt interval
 
 #endif
