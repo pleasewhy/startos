@@ -165,7 +165,7 @@ uint64_t sys_read(void)
   if (argint(0, &fd) < 0 || argint(2, &n) < 0 || argaddr(1, &uaddr) < 0)
     return -1;
   struct file *fp = getFileByfd(fd);
-  int n = vfs::VfsManager::read(fp, reinterpret_cast<char *>(uaddr), n, true);
+  n = vfs::VfsManager::read(fp, reinterpret_cast<char *>(uaddr), n, true);
   LOG_TRACE("fd=%d nread=%d", fd, n);
   return n;
 }
