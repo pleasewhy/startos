@@ -32,12 +32,12 @@ bool vma::LoadIfContain(pagetable_t pagetable, uint64_t va)
   }
 
   if (va < this->addr) {  // [...bss...|...load...]
-    panic("load if contain");
+    // panic("load if contain");
     va = this->addr;
   }
 
   if (va >= this->addr + this->length) {
-    panic("load if contain");
+    // panic("load if contain");
     va = this->addr + this->length - 1;
   }
 
