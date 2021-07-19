@@ -118,37 +118,37 @@ void main()
   char *ls_args[] = {"ls", 0};
   char *sleep_args[] = {"sleep", 0};
 
-  // test("busybox", echo_args);
-  // test("busybox", ash_args);
-  // test("busybox", sh_args);
-  // test("busybox", basename_args);
-  // test("busybox", cal_args);
-  // test("busybox", clear_args);
-  // test("busybox", date_args);
-  // test("busybox", dirname_args);
-  // test("busybox", expr_args);
-  // test("busybox", true_args);
-  // test("busybox", false_args);
-  // test("busybox", which_args);
-  // test("busybox", uname_args);
-  // test("busybox", printf_args);
-  // test("busybox", pwd_args);
-  // test("busybox", kill_args);
-  // test("busybox", ls_args);
-  // test("busybox", sleep_args);
-  // test("busybox", free_args);
+  test("busybox", echo_args);
+  test("busybox", ash_args);
+  test("busybox", sh_args);
+  test("busybox", basename_args);
+  test("busybox", cal_args);
+  test("busybox", clear_args);
+  test("busybox", date_args);
+  test("busybox", dirname_args);
+  test("busybox", expr_args);
+  test("busybox", true_args);
+  test("busybox", false_args);
+  test("busybox", which_args);
+  test("busybox", uname_args);
+  test("busybox", printf_args);
+  test("busybox", pwd_args);
+  test("busybox", kill_args);
+  test("busybox", ls_args);
+  test("busybox", sleep_args);
+  test("busybox", free_args);
 
-  char *shell_args[] = {"ash", "busybox_testcode.sh", 0};
-  int   pid = fork();
-  if (pid == 0) {
-    printf("test file\n");
-    execve("busybox", shell_args, NULL);
-  }
-  else {
-    int status;
-    wait(&status);
-  }
+  // char *shell_args[] = {"ash", "busybox_testcode.sh", 0};
+  // int   pid = fork();
+  // if (pid == 0) {
+  //   printf("test file\n");
+  //   execve("busybox", shell_args, NULL);
+  // }
+  // else {
+  //   int status;
+  //   wait(&status);
+  // }
 
-  kernel_panic();
+  // kernel_panic();
   while (1) {}
 }
