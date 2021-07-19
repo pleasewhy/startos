@@ -12,7 +12,7 @@ SleepLock     VfsManager::vfs_sleeplock_;
 MountPoint    VfsManager::mount_points_[kMountPointNumber];
 struct inode *VfsManager::root_;
 
-const char cmds[] = "echo \"#### file opration test\"\n\
+const char cmds[] = "echo \"####fileoprationtest\"\n\
 touch test.txt\n\
 echo \"hello world\" > test.txt\n\
 cat test.txt\n\
@@ -38,7 +38,7 @@ wc test.txt\n\
 more test.txt\n";
 
 const char testcode[] = "#!/bin/bash\n\
-echo \"hello world\"\n\
+busybox echo \"hello world\"\n\
 while read line\n\
 do\n\
  echo $line\n\
