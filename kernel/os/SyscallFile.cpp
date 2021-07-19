@@ -161,11 +161,13 @@ uint64_t sys_read(void)
 {
   int      fd, n;
   uint64_t uaddr;
-  // LOG_TRACE("sys_read");
+  LOG_TRACE("sys_read");
   if (argint(0, &fd) < 0 || argint(2, &n) < 0 || argaddr(1, &uaddr) < 0)
     return -1;
   struct file *fp = getFileByfd(fd);
-  return vfs::VfsManager::read(fp, reinterpret_cast<char *>(uaddr), n, true);
+  n = vfs::VfsManager::read(fp, reinterpret_cast<char *>(uaddr), n, true);
+  LOG_TRACE("fd=%d nread=%d", fd, n);
+  return n;
 }
 
 uint64_t sys_readlinkat()
@@ -508,7 +510,7 @@ uint64_t sys_fcntl(void)
   fp = vfs::VfsManager::dup(fp);
   new_fd = myTask()->AllocFd(new_fd, -1);
   int dupfd = registerFileHandle(fp, new_fd);
-  LOG_TRACE("newfd=%d fd=%d", new_fd, dupfd);
+  LOG_TRACE("newfd=%d dupfd=%d", new_fd, dupfd);
   return dupfd;
   // }
   // return 0;

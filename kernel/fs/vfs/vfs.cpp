@@ -12,9 +12,9 @@ SleepLock     VfsManager::vfs_sleeplock_;
 MountPoint    VfsManager::mount_points_[kMountPointNumber];
 struct inode *VfsManager::root_;
 
-const char cmds[] = "echo \"#### file opration test\"\n \
+const char cmds[] = "echo \"#### file opration test\"\n\
 touch test.txt\n\
-echo \"hello world\"\n > test.txt\
+echo \"hello world\" > test.txt\n\
 cat test.txt\n\
 cut -c 3 test.txt\n\
 od test.txt\n\
@@ -37,6 +37,21 @@ wc test.txt\n\
 [ -f test.txt ]\n\
 more test.txt\n";
 
+const char testcode[] = "#!/bin/bash\n\
+echo \"hello world\"\n\
+busybox cat /cmds.txt | while read line\n\
+do\n\
+  echo $line\n\
+	eval \"./busybox $line\"\n\
+	RTN=$?\n\
+	if [[ $RTN -ne 0 && $line != \"false\" ]] ;then\n\
+		echo \"testcase busybox $line fail\"\n\
+	else\n\
+		echo \"testcase busybox $line success\"\n\
+	fi\n\
+done\n\
+echo \"TEST END\" >> $RST";
+
 void CreateCmdTxt(struct inode *dp)
 {
   // oscmp比赛需要
@@ -44,6 +59,11 @@ void CreateCmdTxt(struct inode *dp)
   // printf("%s\n", cmds);
   struct inode *ip = dp->file_system->Lookup(dp, "cmds.txt");
   int           n = ip->write(cmds, 0, sizeof(cmds), false);
+  printf("write=%d\n", n);
+
+  dp->file_system->Create(dp, "testcode.sh", 0);
+  ip = dp->file_system->Lookup(dp, "testcode.sh");
+  n = ip->write(testcode, 0, sizeof(testcode), false);
   printf("write=%d\n", n);
   // ip->free();
   printf("leave");
@@ -211,7 +231,7 @@ struct file *VfsManager::rewind(struct file *fp)
 struct file *VfsManager::dup(struct file *fp)
 {
   fp->ref_lock.lock();
-  LOG_TRACE("file=%d", fp->ref);
+  // LOG_TRACE("file=%d", fp->ref);
   if (fp->ref < 1) {
     panic("vfs::dup");
   }
