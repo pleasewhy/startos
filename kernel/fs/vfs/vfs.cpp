@@ -211,7 +211,7 @@ struct file *VfsManager::rewind(struct file *fp)
 struct file *VfsManager::dup(struct file *fp)
 {
   fp->ref_lock.lock();
-  LOG_TRACE("file=%d", fp->ref);
+  // LOG_TRACE("file=%d", fp->ref);
   if (fp->ref < 1) {
     panic("vfs::dup");
   }

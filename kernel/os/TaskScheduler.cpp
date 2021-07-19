@@ -951,12 +951,6 @@ int registerFileHandle(struct file *fp, int fd)
     task->lock.unlock();
     return fd;
   }
-  else {
-    vfs::VfsManager::close(task->openFiles[fd]);
-    task->openFiles[fd] = fp;
-    task->lock.unlock();
-    return fd;
-  }
   task->lock.unlock();
   return -1;
 }
