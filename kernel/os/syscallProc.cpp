@@ -343,31 +343,29 @@ uint64_t sys_clock_nanosleep(void)
   return 1;
 }
 
-extern struct sigaction act_tmp;
-
 uint64_t sys_rt_sigaction(void)
 {
-  int      signum;
-  uint64_t act_addr, old_act_addr;
+  // int      signum;
+  // uint64_t act_addr, old_act_addr;
   // struct sigaction act;
-  if (argint(0, &signum) < 0 || argaddr(1, &act_addr) < 0 ||
-      argaddr(2, &old_act_addr) < 0)
-    return -1;
-  if (act_addr != 0) {
-    either_copyin(true, &myTask()->sig_table[signum], act_addr,
-                  sizeof(act_tmp));
-    // auto p = &myTask()->sig_table[signum];
-    // printf("pid=%d task=%d %p %p %p %p\n", myTask()->pid, p->sa_handler,
-          //  p->sa_mask, p->sa_flags, p->sa_restorer);
-  }
+  // if (argint(0, &signum) < 0 || argaddr(1, &act_addr) < 0 ||
+  //     argaddr(2, &old_act_addr) < 0)
+  //   return -1;
+  // if (act_addr != 0) {
+  //   either_copyin(true, &myTask()->sig_table[signum], act_addr,
+  //                 sizeof(act_tmp));
+  //   // auto p = &myTask()->sig_table[signum];
+  //   // printf("pid=%d task=%d %p %p %p %p\n", myTask()->pid, p->sa_handler,
+  //         //  p->sa_mask, p->sa_flags, p->sa_restorer);
+  // }
 
-  if (old_act_addr != 0) {
-    // auto p = &myTask()->sig_table[signum];
-    either_copyout(true, old_act_addr, &myTask()->sig_table[signum],
-                   sizeof(act_tmp));
-    // printf("pid=%d old=handler=%p mask=%p flags%p rest=%p\n", myTask()->pid,
-    //        p->sa_handler, p->sa_mask, p->sa_flags, p->sa_restorer);
-  }
+  // if (old_act_addr != 0) {
+  //   // auto p = &myTask()->sig_table[signum];
+  //   either_copyout(true, old_act_addr, &myTask()->sig_table[signum],
+  //                  sizeof(act_tmp));
+  //   // printf("pid=%d old=handler=%p mask=%p flags%p rest=%p\n", myTask()->pid,
+  //   //        p->sa_handler, p->sa_mask, p->sa_flags, p->sa_restorer);
+  // }
 
   // LOG_DEBUG("signum=%d, act=%p old act=%p\n", signum, act_addr, old_act_addr);
   LOG_TRACE("rt_sigaction");

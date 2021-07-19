@@ -27,19 +27,10 @@ Cpu                 cpus[2];
 MemAllocator        memAllocator;  // 用于分配页
 mem::BuddyAllocator buddy_alloc_;  // 用于通用内存内配
 BufferLayer         buffer_layer;
-struct sigaction    act_tmp;
 
 static inline void inithartid(unsigned long hartid)
 {
   asm volatile("mv tp, %0" : : "r"(hartid & 0x1));
-}
-
-void init_sig()
-{
-  act_tmp.sa_handler = 0;
-  act_tmp.sa_flags = 0;
-  act_tmp.sa_mask = 0;
-  act_tmp.sa_restorer = 0;
 }
 
 volatile static int started = 0;
@@ -89,8 +80,6 @@ extern "C" void main(unsigned long hartid, unsigned long dtb_pa)
     syscall_init();  // 初始化系统调用
     plic::init();    // 初始化plic
     plic::initHart();
-
-    init_sig();
 
     dev::Init();  // 初始化已有设备
 

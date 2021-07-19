@@ -125,6 +125,13 @@ void main()
   char *od_args[] = {"od", "test.txt", 0};
   char *head_args[] = {"head", "test.txt", 0};
   char *tail_args[] = {"tail", "test.txt", 0};
+  char *hexdump_args[] = {"hexdump", "-C", "test.txt", 0};
+  char *md5sum_args[] = {"md5sum", "test.txt", 0};
+  char *stat_args[] = {"stat", "test.txt", 0};
+  char *strings_args[] = {"strings", "test.txt", 0};
+  char *wc_args[] = {"wc", "test.txt", 0};
+  char *cond_args[] = {"[", "-f", "test.txt", "]", 0};
+  char *more_args[] = {"more", "test.txt", 0};
 
   test("busybox", echo_args);
   test("busybox", ash_args);
@@ -160,6 +167,13 @@ void main()
   test("busybox", od_args);
   test("busybox", head_args);
   test("busybox", tail_args);
+  test("busybox", hexdump_args);
+  test("busybox", md5sum_args);
+  test("busybox", stat_args);
+  test("busybox", strings_args);
+  test("busybox", wc_args);
+  test("busybox", cond_args);
+  test("busybox", more_args);
 
   // kernel_panic();
   while (1) {}
