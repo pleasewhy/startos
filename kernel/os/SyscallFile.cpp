@@ -508,7 +508,7 @@ uint64_t sys_fcntl(void)
   fp = vfs::VfsManager::dup(fp);
   new_fd = myTask()->AllocFd(new_fd, -1);
   int dupfd = registerFileHandle(fp, new_fd);
-  LOG_TRACE("fd=%d", dupfd);
+  LOG_TRACE("newfd=%d fd=%d", new_fd, dupfd);
   return dupfd;
   // }
   // return 0;

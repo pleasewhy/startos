@@ -55,8 +55,8 @@ uint64_t sys_clone(void)
     return -1;
   }
   auto trapframe = myTask()->trapframe;
-  printf("%p %p %p %p\n", trapframe->a0, trapframe->a1, trapframe->a2,
-         trapframe->a3);
+  // printf("%p %p %p %p\n", trapframe->a0, trapframe->a1, trapframe->a2,
+  //        trapframe->a3);
   if (stackHighAddr == 0) {
     printf("do fork");
     int pid = fork();
@@ -357,19 +357,19 @@ uint64_t sys_rt_sigaction(void)
     either_copyin(true, &myTask()->sig_table[signum], act_addr,
                   sizeof(act_tmp));
     auto p = &myTask()->sig_table[signum];
-    printf("pid=%d task=%d %p %p %p %p\n", myTask()->pid, p->sa_handler,
-           p->sa_mask, p->sa_flags, p->sa_restorer);
+    // printf("pid=%d task=%d %p %p %p %p\n", myTask()->pid, p->sa_handler,
+          //  p->sa_mask, p->sa_flags, p->sa_restorer);
   }
 
   if (old_act_addr != 0) {
     auto p = &myTask()->sig_table[signum];
     either_copyout(true, old_act_addr, &myTask()->sig_table[signum],
                    sizeof(act_tmp));
-    printf("pid=%d old=handler=%p mask=%p flags%p rest=%p\n", myTask()->pid,
-           p->sa_handler, p->sa_mask, p->sa_flags, p->sa_restorer);
+    // printf("pid=%d old=handler=%p mask=%p flags%p rest=%p\n", myTask()->pid,
+    //        p->sa_handler, p->sa_mask, p->sa_flags, p->sa_restorer);
   }
 
-  LOG_DEBUG("signum=%d, act=%p old act=%p\n", signum, act_addr, old_act_addr);
+  // LOG_DEBUG("signum=%d, act=%p old act=%p\n", signum, act_addr, old_act_addr);
   LOG_TRACE("rt_sigaction");
   return 0;
 }
@@ -382,8 +382,8 @@ uint64_t sys_rt_sigprocmask(void)
     return -1;
   if (argaddr(2, &old_set_addr) < 0 || argint(3, &sigsetsize))
     return -1;
-  LOG_DEBUG("how=%d set=%p old set=%p sigsetsz=%d", how, set_addr, old_set_addr,
-            sigsetsize);
+  // LOG_DEBUG("how=%d set=%p old set=%p sigsetsz=%d", how, set_addr, old_set_addr,
+            // sigsetsize);
   LOG_TRACE("rt_sigprocmask");
   return 0;
 }
