@@ -54,7 +54,7 @@ uint64_t sys_clone(void)
   if (argint(0, &flags) < 0 || argaddr(1, &stackHighAddr) < 0) {
     return -1;
   }
-  auto trapframe = myTask()->trapframe;
+  // auto trapframe = myTask()->trapframe;
   // printf("%p %p %p %p\n", trapframe->a0, trapframe->a1, trapframe->a2,
   //        trapframe->a3);
   if (stackHighAddr == 0) {
@@ -356,13 +356,13 @@ uint64_t sys_rt_sigaction(void)
   if (act_addr != 0) {
     either_copyin(true, &myTask()->sig_table[signum], act_addr,
                   sizeof(act_tmp));
-    auto p = &myTask()->sig_table[signum];
+    // auto p = &myTask()->sig_table[signum];
     // printf("pid=%d task=%d %p %p %p %p\n", myTask()->pid, p->sa_handler,
           //  p->sa_mask, p->sa_flags, p->sa_restorer);
   }
 
   if (old_act_addr != 0) {
-    auto p = &myTask()->sig_table[signum];
+    // auto p = &myTask()->sig_table[signum];
     either_copyout(true, old_act_addr, &myTask()->sig_table[signum],
                    sizeof(act_tmp));
     // printf("pid=%d old=handler=%p mask=%p flags%p rest=%p\n", myTask()->pid,
