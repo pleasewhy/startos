@@ -37,6 +37,7 @@ wc test.txt\n\
 [ -f test.txt ]\n\
 more test.txt\n";
 
+/*
 // const char testcode[] = "#!/bin/bash\n\
 // echo \"hello world\"\n\
 // ./busybox cat /cmds.txt | while read line\n\
@@ -51,7 +52,7 @@ more test.txt\n";
 // // 	fi\n\
 // // done\n\
 // // echo \"TEST END\" >> $RST\n";
-
+*/
 void CreateCmdTxt(struct inode *dp)
 {
   // oscmp比赛需要
