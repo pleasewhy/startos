@@ -47,6 +47,7 @@ static int LazyLoadSeg(struct Task *task, struct inode *ip, struct proghdr *ph)
 
   uint64_t addr = ELF_PAGESTART(ph->vaddr);
   // size = ELF_PAGEALIGN(size);
+
   LOG_TRACE("vaddr=%p paddr=%p filesz=%d memsz=%d align=%d off=%p", ph->vaddr,
             ph->paddr, ph->filesz, ph->memsz, ph->align, ph->off);
   vma->ip = ip->dup();

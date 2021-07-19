@@ -215,7 +215,7 @@ void main()
   test("busybox", rmdir_args);
   test("busybox", grep_args);
   test("busybox", cp_args);
-  test("busybox", find_args);
+  // test("busybox", find_args);
 
   test("lua", lua_date);
   test("lua", lua_file_io);
