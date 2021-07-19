@@ -248,7 +248,7 @@ void syscall(void)
   if (num > 0 && static_cast<uint64_t>(num) < NELEM(syscalls) &&
       syscalls[num]) {
     task->trapframe->a0 = syscalls[num]();
-    printf("syscall=%d ret=%d\n", num, task->trapframe->a0);
+    // printf("syscall=%d ret=%d\n", num, task->trapframe->a0);
   }
   else {
     printf("\n\n");

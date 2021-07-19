@@ -166,7 +166,7 @@ uint64_t sys_read(void)
     return -1;
   struct file *fp = getFileByfd(fd);
   n = vfs::VfsManager::read(fp, reinterpret_cast<char *>(uaddr), n, true);
-  LOG_TRACE("fd=%d nread=%d", fd, n);
+  // printf("fd=%d nread=%d\n", fd, n);
   return n;
 }
 
@@ -248,7 +248,6 @@ uint64_t sys_pipe(void)
 {
   uint64_t fdarray;
   int      fds[2];
-  LOG_TRACE("pipe");
   Task *task = myTask();
   if (argaddr(0, &fdarray) < 0) {
     return -1;

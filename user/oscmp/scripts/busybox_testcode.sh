@@ -1,9 +1,9 @@
 #!/bin/bash
-busybox cat ./busybox_cmd.txt | while read line
+for line in `./busybox_cmd.txt`
 do
 	eval "busybox $line"
 	RTN=$?
-	if [[ $RTN -ne 0 && $line != "false" ]] ;then
+	if [[ $RTN -ne 0 && $line != "false" ]];then
 		echo "testcase busybox $line fail"
 	else
 		echo "testcase busybox $line success"
