@@ -64,12 +64,20 @@
 //   }
 // }
 
-void print_success(char *argv[])
+void print_success(char *name, char *argv[])
 {
-  printf("testcase busybox ");
+  printf("testcase %s ", name);
   for (int i = 0; argv[i] != 0; i++)
     printf("%s ", argv[i]);
   printf("success\n");
+}
+
+void print_fail(char *name, char *argv[])
+{
+  printf("testcase %s ", name);
+  for (int i = 0; argv[i] != 0; i++)
+    printf("%s ", argv[i]);
+  printf("fail\n");
 }
 
 void test(char *name, char *argv[])
@@ -82,7 +90,10 @@ void test(char *name, char *argv[])
     int status;
     wait(&status);
     if (status >= 0) {
-      print_success(argv);
+      print_success(name, argv);
+    }
+    else {
+      print_fail(name, argv);
     }
   }
 }
@@ -100,20 +111,21 @@ void main()
   char *cal_args[] = {"cal", 0};
   char *clear_args[] = {"clear", 0};
   char *date_args[] = {"date", 0};
-  // df
+  char *df_args[] = {"df", 0};
   char *dirname_args[] = {"dirname", "/aaa/bbb", 0};
-  // dmesg
-  // du
+  char *dmesg_args[] = {"dmesg", 0};
+  char *du_args[] = {"du", 0};
   char *expr_args[] = {"expr", "1", "+", "1", 0};
   char *true_args[] = {"true", 0};
   char *false_args[] = {"false", 0};
   char *which_args[] = {"which", "ls", 0};
   char *uname_args[] = {"uname", 0};
   char *uptime_args[] = {"uptime", 0};
-  char *printf_args[] = {"abc\\n", 0};
-  // ps
+  char *printf_args[] = {"printf", "abc\\n", 0};
+  char *ps[] = {"ps", 0};
   char *pwd_args[] = {"pwd", 0};
   char *free_args[] = {"free", 0};
+  char *hwclock[] = {"hwclock", 0};
   char *kill_args[] = {"kill", "10", 0};
   char *ls_args[] = {"ls", 0};
   char *sleep_args[] = {"sleep", 0};
@@ -141,6 +153,16 @@ void main()
   // rm busybox_cmd.bak
   char *find_args[] = {"find", "-name", "busybox_cmd.txt", 0};
 
+  char *lua_date[] = {"date.lua", 0};
+  char *lua_file_io[] = {"file_io.lua", 0};
+  char *lua_max_min[] = {"max_min.lua", 0};
+  char *lua_random[] = {"random.lua", 0};
+  char *lua_remove[] = {"remove.lua", 0};
+  char *lua_round_num[] = {"round_num.lua", 0};
+  char *lua_sin32[] = {"sin32.lua", 0};
+  char *lua_sort[] = {"sort.lua", 0};
+  char *lua_strings[] = {"strings.lua", 0};
+
   test("busybox", echo_args);
   test("busybox", ash_args);
   test("busybox", sh_args);
@@ -148,7 +170,10 @@ void main()
   test("busybox", cal_args);
   test("busybox", clear_args);
   test("busybox", date_args);
+  test("busybox", df_args);
   test("busybox", dirname_args);
+  test("busybox", dmesg_args);
+  // test("busybox", du_args);
   test("busybox", expr_args);
   test("busybox", true_args);
   test("busybox", false_args);
@@ -157,6 +182,7 @@ void main()
   test("busybox", uptime_args);
   test("busybox", printf_args);
   test("busybox", pwd_args);
+  test("busybox", hwclock);
   test("busybox", kill_args);
   test("busybox", ls_args);
   test("busybox", sleep_args);
@@ -188,8 +214,18 @@ void main()
   // test("busybox", mv_args);
   test("busybox", rmdir_args);
   test("busybox", grep_args);
-  // test("busybox", cp_args);
+  test("busybox", cp_args);
   test("busybox", find_args);
+
+  test("lua", lua_date);
+  test("lua", lua_file_io);
+  test("lua", lua_max_min);
+  test("lua", lua_random);
+  test("lua", lua_remove);
+  test("lua", lua_round_num);
+  test("lua", lua_sin32);
+  test("lua", lua_sort);
+  test("lua", lua_strings);
 
   // kernel_panic();
   while (1) {}

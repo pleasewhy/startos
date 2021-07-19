@@ -66,8 +66,8 @@ void CurrentTimeSpec(struct timespec *ts)
   uint64_t us = (count % freq) / (freq / 1000000);
   ts->tv_nsec = us * 1000;
 #else
-  ts->tv_nsec = 1234567;
-  ts->tv_sec = 1623832156;
+  ts->tv_nsec = 69527494;
+  ts->tv_sec = 1626699516;
 #endif
 }
 

@@ -417,11 +417,9 @@ uint64_t sys_mmap(void)
   a->length = length;
   for (int i = 0; i < NOMMAPFILE; i++) {
     if (task->vma[i] != 0) {
-      LOG_TRACE("len=%d", task->vma[i]->length);
       vmasz += task->vma[i]->length;
     }
   }
-  LOG_TRACE("vmasz=%d", vmasz);
   a->addr = PGROUNDDOWN(MAXVA - PGSIZE * 1024 - vmasz - PGROUNDUP(length));
   a->prot = prot | PROT_READ | PROT_WRITE | PROT_EXEC;
   a->flag = flags;
@@ -494,7 +492,6 @@ uint64_t sys_munmap(void)
 
   if (vma->ip != nullptr)
     return -1;
-  printf("free vma\n");
   userUnmap(task->pagetable, vma->addr, PGROUNDUP(vma->length) / PGSIZE, 1);
   // vfs::VfsManager::close(vma->f);
   vma->free();
@@ -527,6 +524,8 @@ uint64_t sys_fcntl(void)
   if (argint(2, &new_fd) < 0)
     return -1;
   struct file *fp = getFileByfd(fd);
+  if (cmd == 3)
+    return fp->mode;
   fp = vfs::VfsManager::dup(fp);
   new_fd = myTask()->AllocFd(new_fd, -1);
   int dupfd = registerFileHandle(fp, new_fd);
@@ -702,4 +701,18 @@ uint64_t sys_prlimit64(void)
     return either_copyout(myTask()->pagetable, old_limit, &limit,
                           sizeof(limit));
   return 0;
+}
+
+uint64_t sys_syslog()
+{
+  int      type, len;
+  uint64_t uaddr;
+  char     log[] = "startos start\n";
+  if (argint(0, &type) < 0 || argaddr(1, &uaddr) < 0)
+    return -1;
+  if (argint(2, &len) < 0)
+    return -1;
+  len = len > sizeof(log) ? sizeof(log) : len;
+  either_copyout(myTask()->pagetable, uaddr, log, len);
+  return len;
 }

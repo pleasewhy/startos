@@ -66,13 +66,17 @@ fs.img: $(UPROGS)
 	# @if [ ! -d "$(dst)/dynamic" ]; then sudo mkdir $(dst)/dynamic; fi
 
 	sudo cp  oscmp/static/busybox $(dst)/busybox
+	sudo cp  oscmp/static/lua $(dst)/lua	
 	sudo cp  oscmp/scripts/busybox_cmd.txt  $(dst)/busybox_cmd.txt
 	sudo cp  oscmp/scripts/busybox_testcode.sh  $(dst)/busybox_testcode.sh
 	# sudo cp  oscmp/static/busybox $(dst)/static/busybox
-	@for file in $$( ls _* ); do \
-		sudo cp $$file $(dst)/$${file#_};\
-		sudo cp $$file $(dst)/bin/$${file#_}; \
-		echo cp $$file; done
+	@for file in $$( ls oscmp/lua/*.lua ); do \
+		sudo cp $$file $(dst)/`basename $$file`;\
+		echo cp `basename $$file`; done
+	# @for file in $$( ls _* ); do \
+	# 	sudo cp $$file $(dst)/$${file#_};\
+	# 	sudo cp $$file $(dst)/bin/$${file#_}; \
+	# 	echo cp $$file; done
 	@sudo umount $(dst)
 	@cp fs.img ../fs.img
 

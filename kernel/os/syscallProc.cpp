@@ -305,6 +305,7 @@ uint64_t sys_clock_gettime(void)
   uint64_t addr;
   int      clock_id;
   if (argint(0, &clock_id) < 0 && argaddr(1, &addr) < 0) {
+    printf("error\n");
     return -1;
   }
 

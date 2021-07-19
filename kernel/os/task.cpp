@@ -51,6 +51,7 @@ int Task::AllocFd(int from, int to)
     }
   }
   lock.unlock();
+  LOG_ERROR("from=%d to=%d", from, to);
   panic("alloc fd");
   return 0;
 }
