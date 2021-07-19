@@ -262,6 +262,7 @@ uint64_t sys_pipe(void)
     vfs::VfsManager::close(getFileByfd(fds[1]));
     return -1;
   }
+  LOG_TRACE("fd[0]=%d fd[1]=%d", fds[0], fds[1]);
   return 0;
 }
 
