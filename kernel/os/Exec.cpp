@@ -11,18 +11,20 @@
 #include "common/logger.h"
 #include "types.hpp"
 
-const char *env[] = {
-    // "SHELL=shell",
-    "PWD=/", "HOME=/", "USER=root",
-    //  "MOTD_SHOWN=pam",
-    "LANG=C.UTF-8",
-    //  "INVOCATION_ID=e9500a871cf044d9886a157f53826684",
-    //  "TERM=vt220",
-    //  "SHLVL=2",
-    //  "JOURNAL_STREAM=8:9265",
-    "PATH=/", "OLDPWD=/root",
-    //  "_=busybox",
-    0};
+const char *env[] = {"SHELL=ash",
+                     "PWD=/",
+                     "HOME=/",
+                     "USER=root",
+                     "MOTD_SHOWN=pam",
+                     "LANG=C.UTF-8",
+                     "INVOCATION_ID=e9500a871cf044d9886a157f53826684",
+                     "TERM=vt220",
+                     "SHLVL=2",
+                     "JOURNAL_STREAM=8:9265",
+                     "PATH=/",
+                     "OLDPWD=/root",
+                     "_=busybox",
+                     0};
 
 __attribute__((used)) static int loadseg(pagetable_t   pagetable,
                                          uint64_t      va,
