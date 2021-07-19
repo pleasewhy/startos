@@ -58,13 +58,13 @@ uint64_t sys_clone(void)
   // printf("%p %p %p %p\n", trapframe->a0, trapframe->a1, trapframe->a2,
   //        trapframe->a3);
   if (stackHighAddr == 0) {
-    printf("do fork");
+    LOG_TRACE("do fork");
     int pid = fork();
     LOG_TRACE("do fork over");
     return pid;
   }
   else {
-    printf("do clone");
+    LOG_TRACE("do clone");
     return clone(stackHighAddr, flags);
   }
 }

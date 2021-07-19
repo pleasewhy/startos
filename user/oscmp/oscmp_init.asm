@@ -80,7 +80,7 @@ Disassembly of section .text:
   c0:	00000097          	auipc	ra,0x0
   c4:	08a080e7          	jalr	138(ra) # 14a <dup>
   c8:	00000797          	auipc	a5,0x0
-  cc:	7b078793          	addi	a5,a5,1968 # 878 <malloc+0xe4>
+  cc:	7c878793          	addi	a5,a5,1992 # 890 <malloc+0xfc>
   d0:	e43e                	sd	a5,8(sp)
   d2:	00001797          	auipc	a5,0x1
   d6:	81678793          	addi	a5,a5,-2026 # 8e8 <malloc+0x154>
@@ -90,13 +90,13 @@ Disassembly of section .text:
   e2:	044080e7          	jalr	68(ra) # 122 <fork>
   e6:	e905                	bnez	a0,116 <main+0x78>
   e8:	00001517          	auipc	a0,0x1
-  ec:	81850513          	addi	a0,a0,-2024 # 900 <malloc+0x16c>
+  ec:	81050513          	addi	a0,a0,-2032 # 8f8 <malloc+0x164>
   f0:	00000097          	auipc	ra,0x0
   f4:	5fe080e7          	jalr	1534(ra) # 6ee <printf>
   f8:	4601                	li	a2,0
   fa:	002c                	addi	a1,sp,8
   fc:	00001517          	auipc	a0,0x1
- 100:	81450513          	addi	a0,a0,-2028 # 910 <malloc+0x17c>
+ 100:	80c50513          	addi	a0,a0,-2036 # 908 <malloc+0x174>
  104:	00000097          	auipc	ra,0x0
  108:	146080e7          	jalr	326(ra) # 24a <execve>
  10c:	00000097          	auipc	ra,0x0
@@ -500,7 +500,7 @@ Disassembly of section .text:
  472:	4701                	li	a4,0
  474:	2601                	sext.w	a2,a2
  476:	00000517          	auipc	a0,0x0
- 47a:	4aa50513          	addi	a0,a0,1194 # 920 <digits>
+ 47a:	4a250513          	addi	a0,a0,1186 # 918 <digits>
  47e:	883a                	mv	a6,a4
  480:	2705                	addiw	a4,a4,1
  482:	02c5f7bb          	remuw	a5,a1,a2
@@ -571,7 +571,7 @@ Disassembly of section .text:
  534:	07000d13          	li	s10,112
  538:	07300d93          	li	s11,115
  53c:	00000b17          	auipc	s6,0x0
- 540:	3e4b0b13          	addi	s6,s6,996 # 920 <digits>
+ 540:	3dcb0b13          	addi	s6,s6,988 # 918 <digits>
  544:	a839                	j	562 <vprintf+0x6c>
  546:	85a6                	mv	a1,s1
  548:	8552                	mv	a0,s4
@@ -674,7 +674,7 @@ Disassembly of section .text:
  66e:	4901                	li	s2,0
  670:	b5e5                	j	558 <vprintf+0x62>
  672:	00000917          	auipc	s2,0x0
- 676:	2a690913          	addi	s2,s2,678 # 918 <malloc+0x184>
+ 676:	29e90913          	addi	s2,s2,670 # 910 <malloc+0x17c>
  67a:	02800593          	li	a1,40
  67e:	bff1                	j	65a <vprintf+0x164>
  680:	008a8493          	addi	s1,s5,8
@@ -750,7 +750,7 @@ Disassembly of section .text:
 0000000000000716 <free>:
  716:	ff050693          	addi	a3,a0,-16
  71a:	00000797          	auipc	a5,0x0
- 71e:	21e7b783          	ld	a5,542(a5) # 938 <freep>
+ 71e:	2167b783          	ld	a5,534(a5) # 930 <freep>
  722:	a805                	j	752 <free+0x3c>
  724:	4618                	lw	a4,8(a2)
  726:	9db9                	addw	a1,a1,a4
@@ -789,7 +789,7 @@ Disassembly of section .text:
  784:	fae689e3          	beq	a3,a4,736 <free+0x20>
  788:	e394                	sd	a3,0(a5)
  78a:	00000717          	auipc	a4,0x0
- 78e:	1af73723          	sd	a5,430(a4) # 938 <freep>
+ 78e:	1af73323          	sd	a5,422(a4) # 930 <freep>
  792:	8082                	ret
 
 0000000000000794 <malloc>:
@@ -808,7 +808,7 @@ Disassembly of section .text:
  7ae:	0014091b          	addiw	s2,s0,1
  7b2:	0405                	addi	s0,s0,1
  7b4:	00000517          	auipc	a0,0x0
- 7b8:	18453503          	ld	a0,388(a0) # 938 <freep>
+ 7b8:	17c53503          	ld	a0,380(a0) # 930 <freep>
  7bc:	c905                	beqz	a0,7ec <malloc+0x58>
  7be:	611c                	ld	a5,0(a0)
  7c0:	4798                	lw	a4,8(a5)
@@ -823,13 +823,13 @@ Disassembly of section .text:
  7da:	0209d993          	srli	s3,s3,0x20
  7de:	0992                	slli	s3,s3,0x4
  7e0:	00000497          	auipc	s1,0x0
- 7e4:	15848493          	addi	s1,s1,344 # 938 <freep>
+ 7e4:	15048493          	addi	s1,s1,336 # 930 <freep>
  7e8:	5afd                	li	s5,-1
  7ea:	a0bd                	j	858 <malloc+0xc4>
  7ec:	00000797          	auipc	a5,0x0
- 7f0:	15478793          	addi	a5,a5,340 # 940 <base>
+ 7f0:	14c78793          	addi	a5,a5,332 # 938 <base>
  7f4:	00000717          	auipc	a4,0x0
- 7f8:	14f73223          	sd	a5,324(a4) # 938 <freep>
+ 7f8:	12f73e23          	sd	a5,316(a4) # 930 <freep>
  7fc:	e39c                	sd	a5,0(a5)
  7fe:	0007a423          	sw	zero,8(a5)
  802:	b7d1                	j	7c6 <malloc+0x32>
@@ -842,7 +842,7 @@ Disassembly of section .text:
  814:	97ba                	add	a5,a5,a4
  816:	0127a423          	sw	s2,8(a5)
  81a:	00000717          	auipc	a4,0x0
- 81e:	10a73f23          	sd	a0,286(a4) # 938 <freep>
+ 81e:	10a73b23          	sd	a0,278(a4) # 930 <freep>
  822:	01078513          	addi	a0,a5,16
  826:	70e2                	ld	ra,56(sp)
  828:	7442                	ld	s0,48(sp)

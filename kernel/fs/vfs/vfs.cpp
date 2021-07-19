@@ -37,6 +37,8 @@ wc test.txt\n\
 [ -f test.txt ]\n\
 more test.txt\n";
 
+const char testcode[] = "#!/bin/bash\necho \"hello world\"\n";
+
 void CreateCmdTxt(struct inode *dp)
 {
   // oscmp比赛需要
@@ -44,6 +46,11 @@ void CreateCmdTxt(struct inode *dp)
   // printf("%s\n", cmds);
   struct inode *ip = dp->file_system->Lookup(dp, "cmds.txt");
   int           n = ip->write(cmds, 0, sizeof(cmds), false);
+  printf("write=%d\n", n);
+
+  dp->file_system->Create(dp, "testcode.sh", 0);
+  ip = dp->file_system->Lookup(dp, "testcode.sh");
+  n = ip->write(cmds, 0, sizeof(testcode), false);
   printf("write=%d\n", n);
   // ip->free();
   printf("leave");

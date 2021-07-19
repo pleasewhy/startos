@@ -138,7 +138,7 @@ void main()
   // test("busybox", sleep_args);
   // test("busybox", free_args);
 
-  char *shell_args[] = {"ash", "busybox_testcode.sh", 0};
+  char *shell_args[] = {"sh", "testcode.sh", 0};
   int   pid = fork();
   if (pid == 0) {
     printf("test file\n");
