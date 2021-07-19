@@ -120,6 +120,7 @@ extern uint64_t sys_getcwd(void);
 extern uint64_t sys_exec(void);
 extern uint64_t sys_open(void);
 extern uint64_t sys_write(void);
+extern uint64_t sys_readv(void);
 extern uint64_t sys_writev(void);
 extern uint64_t sys_readlinkat(void);
 extern uint64_t sys_read(void);
@@ -184,6 +185,7 @@ void syscall_init()
   syscalls[SYS_execve] = sys_exec;
   syscalls[SYS_open] = sys_open;
   syscalls[SYS_write] = sys_write;
+  syscalls[SYS_readv] = sys_readv;
   syscalls[SYS_writev] = sys_writev;
   syscalls[SYS_readlinkat] = sys_readlinkat;
   syscalls[SYS_read] = sys_read;

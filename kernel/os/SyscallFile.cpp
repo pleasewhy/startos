@@ -157,6 +157,29 @@ uint64_t sys_writev()
   return nwrite;
 }
 
+uint64_t sys_readv()
+{
+  int      fd;
+  int      n;
+  uint64_t iovec_addr;
+  if (argint(0, &fd) < 0 || argint(2, &n) < 0 || argaddr(1, &iovec_addr) < 0)
+    return -1;
+  if (n > 10)
+    return -1;
+  struct iovec vec[10];
+  if (copyin(myTask()->pagetable, (char *)vec, iovec_addr,
+             n * sizeof(struct iovec)) < 0)
+    return -1;
+  struct file *fp = getFileByfd(fd);
+
+  int nread = 0;
+  for (int i = 0; i < n; i++) {
+    nread += vfs::VfsManager::read(fp, (char *)(vec[i].iov_base),
+                                   vec[i].iov_len, true);
+  }
+  return nread;
+}
+
 uint64_t sys_read(void)
 {
   int      fd, n;
@@ -248,7 +271,7 @@ uint64_t sys_pipe(void)
 {
   uint64_t fdarray;
   int      fds[2];
-  Task *task = myTask();
+  Task *   task = myTask();
   if (argaddr(0, &fdarray) < 0) {
     return -1;
   }
