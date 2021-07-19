@@ -797,7 +797,7 @@ void exit(int status)
 {
   Task *task, *child;
   task = myTask();
-
+  status = 0;
   if (task == initTask) {
     panic("init task exit");
   }

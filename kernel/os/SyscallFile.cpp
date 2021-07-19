@@ -76,7 +76,6 @@ uint64_t sys_openat(void)
   char filename[MAXPATH];
   int  dirfd, mode, flags;
   int  n;
-  LOG_TRACE("sys_openat dirfd=%d");
   if (argint(0, &dirfd) < 0 || (n = argstr(1, filename, MAXPATH)) < 0) {
     return -1;
   }
@@ -84,6 +83,7 @@ uint64_t sys_openat(void)
   if (argint(2, &flags) || argint(3, &mode)) {
     return -1;
   }
+  LOG_TRACE("sys_openat filepath=%s", filename);
   struct file *dirfp = getFileByfd(dirfd);
   LOG_TRACE("flag=%p mode=%p", flags, mode);
   struct file *fp = vfs::VfsManager::openat(dirfp, filename, flags, mode);
