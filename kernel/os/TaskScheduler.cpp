@@ -532,6 +532,47 @@ void wakeup(void *chan)
   }
 }
 
+int CopyUserMem(pagetable_t oldPg, pagetable_t newPg, uint64_t addr, int sz)
+{
+  pte_t *  pte;
+  uint64_t pa;
+  uint_t   flags;
+  char *   mem;
+  LOG_TRACE("copy user mem: addr=%p sz=%d", addr, sz);
+  for (int i = addr; i < addr + sz; i += PGSIZE) {
+    if ((pte = walk(oldPg, i, 0)) == 0) {
+      panic("CopyUserMem: pte not present");
+    }
+    if ((*pte & PTE_V) == 0) {
+      // panic("userVmCopy: pte invalid");
+      continue;
+    }
+    pa = PTE2PA(*pte);
+    flags = PTE_FLAGS(*pte);
+    if ((mem = static_cast<char *>(memAllocator.alloc())) == 0) {
+      panic("CopyUserMem: alloc mem fail");
+    }
+    memmove(mem, (void *)pa, PGSIZE);
+    if (mappages(newPg, i, PGSIZE, (uint64_t)mem, flags) < 0) {
+      memAllocator.free(mem);
+      panic("CopyUserMem: mappages fail");
+    }
+  }
+  return 0;
+}
+
+void CopyVmaMem(Task *parent, Task *child)
+{
+  for (int i = 0; i < NOMMAPFILE; i++) {
+    if (parent->vma[i] == nullptr)
+      continue;
+    struct vma *vma = parent->vma[i];
+    if (vma->addr < parent->sz)
+      continue;
+    CopyUserMem(parent->pagetable, child->pagetable, vma->addr, vma->length);
+  }
+}
+
 int fork()
 {
   Task *child;
@@ -544,6 +585,7 @@ int fork()
   if (userVmCopy(task->pagetable, child->pagetable, task->sz) < 0) {
     return -1;
   }
+  CopyVmaMem(task, child);
   child->sz = task->sz;
   child->parent = task;
   // child->trapframe->ra = MAXVA;
@@ -797,7 +839,6 @@ void exit(int status)
 {
   Task *task, *child;
   task = myTask();
-  status = 0;
   if (task == initTask) {
     panic("init task exit");
   }
