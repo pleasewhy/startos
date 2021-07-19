@@ -402,7 +402,7 @@ uint64_t sys_mmap(void)
     }
   }
   LOG_TRACE("vmasz=%d", vmasz);
-  a->addr = PGROUNDDOWN(MAXVA - PGSIZE * 5 - vmasz - PGROUNDUP(length + 10));
+  a->addr = PGROUNDDOWN(MAXVA - PGSIZE * 1024 - vmasz - PGROUNDUP(length));
   a->prot = prot | PROT_READ | PROT_WRITE | PROT_EXEC;
   a->flag = flags;
 
