@@ -555,7 +555,7 @@ int fork()
   child->trapframe->a0 = 0;
 
   memmove(child->sig_table, task->sig_table, sizeof(task->sig_table));
-  
+
   // 复制文件资源
   LOG_TRACE("fork:dup files");
   for (int i = 0; i < NOFILE; i++) {
@@ -947,6 +947,12 @@ int registerFileHandle(struct file *fp, int fd)
     panic("register file handle");
   }
   if (task->openFiles[fd] == NULL) {
+    task->openFiles[fd] = fp;
+    task->lock.unlock();
+    return fd;
+  }
+  else {
+    vfs::VfsManager::close(task->openFiles[fd]);
     task->openFiles[fd] = fp;
     task->lock.unlock();
     return fd;

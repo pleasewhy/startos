@@ -216,6 +216,7 @@ uint64_t sys_dup3(void)
   if (ansfd < 0) {
     vfs::VfsManager::close(fp);
   }
+  LOG_TRACE("dup3 ret=%d", ansfd);
   return ansfd;
 }
 
