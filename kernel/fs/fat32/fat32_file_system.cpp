@@ -752,7 +752,7 @@ namespace fat32 {
         off += sizeof(entry);
       }
 
-      if (strncmp(name, tmp_name, name_len) != 0) {
+      if (strncmp(name, tmp_name, strlen(name)) != 0) {
         continue;
       }
 
@@ -773,9 +773,6 @@ namespace fat32 {
 
   out:
     return 0;
-
-    // bad:
-    //   return -1;
   }
 
   void Fat32FileSystem::DebugInfo()
@@ -868,6 +865,7 @@ namespace fat32 {
       cluster = next_cluster;
     }
   }
+
   void Fat32FileSystem::MarkEntryDeleted(struct inode *ip,
                                          uint32_t      off,
                                          int           n) noexcept
