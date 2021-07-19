@@ -87,6 +87,7 @@ void test(char *name, char *argv[])
   }
 }
 
+
 void test_file_operation();
 void main()
 {
@@ -118,6 +119,14 @@ void main()
   char *ls_args[] = {"ls", 0};
   char *sleep_args[] = {"sleep", 0};
 
+  char *fecho_args[] = {"echo", "\"#### file opration test\"", 0};
+  char *touch_args[] = {"touch", "test.txt", 0};
+  char *cat_args[] = {"cat", "test.txt", 0};
+  char *cut_args[] = {"cut", "-c", "3", "test.txt", 0};
+  char *od_args[] = {"od", "test.txt", 0};
+  char *head_args[] = {"head", "test.txt", 0};
+  char *tail_args[] = {"tail", "test.txt", 0};
+
   test("busybox", echo_args);
   test("busybox", ash_args);
   test("busybox", sh_args);
@@ -138,16 +147,16 @@ void main()
   test("busybox", sleep_args);
   test("busybox", free_args);
 
-  // char *shell_args[] = {"ash", "busybox_testcode.sh", 0};
-  // int   pid = fork();
-  // if (pid == 0) {
-  //   printf("test file\n");
-  //   execve("busybox", shell_args, NULL);
-  // }
-  // else {
-  //   int status;
-  //   wait(&status);
-  // }
+  test("busybox", fecho_args);
+  test("busybox", touch_args);
+  int fd = open("test.txt", O_RDWR);
+  write(fd, "hello world\n", 13);
+  close(fd);
+  test("busybox", cat_args);
+  test("busybox", cut_args);
+  test("busybox", od_args);
+  test("busybox", head_args);
+  test("busybox", tail_args);
 
   // kernel_panic();
   while (1) {}

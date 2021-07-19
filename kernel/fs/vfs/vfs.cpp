@@ -88,10 +88,10 @@ struct file *
 VfsManager::openat(struct file *dir, char *filepath, size_t flags, mode_t mode)
 {
   LOG_WARN("vfs::openat filepath=%s flags=%p mode=%p", filepath, flags, mode);
-  printf("file=%s\n", filepath);
-  if (strcmp(filepath, "./busybox_cmd.txt") == 0) {
-    filepath = cmds_name;
-  }
+  // printf("file=%s\n", filepath);
+  // if (strcmp(filepath, "./busybox_cmd.txt") == 0) {
+  //   filepath = cmds_name;
+  // }
   struct inode *ip = nullptr;
 
   struct inode *dp = nullptr;  // 父目录inode
