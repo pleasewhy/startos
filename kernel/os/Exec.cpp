@@ -12,20 +12,17 @@
 #include "types.hpp"
 
 const char *env[] = {
-                    // "SHELL=shell",
-                     "PWD=/",
-                     "HOME=/",
-                     "USER=root",
-                    //  "MOTD_SHOWN=pam",
-                     "LANG=C.UTF-8",
-                    //  "INVOCATION_ID=e9500a871cf044d9886a157f53826684",
-                    //  "TERM=vt220",
-                    //  "SHLVL=2",
-                    //  "JOURNAL_STREAM=8:9265",
-                     "PATH=/",
-                     "OLDPWD=/root",
-                    //  "_=busybox",
-                     0};
+    // "SHELL=shell",
+    "PWD=/", "HOME=/", "USER=root",
+    //  "MOTD_SHOWN=pam",
+    "LANG=C.UTF-8",
+    //  "INVOCATION_ID=e9500a871cf044d9886a157f53826684",
+    //  "TERM=vt220",
+    //  "SHLVL=2",
+    //  "JOURNAL_STREAM=8:9265",
+    "PATH=/", "OLDPWD=/root",
+    //  "_=busybox",
+    0};
 
 __attribute__((used)) static int loadseg(pagetable_t   pagetable,
                                          uint64_t      va,
@@ -128,6 +125,11 @@ uint64_t CreateUserStack(struct BinProgram *bin_program, struct elfhdr *elf)
 int exec(char *path, char **argv)
 {
   // printf("exec =%s\n", path);
+  LOG_TRACE("exec path=%s", path);
+  for (int a = 0; argv[a] != 0; a++) {
+    char *s = argv[a];
+    LOG_TRACE("argv=%s", s);
+  }
   int            i, off, oldsz;
   uint64_t       sz = 0, stackbase, sp, a0 = 0;
   uint64_t       ustack[MAXARG + 1];  // 最后一项为0，用于标记结束
