@@ -522,6 +522,7 @@ uint64_t sys_ppoll()
   int           nfd;
   uint64_t      fds_addr;
 
+  LOG_TRACE("sys_ppoll");
   if (argaddr(0, &fds_addr) < 0 || argint(1, &nfd) < 0) {
     return -1;
   }
