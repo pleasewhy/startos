@@ -38,7 +38,8 @@ wc test.txt\n\
 more test.txt\n";
 
 const char testcode[] = "#!/bin/bash\n\
-busybox echo \"hello world\"\n\
+busybox echo \"hello world\" >> aa.txt\n\
+busybox cat aa.txt\n\
 while read line\n\
 do\n\
  echo $line\n\
