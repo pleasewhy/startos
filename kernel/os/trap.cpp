@@ -102,7 +102,7 @@ void usertrap(void)
   }
   else if (r_scause() == 3) {
     task->trapframe->epc += 4;
-    printf("ebreak");
+    printf("ebreak %d\n", task->trapframe->a7);
   }
   else {
     printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), task->pid);
