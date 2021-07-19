@@ -502,6 +502,10 @@ uint64_t sys_fcntl(void)
     return -1;
   }
   LOG_TRACE("fd=%d cmd=%d", fd, cmd);
+  if (cmd == 2 || cmd == 4) {
+    return 0;
+  }
+
   // if (cmd == F_DUPFD || cmd == F_DUPFD_CLOEXEC) {
   LOG_TRACE("F_DUPFD, F_DUPFD_CLOEXEC");
   int new_fd;
